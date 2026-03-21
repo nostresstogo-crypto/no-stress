@@ -5,7 +5,9 @@
  * NoStress Events API
  * OpenAPI spec version: 0.1.0
  */
+import type { Venue } from "./venue";
 
-export interface HealthStatus {
-  status: string;
+export interface VenuesListResponse {
+  venues: Venue[];
+  total: number;
 }

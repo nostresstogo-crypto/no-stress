@@ -1,22 +1,34 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: NoStress Events API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: events
+    description: Events operations
+  - name: venues
+    description: Venues operations
+  - name: cities
+    description: Cities operations
+  - name: auth
+    description: Authentication operations
+  - name: tickets
+    description: Ticket operations
+  - name: subscriptions
+    description: Subscription operations
+  - name: admin
+    description: Admin operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +36,319 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /events:
+    get:
+      operationId: getEvents
+      tags: [events]
+      summary: List events
+      parameters:
+        - name: city
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        "200":
+          description: Events list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EventsListResponse"
+    post:
+      operationId: createEvent
+      tags: [events]
+      summary: Create an event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEventRequest"
+      responses:
+        "201":
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+
+  /events/{id}:
+    get:
+      operationId: getEvent
+      tags: [events]
+      summary: Get event details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Event details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+    patch:
+      operationId: updateEvent
+      tags: [events]
+      summary: Update an event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateEventRequest"
+      responses:
+        "200":
+          description: Event updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+
+  /venues:
+    get:
+      operationId: getVenues
+      tags: [venues]
+      summary: List venues
+      parameters:
+        - name: city
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Venues list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VenuesListResponse"
+    post:
+      operationId: createVenue
+      tags: [venues]
+      summary: Create a venue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateVenueRequest"
+      responses:
+        "201":
+          description: Venue created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Venue"
+
+  /venues/{id}:
+    get:
+      operationId: getVenue
+      tags: [venues]
+      summary: Get venue details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Venue details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Venue"
+    patch:
+      operationId: updateVenue
+      tags: [venues]
+      summary: Update a venue
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateVenueRequest"
+      responses:
+        "200":
+          description: Venue updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Venue"
+
+  /cities:
+    get:
+      operationId: getCities
+      tags: [cities]
+      summary: List cities
+      responses:
+        "200":
+          description: Cities list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CitiesListResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /tickets:
+    post:
+      operationId: purchaseTicket
+      tags: [tickets]
+      summary: Purchase a ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurchaseTicketRequest"
+      responses:
+        "201":
+          description: Ticket purchased
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketPurchaseResponse"
+
+  /subscriptions:
+    get:
+      operationId: getSubscriptionPlans
+      tags: [subscriptions]
+      summary: Get subscription plans
+      responses:
+        "200":
+          description: Subscription plans
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubscriptionPlansResponse"
+
+  /admin/events/{id}/approve:
+    post:
+      operationId: approveEvent
+      tags: [admin]
+      summary: Approve an event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Event approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+
+  /admin/events/{id}/reject:
+    post:
+      operationId: rejectEvent
+      tags: [admin]
+      summary: Reject an event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Event rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+
+  /admin/venues/{id}/verify:
+    post:
+      operationId: verifyVenue
+      tags: [admin]
+      summary: Verify a venue
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Venue verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Venue"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +359,447 @@ components:
       required:
         - status
 
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        titleFr:
+          type: string
+        description:
+          type: string
+        descriptionFr:
+          type: string
+        date:
+          type: string
+        time:
+          type: string
+        venue:
+          type: string
+        venueId:
+          type: string
+        city:
+          type: string
+        category:
+          type: string
+        imageUrl:
+          type: string
+        price:
+          type: number
+        currency:
+          type: string
+        isSponsored:
+          type: boolean
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        ticketTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/TicketType"
+        latitude:
+          type: number
+        longitude:
+          type: number
+        createdAt:
+          type: string
+      required:
+        - id
+        - title
+        - date
+        - venue
+        - city
+        - category
+        - price
+        - status
+
+    EventsListResponse:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/Event"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+      required:
+        - events
+        - total
+        - page
+        - limit
+
+    CreateEventRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        titleFr:
+          type: string
+        description:
+          type: string
+        descriptionFr:
+          type: string
+        date:
+          type: string
+        time:
+          type: string
+        venue:
+          type: string
+        venueId:
+          type: string
+        city:
+          type: string
+        category:
+          type: string
+        imageUrl:
+          type: string
+        price:
+          type: number
+        currency:
+          type: string
+        isSponsored:
+          type: boolean
+        ticketTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/TicketType"
+        latitude:
+          type: number
+        longitude:
+          type: number
+      required:
+        - title
+        - date
+        - venue
+        - city
+        - category
+        - price
+
+    UpdateEventRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        titleFr:
+          type: string
+        description:
+          type: string
+        descriptionFr:
+          type: string
+        date:
+          type: string
+        time:
+          type: string
+        venue:
+          type: string
+        venueId:
+          type: string
+        city:
+          type: string
+        category:
+          type: string
+        imageUrl:
+          type: string
+        price:
+          type: number
+        currency:
+          type: string
+        isSponsored:
+          type: boolean
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        ticketTypes:
+          type: array
+          items:
+            $ref: "#/components/schemas/TicketType"
+
+    Venue:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        city:
+          type: string
+        address:
+          type: string
+        imageUrl:
+          type: string
+        description:
+          type: string
+        isVerified:
+          type: boolean
+        latitude:
+          type: number
+        longitude:
+          type: number
+        ownerId:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - type
+        - city
+
+    VenuesListResponse:
+      type: object
+      properties:
+        venues:
+          type: array
+          items:
+            $ref: "#/components/schemas/Venue"
+        total:
+          type: integer
+      required:
+        - venues
+        - total
+
+    CreateVenueRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        city:
+          type: string
+        address:
+          type: string
+        imageUrl:
+          type: string
+        description:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+      required:
+        - name
+        - type
+        - city
+
+    UpdateVenueRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+        city:
+          type: string
+        address:
+          type: string
+        imageUrl:
+          type: string
+        description:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+
+    CitiesListResponse:
+      type: object
+      properties:
+        cities:
+          type: array
+          items:
+            $ref: "#/components/schemas/City"
+      required:
+        - cities
+
+    City:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        country:
+          type: string
+        imageUrl:
+          type: string
+      required:
+        - id
+        - name
+        - country
+
+    TicketType:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        nameFr:
+          type: string
+        price:
+          type: number
+        currency:
+          type: string
+        available:
+          type: integer
+        description:
+          type: string
+      required:
+        - id
+        - name
+        - price
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+      required:
+        - email
+        - password
+        - name
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+      required:
+        - token
+        - user
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [user, structure, admin]
+        avatarUrl:
+          type: string
+        favorites:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - email
+        - name
+        - role
+
+    PurchaseTicketRequest:
+      type: object
+      properties:
+        eventId:
+          type: string
+        ticketTypeId:
+          type: string
+        quantity:
+          type: integer
+        paymentMethod:
+          type: string
+          enum: [flooz, tmoney, mix_yas]
+        phoneNumber:
+          type: string
+      required:
+        - eventId
+        - ticketTypeId
+        - quantity
+        - paymentMethod
+        - phoneNumber
+
+    TicketPurchaseResponse:
+      type: object
+      properties:
+        transactionId:
+          type: string
+        status:
+          type: string
+        ticket:
+          type: object
+          properties:
+            id:
+              type: string
+            eventId:
+              type: string
+            ticketType:
+              type: string
+            qrCode:
+              type: string
+      required:
+        - transactionId
+        - status
+
+    SubscriptionPlan:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        nameFr:
+          type: string
+        monthlyPriceFCFA:
+          type: number
+        features:
+          type: array
+          items:
+            type: string
+        featuresFr:
+          type: array
+          items:
+            type: string
+        isPopular:
+          type: boolean
+      required:
+        - id
+        - name
+        - monthlyPriceFCFA
+        - features
+
+    SubscriptionPlansResponse:
+      type: object
+      properties:
+        plans:
+          type: array
+          items:
+            $ref: "#/components/schemas/SubscriptionPlan"
+      required:
+        - plans

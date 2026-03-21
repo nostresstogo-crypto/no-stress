@@ -5,7 +5,8 @@
  * NoStress Events API
  * OpenAPI spec version: 0.1.0
  */
+import type { City } from "./city";
 
-export interface HealthStatus {
-  status: string;
+export interface CitiesListResponse {
+  cities: City[];
 }

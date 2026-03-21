@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "NoStress",
+    "slug": "nostress",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "nostress",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0E1120"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.nostress.app"
+    },
+    "android": {
+      "backgroundColor": "#0E1120"
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://replit.com/"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
