@@ -160,7 +160,7 @@ export default function CreateEventScreen() {
         <Field label={t("titleFr")} required error={errors.titleFr}>
           <TextInput
             style={[styles.input, errors.titleFr && styles.inputError]}
-            placeholder="Ex: Nuit Afrobeats Abidjan"
+            placeholder="Ex: Nuit Afrobeats Lomé"
             placeholderTextColor={C.textMuted}
             value={form.titleFr}
             onChangeText={(v) => setField("titleFr", v)}
@@ -170,7 +170,7 @@ export default function CreateEventScreen() {
         <Field label={t("titleEn")}>
           <TextInput
             style={styles.input}
-            placeholder="Ex: Afrobeats Night Abidjan"
+            placeholder="Ex: Afrobeats Night Lomé"
             placeholderTextColor={C.textMuted}
             value={form.titleEn}
             onChangeText={(v) => setField("titleEn", v)}

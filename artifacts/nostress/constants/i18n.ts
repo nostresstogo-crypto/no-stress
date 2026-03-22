@@ -171,8 +171,8 @@ export const translations = {
     onboarding1Sub: "L'application des événements pan-africains — concerts, festivals, soirées et bien plus.",
     onboarding2Title: "Billets en quelques clics",
     onboarding2Sub: "Réservez vos places et payez avec Flooz, T-Money ou MIX by YAS.",
-    onboarding3Title: "10 villes africaines",
-    onboarding3Sub: "Abidjan, Dakar, Lagos, Lomé et bien d'autres. Découvrez les événements près de chez vous.",
+    onboarding3Title: "6 villes du Togo",
+    onboarding3Sub: "Lomé, Kpalimé, Kara, Aného et bien d'autres. Découvrez les événements près de chez vous.",
 
     // Common
     loading: "Chargement...",
@@ -351,8 +351,8 @@ export const translations = {
     onboarding1Sub: "The pan-African events app — concerts, festivals, nightlife and so much more.",
     onboarding2Title: "Tickets in seconds",
     onboarding2Sub: "Book your spots and pay with Flooz, T-Money or MIX by YAS.",
-    onboarding3Title: "10 African cities",
-    onboarding3Sub: "Abidjan, Dakar, Lagos, Lomé and more. Discover events near you.",
+    onboarding3Title: "6 cities in Togo",
+    onboarding3Sub: "Lomé, Kpalimé, Kara, Aného and more. Discover events near you.",
 
     // Common
     loading: "Loading...",
