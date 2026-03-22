@@ -35,6 +35,7 @@ function RootLayoutNav() {
         <Stack.Screen name="event/[id]" options={{ headerShown: false, presentation: "card" }} />
         <Stack.Screen name="ticket/[eventId]" options={{ headerShown: false, presentation: "modal" }} />
         <Stack.Screen name="auth" options={{ headerShown: false, presentation: "modal" }} />
+        <Stack.Screen name="create-event" options={{ headerShown: false, presentation: "modal" }} />
       </Stack>
     </>
   );

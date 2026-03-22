@@ -101,7 +101,7 @@ export default function DashboardScreen() {
           <>
             <TouchableOpacity
               style={styles.createBtn}
-              onPress={() => {}}
+              onPress={() => router.push("/create-event")}
             >
               <Ionicons name="add-circle" size={20} color={C.bg} />
               <Text style={styles.createBtnText}>{t("createEvent")}</Text>

@@ -1,0 +1,658 @@
+import React, { useState, useRef } from "react";
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router } from "expo-router";
+
+import { C } from "@/constants/colors";
+import { useT, useApp } from "@/context/AppContext";
+import { CATEGORIES, MOCK_CITIES, MOCK_VENUES, CategoryKey } from "@/constants/data";
+
+type FormData = {
+  titleFr: string;
+  titleEn: string;
+  category: CategoryKey | "";
+  city: string;
+  venue: string;
+  date: string;
+  time: string;
+  descriptionFr: string;
+  descriptionEn: string;
+  priceFCFA: string;
+  isFree: boolean;
+  isSponsored: boolean;
+  imageUrl: string;
+};
+
+type FieldErrors = Partial<Record<keyof FormData, string>>;
+
+const INITIAL_FORM: FormData = {
+  titleFr: "",
+  titleEn: "",
+  category: "",
+  city: "",
+  venue: "",
+  date: "",
+  time: "",
+  descriptionFr: "",
+  descriptionEn: "",
+  priceFCFA: "",
+  isFree: false,
+  isSponsored: false,
+  imageUrl: "",
+};
+
+export default function CreateEventScreen() {
+  const t = useT();
+  const { lang } = useApp();
+  const insets = useSafeAreaInsets();
+  const [form, setForm] = useState<FormData>(INITIAL_FORM);
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+
+  function setField<K extends keyof FormData>(key: K, value: FormData[K]) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }));
+  }
+
+  function validate(): boolean {
+    const newErrors: FieldErrors = {};
+    if (!form.titleFr.trim()) newErrors.titleFr = t("requiredField");
+    if (!form.category) newErrors.category = t("requiredField");
+    if (!form.city) newErrors.city = t("requiredField");
+    if (!form.date.trim()) newErrors.date = t("requiredField");
+    if (!form.time.trim()) newErrors.time = t("requiredField");
+    if (!form.isFree && !form.priceFCFA.trim()) newErrors.priceFCFA = t("requiredField");
+    if (!form.descriptionFr.trim()) newErrors.descriptionFr = t("requiredField");
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }
+
+  async function handleSubmit() {
+    if (!validate()) {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+      return;
+    }
+    setSubmitting(true);
+    await new Promise((r) => setTimeout(r, 1200));
+    setSubmitting(false);
+    setSubmitted(true);
+  }
+
+  if (submitted) {
+    return (
+      <View style={[styles.root, styles.successRoot]}>
+        <View style={styles.successBox}>
+          <View style={styles.successIcon}>
+            <Ionicons name="checkmark-circle" size={72} color={C.success} />
+          </View>
+          <Text style={styles.successTitle}>{t("eventCreatedSuccess")}</Text>
+          <Text style={styles.successSub}>
+            {lang === "fr"
+              ? "Votre événement est en attente de validation par l'équipe NoStress."
+              : "Your event is pending review by the NoStress team."}
+          </Text>
+          <TouchableOpacity
+            style={styles.successBtn}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={18} color={C.bg} />
+            <Text style={styles.successBtnText}>{t("back")}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      style={styles.root}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: (Platform.OS === "web" ? 16 : insets.top) + 12 }]}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <Ionicons name="close" size={22} color={C.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t("newEvent")}</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <ScrollView
+        ref={scrollRef}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Section 1 — Informations générales */}
+        <SectionHeader icon="information-circle" label={t("formSectionInfo")} />
+
+        <Field label={t("titleFr")} required error={errors.titleFr}>
+          <TextInput
+            style={[styles.input, errors.titleFr && styles.inputError]}
+            placeholder="Ex: Nuit Afrobeats Abidjan"
+            placeholderTextColor={C.textMuted}
+            value={form.titleFr}
+            onChangeText={(v) => setField("titleFr", v)}
+          />
+        </Field>
+
+        <Field label={t("titleEn")}>
+          <TextInput
+            style={styles.input}
+            placeholder="Ex: Afrobeats Night Abidjan"
+            placeholderTextColor={C.textMuted}
+            value={form.titleEn}
+            onChangeText={(v) => setField("titleEn", v)}
+          />
+        </Field>
+
+        {/* Category selector */}
+        <Field label={t("category")} required error={errors.category}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
+            {CATEGORIES.map((cat) => {
+              const label = lang === "fr" ? (cat.key === "liveMusic" ? "Musique live" : cat.key === "nightclubs" ? "Boîtes de nuit" : cat.key.charAt(0).toUpperCase() + cat.key.slice(1)) : cat.key.charAt(0).toUpperCase() + cat.key.slice(1);
+              const active = form.category === cat.key;
+              return (
+                <TouchableOpacity
+                  key={cat.key}
+                  style={[styles.pill, active && { backgroundColor: cat.color + "33", borderColor: cat.color }]}
+                  onPress={() => setField("category", cat.key)}
+                >
+                  <Ionicons name={cat.icon as any} size={14} color={active ? cat.color : C.textMuted} />
+                  <Text style={[styles.pillText, active && { color: cat.color }]}>{label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </Field>
+
+        {/* City selector */}
+        <Field label={t("city")} required error={errors.city}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
+            {MOCK_CITIES.map((c) => {
+              const active = form.city === c.name;
+              return (
+                <TouchableOpacity
+                  key={c.id}
+                  style={[styles.pill, active && styles.pillActive]}
+                  onPress={() => setField("city", c.name)}
+                >
+                  <Text style={[styles.pillText, active && styles.pillTextActive]}>{c.name}</Text>
+                  <Text style={styles.pillCountry}>{c.country}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </Field>
+
+        <Field label={t("selectVenue")}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
+            {MOCK_VENUES.map((v) => {
+              const active = form.venue === v.name;
+              return (
+                <TouchableOpacity
+                  key={v.id}
+                  style={[styles.pill, active && styles.pillActive]}
+                  onPress={() => setField("venue", v.name)}
+                >
+                  <Ionicons name="business-outline" size={13} color={active ? C.lavender : C.textMuted} />
+                  <Text style={[styles.pillText, active && styles.pillTextActive]}>{v.name}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </Field>
+
+        {/* Date & time row */}
+        <View style={styles.row}>
+          <View style={{ flex: 1 }}>
+            <Field label={t("date")} required error={errors.date}>
+              <TextInput
+                style={[styles.input, errors.date && styles.inputError]}
+                placeholder="AAAA-MM-JJ"
+                placeholderTextColor={C.textMuted}
+                value={form.date}
+                onChangeText={(v) => setField("date", v)}
+                keyboardType="numbers-and-punctuation"
+                maxLength={10}
+              />
+            </Field>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Field label={t("time")} required error={errors.time}>
+              <TextInput
+                style={[styles.input, errors.time && styles.inputError]}
+                placeholder="22:00"
+                placeholderTextColor={C.textMuted}
+                value={form.time}
+                onChangeText={(v) => setField("time", v)}
+                keyboardType="numbers-and-punctuation"
+                maxLength={5}
+              />
+            </Field>
+          </View>
+        </View>
+
+        {/* Section 2 — Détails */}
+        <SectionHeader icon="ticket" label={t("formSectionDetails")} />
+
+        <Field label={t("descriptionFr")} required error={errors.descriptionFr}>
+          <TextInput
+            style={[styles.input, styles.textarea, errors.descriptionFr && styles.inputError]}
+            placeholder={lang === "fr" ? "Décrivez votre événement en français..." : "Describe your event in French..."}
+            placeholderTextColor={C.textMuted}
+            value={form.descriptionFr}
+            onChangeText={(v) => setField("descriptionFr", v)}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+        </Field>
+
+        <Field label={t("descriptionEn")}>
+          <TextInput
+            style={[styles.input, styles.textarea]}
+            placeholder={lang === "fr" ? "Décrivez votre événement en anglais..." : "Describe your event in English..."}
+            placeholderTextColor={C.textMuted}
+            value={form.descriptionEn}
+            onChangeText={(v) => setField("descriptionEn", v)}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+        </Field>
+
+        {/* Free toggle */}
+        <View style={styles.toggleRow}>
+          <View style={styles.toggleLabel}>
+            <Ionicons name="gift-outline" size={18} color={form.isFree ? C.success : C.textMuted} />
+            <Text style={[styles.toggleText, form.isFree && { color: C.success }]}>{t("isFree")}</Text>
+          </View>
+          <Switch
+            value={form.isFree}
+            onValueChange={(v) => {
+              setField("isFree", v);
+              if (v) setField("priceFCFA", "0");
+            }}
+            trackColor={{ false: C.border, true: C.success + "88" }}
+            thumbColor={form.isFree ? C.success : C.card2}
+          />
+        </View>
+
+        {!form.isFree && (
+          <Field label={t("priceFCFA")} required error={errors.priceFCFA}>
+            <View style={styles.priceRow}>
+              <TextInput
+                style={[styles.input, styles.priceInput, errors.priceFCFA && styles.inputError]}
+                placeholder="15000"
+                placeholderTextColor={C.textMuted}
+                value={form.priceFCFA}
+                onChangeText={(v) => setField("priceFCFA", v.replace(/[^0-9]/g, ""))}
+                keyboardType="numeric"
+              />
+              <View style={styles.priceSuffix}>
+                <Text style={styles.priceSuffixText}>FCFA</Text>
+              </View>
+            </View>
+          </Field>
+        )}
+
+        {/* Sponsored toggle */}
+        <View style={styles.toggleRow}>
+          <View style={styles.toggleLabel}>
+            <Ionicons name="star-outline" size={18} color={form.isSponsored ? C.gold : C.textMuted} />
+            <Text style={[styles.toggleText, form.isSponsored && { color: C.gold }]}>{t("isSponsored")}</Text>
+          </View>
+          <Switch
+            value={form.isSponsored}
+            onValueChange={(v) => setField("isSponsored", v)}
+            trackColor={{ false: C.border, true: C.gold + "88" }}
+            thumbColor={form.isSponsored ? C.gold : C.card2}
+          />
+        </View>
+
+        {/* Section 3 — Médias */}
+        <SectionHeader icon="image" label={t("formSectionMedia")} />
+
+        <Field label={t("imageUrl")}>
+          <TextInput
+            style={styles.input}
+            placeholder="https://images.unsplash.com/..."
+            placeholderTextColor={C.textMuted}
+            value={form.imageUrl}
+            onChangeText={(v) => setField("imageUrl", v)}
+            keyboardType="url"
+            autoCapitalize="none"
+          />
+        </Field>
+
+        {/* Error summary */}
+        {Object.keys(errors).length > 0 && (
+          <View style={styles.errorSummary}>
+            <Ionicons name="alert-circle" size={18} color={C.error} />
+            <Text style={styles.errorSummaryText}>
+              {lang === "fr"
+                ? "Veuillez remplir tous les champs obligatoires."
+                : "Please fill in all required fields."}
+            </Text>
+          </View>
+        )}
+
+        {/* Submit */}
+        <TouchableOpacity
+          style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
+          onPress={handleSubmit}
+          disabled={submitting}
+          activeOpacity={0.85}
+        >
+          {submitting ? (
+            <>
+              <Ionicons name="hourglass-outline" size={20} color={C.bg} />
+              <Text style={styles.submitBtnText}>{t("processing")}</Text>
+            </>
+          ) : (
+            <>
+              <Ionicons name="send" size={20} color={C.bg} />
+              <Text style={styles.submitBtnText}>{t("submitEvent")}</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+function SectionHeader({ icon, label }: { icon: string; label: string }) {
+  return (
+    <View style={sectionStyles.row}>
+      <Ionicons name={icon as any} size={18} color={C.lavender} />
+      <Text style={sectionStyles.label}>{label}</Text>
+    </View>
+  );
+}
+
+function Field({
+  label,
+  required,
+  error,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <View style={fieldStyles.wrap}>
+      <View style={fieldStyles.labelRow}>
+        <Text style={fieldStyles.label}>{label}</Text>
+        {required && <Text style={fieldStyles.required}>*</Text>}
+      </View>
+      {children}
+      {error ? <Text style={fieldStyles.error}>{error}</Text> : null}
+    </View>
+  );
+}
+
+const sectionStyles = StyleSheet.create({
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 8,
+    marginBottom: 4,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+  },
+  label: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    color: C.lavender,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+});
+
+const fieldStyles = StyleSheet.create({
+  wrap: { gap: 6 },
+  labelRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  label: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textMuted },
+  required: { fontSize: 13, fontFamily: "Inter_700Bold", color: C.error },
+  error: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.error },
+});
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: C.bg },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+    backgroundColor: C.bg,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: C.card,
+    borderWidth: 1,
+    borderColor: C.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    color: C.text,
+  },
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    gap: 16,
+  },
+  input: {
+    backgroundColor: C.card,
+    borderWidth: 1,
+    borderColor: C.border,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+    color: C.text,
+  },
+  inputError: {
+    borderColor: C.error,
+  },
+  textarea: {
+    height: 100,
+    paddingTop: 12,
+  },
+  row: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  pillScroll: {
+    marginHorizontal: -2,
+  },
+  pill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: C.border,
+    backgroundColor: C.card,
+    marginRight: 8,
+    marginVertical: 2,
+  },
+  pillActive: {
+    backgroundColor: C.lavender + "22",
+    borderColor: C.lavender,
+  },
+  pillText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: C.textMuted,
+  },
+  pillTextActive: {
+    color: C.lavender,
+    fontFamily: "Inter_600SemiBold",
+  },
+  pillCountry: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    color: C.textMuted,
+    opacity: 0.7,
+  },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: C.card,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: C.border,
+  },
+  toggleLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  toggleText: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    color: C.textMuted,
+  },
+  priceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 0,
+  },
+  priceInput: {
+    flex: 1,
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
+    borderRightWidth: 0,
+  },
+  priceSuffix: {
+    backgroundColor: C.card2,
+    borderWidth: 1,
+    borderColor: C.border,
+    borderTopRightRadius: 10,
+    borderBottomRightRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+  },
+  priceSuffixText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: C.gold,
+  },
+  errorSummary: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: C.error + "15",
+    borderWidth: 1,
+    borderColor: C.error + "44",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  errorSummaryText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: C.error,
+  },
+  submitBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    backgroundColor: C.lavender,
+    borderRadius: 14,
+    paddingVertical: 16,
+    marginTop: 8,
+  },
+  submitBtnDisabled: {
+    opacity: 0.6,
+  },
+  submitBtnText: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+    color: C.bg,
+  },
+  successRoot: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 32,
+  },
+  successBox: {
+    alignItems: "center",
+    gap: 16,
+    width: "100%",
+  },
+  successIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: C.success + "15",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  successTitle: {
+    fontSize: 22,
+    fontFamily: "Inter_700Bold",
+    color: C.text,
+    textAlign: "center",
+  },
+  successSub: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: C.textMuted,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  successBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: C.lavender,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    marginTop: 8,
+    width: "100%",
+    justifyContent: "center",
+  },
+  successBtnText: {
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+    color: C.bg,
+  },
+});
