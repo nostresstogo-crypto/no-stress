@@ -149,6 +149,18 @@ export const translations = {
     verify: "Vérifier",
     adminPanel: "Panel Admin",
 
+    // Onboarding
+    onboardingSkip: "Passer",
+    onboardingNext: "Suivant",
+    onboardingStart: "Commencer",
+    onboardingChooseLang: "Choisissez votre langue",
+    onboarding1Title: "Bienvenue sur NoStress",
+    onboarding1Sub: "L'application des événements pan-africains — concerts, festivals, soirées et bien plus.",
+    onboarding2Title: "Billets en quelques clics",
+    onboarding2Sub: "Réservez vos places et payez avec Flooz, T-Money ou MIX by YAS.",
+    onboarding3Title: "10 villes africaines",
+    onboarding3Sub: "Abidjan, Dakar, Lagos, Lomé et bien d'autres. Découvrez les événements près de chez vous.",
+
     // Common
     loading: "Chargement...",
     error: "Erreur",
@@ -303,6 +315,18 @@ export const translations = {
     reject: "Reject",
     verify: "Verify",
     adminPanel: "Admin Panel",
+
+    // Onboarding
+    onboardingSkip: "Skip",
+    onboardingNext: "Next",
+    onboardingStart: "Get started",
+    onboardingChooseLang: "Choose your language",
+    onboarding1Title: "Welcome to NoStress",
+    onboarding1Sub: "The pan-African events app — concerts, festivals, nightlife and so much more.",
+    onboarding2Title: "Tickets in seconds",
+    onboarding2Sub: "Book your spots and pay with Flooz, T-Money or MIX by YAS.",
+    onboarding3Title: "10 African cities",
+    onboarding3Sub: "Abidjan, Dakar, Lagos, Lomé and more. Discover events near you.",
 
     // Common
     loading: "Loading...",

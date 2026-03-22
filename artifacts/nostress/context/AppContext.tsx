@@ -51,6 +51,9 @@ interface AppContextValue {
   selectedCategory: string;
   setSelectedCategory: (cat: string) => void;
   logout: () => void;
+  hasOnboarded: boolean;
+  setHasOnboarded: () => void;
+  appReady: boolean;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -61,6 +64,7 @@ const KEYS = {
   token: "ns_token",
   favorites: "ns_favorites",
   notifications: "ns_notifications",
+  onboarded: "ns_onboarded",
 };
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -71,21 +75,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [selectedCity, setSelectedCity] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [hasOnboarded, setHasOnboardedState] = useState<boolean>(false);
+  const [appReady, setAppReady] = useState<boolean>(false);
 
   useEffect(() => {
     (async () => {
-      const [l, u, t, f, n] = await Promise.all([
+      const [l, u, t, f, n, o] = await Promise.all([
         AsyncStorage.getItem(KEYS.lang),
         AsyncStorage.getItem(KEYS.user),
         AsyncStorage.getItem(KEYS.token),
         AsyncStorage.getItem(KEYS.favorites),
         AsyncStorage.getItem(KEYS.notifications),
+        AsyncStorage.getItem(KEYS.onboarded),
       ]);
       if (l) setLangState(l as Lang);
       if (u) setUserState(JSON.parse(u));
       if (t) setTokenState(t);
       if (f) setFavorites(JSON.parse(f));
       if (n) setNotifications(JSON.parse(n));
+      if (o === "true") setHasOnboardedState(true);
+      setAppReady(true);
     })();
   }, []);
 
@@ -157,6 +166,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.multiRemove([KEYS.user, KEYS.token]);
   }, []);
 
+  const setHasOnboarded = useCallback(async () => {
+    setHasOnboardedState(true);
+    await AsyncStorage.setItem(KEYS.onboarded, "true");
+  }, []);
+
   const unreadCount = useMemo(
     () => notifications.filter((n) => !n.read).length,
     [notifications]
@@ -182,6 +196,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       selectedCategory,
       setSelectedCategory,
       logout,
+      hasOnboarded,
+      setHasOnboarded,
+      appReady,
     }),
     [
       lang,
@@ -202,6 +219,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       selectedCategory,
       setSelectedCategory,
       logout,
+      hasOnboarded,
+      setHasOnboarded,
+      appReady,
     ]
   );
 
