@@ -1,43 +1,95 @@
 import { BlurView } from "expo-blur";
-import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Tabs } from "expo-router";
-import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
-import { SymbolView } from "expo-symbols";
 import { Ionicons } from "@expo/vector-icons";
 import React from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import {
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SymbolView } from "expo-symbols";
 import { C } from "@/constants/colors";
 import { useApp, useT } from "@/context/AppContext";
 
-function NativeTabLayout() {
-  const t = useT();
+/* ── Custom centre "Carte" button ──────────────────────────────────────── */
+function MapTabButton({
+  onPress,
+  accessibilityState,
+  children,
+}: {
+  onPress?: () => void;
+  accessibilityState?: { selected?: boolean };
+  children?: React.ReactNode;
+}) {
+  const isSelected = accessibilityState?.selected;
 
   return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="index">
-        <Icon sf={{ default: "house", selected: "house.fill" }} />
-        <Label>{t("home")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="venues">
-        <Icon sf={{ default: "map", selected: "map.fill" }} />
-        <Label>{t("map")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="dashboard">
-        <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
-        <Label>{t("dashboard")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="account">
-        <Icon sf={{ default: "person", selected: "person.fill" }} />
-        <Label>{t("account")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="adminpanel">
-        <Icon sf={{ default: "shield", selected: "shield.fill" }} />
-        <Label>{t("admin")}</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <TouchableOpacity
+      style={centerBtn.wrap}
+      onPress={onPress}
+      activeOpacity={0.85}
+      accessibilityRole="button"
+    >
+      <View style={[centerBtn.circle, isSelected && centerBtn.circleActive]}>
+        <Ionicons
+          name="map"
+          size={26}
+          color={isSelected ? C.bg : C.bg}
+        />
+      </View>
+      <Text style={[centerBtn.label, isSelected && centerBtn.labelActive]}>
+        Carte
+      </Text>
+    </TouchableOpacity>
   );
 }
 
+const centerBtn = StyleSheet.create({
+  wrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingBottom: Platform.OS === "ios" ? 6 : 8,
+  },
+  circle: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: C.gold,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
+    marginTop: -26,
+    /* iOS shadow */
+    shadowColor: C.gold,
+    shadowOpacity: 0.6,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -3 },
+    /* Android elevation */
+    elevation: 10,
+    /* subtle ring */
+    borderWidth: 3,
+    borderColor: C.bg,
+  },
+  circleActive: {
+    backgroundColor: C.goldDim,
+    shadowOpacity: 0.9,
+    elevation: 14,
+  },
+  label: {
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
+    color: C.textMuted,
+  },
+  labelActive: {
+    color: C.gold,
+    fontFamily: "Inter_600SemiBold",
+  },
+});
+
+/* ── Tab layout ─────────────────────────────────────────────────────────── */
 function ClassicTabLayout() {
   const t = useT();
   const { user } = useApp();
@@ -71,58 +123,76 @@ function ClassicTabLayout() {
           ) : null,
         tabBarLabelStyle: {
           fontFamily: "Inter_500Medium",
-          fontSize: 11,
+          fontSize: 10,
         },
       }}
     >
+      {/* 1 — Accueil */}
       <Tabs.Screen
         name="index"
         options={{
           title: t("home"),
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="house.fill" tintColor={color} size={24} />
+              <SymbolView name="house.fill" tintColor={color} size={22} />
             ) : (
               <Ionicons name="home" size={22} color={color} />
             ),
         }}
       />
+
+      {/* 2 — Lieux */}
       <Tabs.Screen
         name="venues"
         options={{
-          title: t("map"),
+          title: t("venues"),
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="map.fill" tintColor={color} size={24} />
+              <SymbolView name="building.2.fill" tintColor={color} size={22} />
             ) : (
-              <Ionicons name="map" size={22} color={color} />
+              <Ionicons name="business" size={22} color={color} />
             ),
         }}
       />
+
+      {/* 3 — Carte (centre, bouton doré surélevé) */}
+      <Tabs.Screen
+        name="map"
+        options={{
+          title: "Carte",
+          tabBarButton: (props) => <MapTabButton {...(props as any)} />,
+        }}
+      />
+
+      {/* 4 — Tableau de bord */}
       <Tabs.Screen
         name="dashboard"
         options={{
           title: t("dashboard"),
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="chart.bar.fill" tintColor={color} size={24} />
+              <SymbolView name="chart.bar.fill" tintColor={color} size={22} />
             ) : (
               <Ionicons name="bar-chart" size={22} color={color} />
             ),
         }}
       />
+
+      {/* 5 — Mon Compte */}
       <Tabs.Screen
         name="account"
         options={{
           title: t("account"),
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="person.fill" tintColor={color} size={24} />
+              <SymbolView name="person.fill" tintColor={color} size={22} />
             ) : (
               <Ionicons name="person" size={22} color={color} />
             ),
         }}
       />
+
+      {/* Admin — hidden for non-admins */}
       <Tabs.Screen
         name="adminpanel"
         options={{
@@ -130,7 +200,7 @@ function ClassicTabLayout() {
           tabBarItemStyle: isAdmin ? undefined : { display: "none" },
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="shield.fill" tintColor={color} size={24} />
+              <SymbolView name="shield.fill" tintColor={color} size={22} />
             ) : (
               <Ionicons name="shield" size={22} color={color} />
             ),
@@ -141,8 +211,5 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
   return <ClassicTabLayout />;
 }
