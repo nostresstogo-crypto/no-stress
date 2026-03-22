@@ -12,6 +12,25 @@ import { Lang } from "@/constants/i18n";
 
 type UserRole = "user" | "structure" | "admin";
 
+export interface MyEvent {
+  id: string;
+  titleFr: string;
+  titleEn: string;
+  category: string;
+  city: string;
+  venue: string;
+  date: string;
+  time: string;
+  descriptionFr: string;
+  descriptionEn: string;
+  priceFCFA: number;
+  isFree: boolean;
+  isSponsored: boolean;
+  imageUrl: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+}
+
 interface User {
   id: string;
   email: string;
@@ -54,6 +73,8 @@ interface AppContextValue {
   hasOnboarded: boolean;
   setHasOnboarded: () => void;
   appReady: boolean;
+  myEvents: MyEvent[];
+  addMyEvent: (event: Omit<MyEvent, "id" | "status" | "createdAt">) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -65,6 +86,7 @@ const KEYS = {
   favorites: "ns_favorites",
   notifications: "ns_notifications",
   onboarded: "ns_onboarded",
+  myEvents: "ns_my_events",
 };
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -77,16 +99,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [hasOnboarded, setHasOnboardedState] = useState<boolean>(false);
   const [appReady, setAppReady] = useState<boolean>(false);
+  const [myEvents, setMyEvents] = useState<MyEvent[]>([]);
 
   useEffect(() => {
     (async () => {
-      const [l, u, t, f, n, o] = await Promise.all([
+      const [l, u, t, f, n, o, me] = await Promise.all([
         AsyncStorage.getItem(KEYS.lang),
         AsyncStorage.getItem(KEYS.user),
         AsyncStorage.getItem(KEYS.token),
         AsyncStorage.getItem(KEYS.favorites),
         AsyncStorage.getItem(KEYS.notifications),
         AsyncStorage.getItem(KEYS.onboarded),
+        AsyncStorage.getItem(KEYS.myEvents),
       ]);
       if (l) setLangState(l as Lang);
       if (u) setUserState(JSON.parse(u));
@@ -94,6 +118,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (f) setFavorites(JSON.parse(f));
       if (n) setNotifications(JSON.parse(n));
       if (o === "true") setHasOnboardedState(true);
+      if (me) setMyEvents(JSON.parse(me));
       setAppReady(true);
     })();
   }, []);
@@ -171,6 +196,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(KEYS.onboarded, "true");
   }, []);
 
+  const addMyEvent = useCallback(
+    (eventData: Omit<MyEvent, "id" | "status" | "createdAt">) => {
+      setMyEvents((prev) => {
+        const newEvent: MyEvent = {
+          ...eventData,
+          id: "ev_" + Date.now(),
+          status: "pending",
+          createdAt: new Date().toISOString(),
+        };
+        const next = [newEvent, ...prev];
+        AsyncStorage.setItem(KEYS.myEvents, JSON.stringify(next));
+        return next;
+      });
+    },
+    []
+  );
+
   const unreadCount = useMemo(
     () => notifications.filter((n) => !n.read).length,
     [notifications]
@@ -199,6 +241,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       hasOnboarded,
       setHasOnboarded,
       appReady,
+      myEvents,
+      addMyEvent,
     }),
     [
       lang,
@@ -222,6 +266,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       hasOnboarded,
       setHasOnboarded,
       appReady,
+      myEvents,
+      addMyEvent,
     ]
   );
 

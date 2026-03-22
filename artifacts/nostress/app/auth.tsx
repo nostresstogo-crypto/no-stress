@@ -17,6 +17,7 @@ import { C } from "@/constants/colors";
 import { useT, useApp } from "@/context/AppContext";
 
 type Mode = "login" | "register";
+type RegisterRole = "user" | "structure";
 
 export default function AuthScreen() {
   const t = useT();
@@ -27,6 +28,7 @@ export default function AuthScreen() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [registerRole, setRegisterRole] = useState<RegisterRole>("user");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -39,12 +41,17 @@ export default function AuthScreen() {
     setError("");
     setLoading(true);
     await new Promise((r) => setTimeout(r, 900));
+    const role = mode === "register"
+      ? registerRole
+      : email.includes("admin") ? "admin" as const
+      : email.includes("partner") || email.includes("structure") || email.includes("partenaire") ? "structure" as const
+      : "user" as const;
     const mockUser = {
-      id: "u_demo",
+      id: "u_" + Date.now(),
       email,
       name: name || email.split("@")[0],
       phone,
-      role: email.includes("admin") ? "admin" as const : "user" as const,
+      role,
       favorites: [],
     };
     await setUser(mockUser);
@@ -71,7 +78,7 @@ export default function AuthScreen() {
         {/* Logo / header */}
         <View style={styles.logoArea}>
           <View style={styles.logo}>
-            <Ionicons name="musical-notes" size={32} color={C.bg} />
+            <Text style={styles.logoLetter}>N</Text>
           </View>
           <Text style={styles.appName}>NoStress</Text>
           <Text style={styles.tagline}>
@@ -102,20 +109,66 @@ export default function AuthScreen() {
         {/* Form */}
         <View style={styles.form}>
           {mode === "register" && (
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>{t("name")}</Text>
-              <View style={styles.inputRow}>
-                <Ionicons name="person-outline" size={18} color={C.textMuted} />
-                <TextInput
-                  value={name}
-                  onChangeText={setName}
-                  placeholder={t("name")}
-                  placeholderTextColor={C.textMuted}
-                  style={styles.input}
-                  autoCapitalize="words"
-                />
+            <>
+              {/* Account type selector */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>{t("accountType")}</Text>
+                <View style={styles.roleRow}>
+                  <TouchableOpacity
+                    style={[styles.roleCard, registerRole === "user" && styles.roleCardActive]}
+                    onPress={() => setRegisterRole("user")}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.roleIconWrap, { backgroundColor: C.lavender + "22" }]}>
+                      <Ionicons name="person" size={22} color={C.lavender} />
+                    </View>
+                    <Text style={[styles.roleTitle, registerRole === "user" && styles.roleTitleActive]}>
+                      {t("accountTypeUser")}
+                    </Text>
+                    <Text style={styles.roleSub}>{t("accountTypeUserSub")}</Text>
+                    {registerRole === "user" && (
+                      <View style={styles.roleCheck}>
+                        <Ionicons name="checkmark-circle" size={18} color={C.lavender} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.roleCard, registerRole === "structure" && styles.roleCardPartner]}
+                    onPress={() => setRegisterRole("structure")}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.roleIconWrap, { backgroundColor: C.gold + "22" }]}>
+                      <Ionicons name="business" size={22} color={C.gold} />
+                    </View>
+                    <Text style={[styles.roleTitle, registerRole === "structure" && { color: C.gold }]}>
+                      {t("accountTypePartner")}
+                    </Text>
+                    <Text style={styles.roleSub}>{t("accountTypePartnerSub")}</Text>
+                    {registerRole === "structure" && (
+                      <View style={styles.roleCheck}>
+                        <Ionicons name="checkmark-circle" size={18} color={C.gold} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
-            </View>
+
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>{t("name")}</Text>
+                <View style={styles.inputRow}>
+                  <Ionicons name="person-outline" size={18} color={C.textMuted} />
+                  <TextInput
+                    value={name}
+                    onChangeText={setName}
+                    placeholder={t("name")}
+                    placeholderTextColor={C.textMuted}
+                    style={styles.input}
+                    autoCapitalize="words"
+                  />
+                </View>
+              </View>
+            </>
           )}
 
           <View style={styles.field}>
@@ -183,7 +236,11 @@ export default function AuthScreen() {
           )}
 
           <TouchableOpacity
-            style={[styles.submitBtn, loading && { opacity: 0.7 }]}
+            style={[
+              styles.submitBtn,
+              loading && { opacity: 0.7 },
+              mode === "register" && registerRole === "structure" && styles.submitBtnPartner,
+            ]}
             onPress={handleSubmit}
             disabled={loading}
           >
@@ -251,6 +308,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  logoLetter: {
+    fontSize: 36,
+    fontFamily: "Inter_700Bold",
+    color: C.bg,
+  },
   appName: {
     fontSize: 26,
     fontFamily: "Inter_700Bold",
@@ -290,6 +352,9 @@ const styles = StyleSheet.create({
   form: {
     gap: 16,
   },
+  fieldGroup: {
+    gap: 8,
+  },
   field: {
     gap: 6,
   },
@@ -298,6 +363,55 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     color: C.textMuted,
     marginLeft: 2,
+  },
+  roleRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  roleCard: {
+    flex: 1,
+    backgroundColor: C.card,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: C.border,
+    padding: 14,
+    gap: 6,
+    position: "relative",
+  },
+  roleCardActive: {
+    borderColor: C.lavender,
+    backgroundColor: C.lavender + "10",
+  },
+  roleCardPartner: {
+    borderColor: C.gold,
+    backgroundColor: C.gold + "10",
+  },
+  roleIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
+  },
+  roleTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    color: C.text,
+  },
+  roleTitleActive: {
+    color: C.lavender,
+  },
+  roleSub: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: C.textMuted,
+    lineHeight: 16,
+  },
+  roleCheck: {
+    position: "absolute",
+    top: 10,
+    right: 10,
   },
   inputRow: {
     flexDirection: "row",
@@ -336,6 +450,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: "center",
     marginTop: 4,
+  },
+  submitBtnPartner: {
+    backgroundColor: C.gold,
   },
   submitBtnText: {
     fontSize: 16,

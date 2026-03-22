@@ -19,6 +19,7 @@ import { router } from "expo-router";
 import { C } from "@/constants/colors";
 import { useT, useApp } from "@/context/AppContext";
 import { CATEGORIES, MOCK_CITIES, MOCK_VENUES, CategoryKey } from "@/constants/data";
+import type { MyEvent } from "@/context/AppContext";
 
 type FormData = {
   titleFr: string;
@@ -56,7 +57,7 @@ const INITIAL_FORM: FormData = {
 
 export default function CreateEventScreen() {
   const t = useT();
-  const { lang } = useApp();
+  const { lang, addMyEvent } = useApp();
   const insets = useSafeAreaInsets();
   const [form, setForm] = useState<FormData>(INITIAL_FORM);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -88,7 +89,22 @@ export default function CreateEventScreen() {
       return;
     }
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 1200));
+    await new Promise((r) => setTimeout(r, 800));
+    addMyEvent({
+      titleFr: form.titleFr.trim(),
+      titleEn: form.titleEn.trim(),
+      category: form.category,
+      city: form.city,
+      venue: form.venue,
+      date: form.date.trim(),
+      time: form.time.trim(),
+      descriptionFr: form.descriptionFr.trim(),
+      descriptionEn: form.descriptionEn.trim(),
+      priceFCFA: form.isFree ? 0 : parseInt(form.priceFCFA, 10) || 0,
+      isFree: form.isFree,
+      isSponsored: form.isSponsored,
+      imageUrl: form.imageUrl.trim(),
+    });
     setSubmitting(false);
     setSubmitted(true);
   }

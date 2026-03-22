@@ -149,6 +149,18 @@ export const translations = {
     verify: "Vérifier",
     adminPanel: "Panel Admin",
 
+    // Account type & partner access
+    accountType: "Type de compte",
+    accountTypeUser: "Utilisateur",
+    accountTypeUserSub: "Voir les événements, liker, partager, favoris",
+    accountTypePartner: "Client / Partenaire",
+    accountTypePartnerSub: "Gérer vos événements et lieux",
+    partnerOnly: "Espace partenaires",
+    partnerOnlyDesc: "Le tableau de bord est réservé aux clients et partenaires NoStress. Créez un compte partenaire pour gérer vos événements et vos lieux.",
+    partnerOnlyCreate: "Créer un compte partenaire",
+    partnerOnlyLogin: "Se connecter en tant que partenaire",
+    noPartnerYet: "Pas encore partenaire ?",
+
     // Onboarding
     onboardingSkip: "Passer",
     onboardingNext: "Suivant",
@@ -315,6 +327,18 @@ export const translations = {
     reject: "Reject",
     verify: "Verify",
     adminPanel: "Admin Panel",
+
+    // Account type & partner access
+    accountType: "Account type",
+    accountTypeUser: "User",
+    accountTypeUserSub: "Browse events, like, share, favorites",
+    accountTypePartner: "Client / Partner",
+    accountTypePartnerSub: "Manage your events and venues",
+    partnerOnly: "Partner space",
+    partnerOnlyDesc: "The dashboard is reserved for NoStress clients and partners. Create a partner account to manage your events and venues.",
+    partnerOnlyCreate: "Create a partner account",
+    partnerOnlyLogin: "Sign in as a partner",
+    noPartnerYet: "Not a partner yet?",
 
     // Onboarding
     onboardingSkip: "Skip",
