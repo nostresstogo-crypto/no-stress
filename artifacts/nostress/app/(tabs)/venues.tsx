@@ -13,7 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 
 import { C } from "@/constants/colors";
-import { useT, useApp } from "@/context/AppContext";
+import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_VENUES, VENUE_TYPES, MOCK_CITIES } from "@/constants/data";
 import { VenueCard } from "@/components/VenueCard";
 import { CitySelector } from "@/components/CitySelector";
@@ -21,6 +21,7 @@ import { CitySelector } from "@/components/CitySelector";
 export default function VenuesScreen() {
   const t = useT();
   const { selectedCity, setSelectedCity } = useApp();
+  const C = useColors();
   const insets = useSafeAreaInsets();
   const [selectedType, setSelectedType] = useState("");
   const topInset = Platform.OS === "web" ? 67 : insets.top;

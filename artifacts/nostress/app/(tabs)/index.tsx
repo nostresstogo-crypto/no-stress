@@ -15,8 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 
-import { C } from "@/constants/colors";
-import { useT, useApp } from "@/context/AppContext";
+import { useT, useApp, useColors } from "@/context/AppContext";
+import { ColorPalette } from "@/constants/colors";
 import { CATEGORIES, MOCK_EVENTS, MOCK_VENUES } from "@/constants/data";
 import { CategoryPill } from "@/components/CategoryPill";
 import { CitySelector } from "@/components/CitySelector";
@@ -25,12 +25,53 @@ import { VenueCard } from "@/components/VenueCard";
 
 const { width } = Dimensions.get("window");
 
+function makeStyles(C: ColorPalette) {
+  return StyleSheet.create({
+    root: { flex: 1, backgroundColor: C.bg },
+    header: {
+      backgroundColor: C.bg, paddingHorizontal: 20,
+      paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: C.border,
+    },
+    headerTop: {
+      flexDirection: "row", justifyContent: "space-between",
+      alignItems: "flex-end", marginBottom: 14,
+    },
+    headerGreet: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textMuted },
+    headerSub: { fontSize: 28, fontFamily: "Inter_700Bold", color: C.text, letterSpacing: -0.5 },
+    searchRow: {
+      flexDirection: "row", alignItems: "center",
+      backgroundColor: C.card, borderRadius: 12,
+      paddingHorizontal: 12, paddingVertical: 10,
+      borderWidth: 1, borderColor: C.border, marginBottom: 12, gap: 8,
+    },
+    searchIcon: {},
+    searchInput: { flex: 1, fontSize: 14, fontFamily: "Inter_400Regular", color: C.text },
+    categories: { gap: 8, paddingBottom: 2, paddingRight: 20 },
+    scroll: { flex: 1 },
+    content: { paddingHorizontal: 20, paddingTop: 16 },
+    section: { marginBottom: 24 },
+    sectionHeader: {
+      flexDirection: "row", justifyContent: "space-between",
+      alignItems: "center", marginBottom: 14,
+    },
+    sectionTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+    goldDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.gold },
+    sectionTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: C.text },
+    countText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textMuted },
+    horizontalList: { gap: 12, paddingRight: 4 },
+    empty: { alignItems: "center", justifyContent: "center", paddingVertical: 48, gap: 16 },
+    emptyText: { fontSize: 16, fontFamily: "Inter_500Medium", color: C.textMuted },
+  });
+}
+
 export default function HomeScreen() {
   const t = useT();
+  const C = useColors();
   const { lang, selectedCity, setSelectedCity, selectedCategory, setSelectedCategory } = useApp();
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const styles = useMemo(() => makeStyles(C), [C]);
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
@@ -195,109 +236,3 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: C.bg,
-  },
-  header: {
-    backgroundColor: C.bg,
-    paddingHorizontal: 20,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-  },
-  headerTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginBottom: 14,
-  },
-  headerGreet: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    color: C.textMuted,
-  },
-  headerSub: {
-    fontSize: 28,
-    fontFamily: "Inter_700Bold",
-    color: C.text,
-    letterSpacing: -0.5,
-  },
-  searchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: C.card,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: C.border,
-    marginBottom: 12,
-    gap: 8,
-  },
-  searchIcon: {},
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: C.text,
-  },
-  categories: {
-    gap: 8,
-    paddingBottom: 2,
-    paddingRight: 20,
-  },
-  scroll: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 14,
-  },
-  sectionTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  goldDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: C.gold,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontFamily: "Inter_700Bold",
-    color: C.text,
-  },
-  countText: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    color: C.textMuted,
-  },
-  horizontalList: {
-    gap: 12,
-    paddingRight: 4,
-  },
-  empty: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 48,
-    gap: 16,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontFamily: "Inter_500Medium",
-    color: C.textMuted,
-  },
-});

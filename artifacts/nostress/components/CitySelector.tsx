@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { C } from "@/constants/colors";
-import { useT } from "@/context/AppContext";
+import { useT, useColors } from "@/context/AppContext";
 import { MOCK_CITIES } from "@/constants/data";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -21,6 +21,7 @@ interface CitySelectorProps {
 
 export function CitySelector({ value, onChange }: CitySelectorProps) {
   const t = useT();
+  const C = useColors();
   const [open, setOpen] = useState(false);
   const insets = useSafeAreaInsets();
   const cities = MOCK_CITIES;

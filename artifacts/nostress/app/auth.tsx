@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 
 import { C } from "@/constants/colors";
-import { useT, useApp } from "@/context/AppContext";
+import { useT, useApp, useColors } from "@/context/AppContext";
 
 type Mode = "login" | "register";
 type RegisterRole = "user" | "structure";
@@ -23,6 +23,8 @@ export default function AuthScreen() {
   const t = useT();
   const { setUser, setToken } = useApp();
   const insets = useSafeAreaInsets();
+  const C = useColors();
+
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

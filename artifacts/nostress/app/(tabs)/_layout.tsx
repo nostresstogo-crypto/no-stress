@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { SymbolView } from "expo-symbols";
 import { C } from "@/constants/colors";
-import { useApp, useT } from "@/context/AppContext";
+import { useApp, useT, useColors } from "@/context/AppContext";
 
 /* ── Custom centre "Carte" button ──────────────────────────────────────── */
 function MapTabButton({
@@ -92,7 +92,8 @@ const centerBtn = StyleSheet.create({
 /* ── Tab layout ─────────────────────────────────────────────────────────── */
 function ClassicTabLayout() {
   const t = useT();
-  const { user } = useApp();
+  const { user, isDark } = useApp();
+  const C = useColors();
   const isAdmin = user?.role === "admin";
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
@@ -115,7 +116,7 @@ function ClassicTabLayout() {
           isIOS ? (
             <BlurView
               intensity={80}
-              tint="dark"
+              tint={isDark ? "dark" : "light"}
               style={StyleSheet.absoluteFill}
             />
           ) : isWeb ? (

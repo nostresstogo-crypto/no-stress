@@ -15,12 +15,13 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { C } from "@/constants/colors";
-import { useT, useApp } from "@/context/AppContext";
+import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_VENUES, MOCK_EVENTS } from "@/constants/data";
 
 export default function VenueDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const t = useT();
+  const C = useColors();
   const { lang } = useApp();
   const insets = useSafeAreaInsets();
 

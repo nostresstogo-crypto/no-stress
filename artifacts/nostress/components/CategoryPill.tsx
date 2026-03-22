@@ -2,7 +2,7 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { C } from "@/constants/colors";
-import { useT } from "@/context/AppContext";
+import { useT, useColors } from "@/context/AppContext";
 import { CategoryKey, CATEGORIES } from "@/constants/data";
 
 interface CategoryPillProps {
@@ -14,6 +14,7 @@ interface CategoryPillProps {
 
 export function CategoryPill({ categoryKey, selected, onPress, label }: CategoryPillProps) {
   const t = useT();
+  const C = useColors();
   const cat = CATEGORIES.find((c) => c.key === categoryKey);
   const color = cat?.color || C.lavender;
   const icon = cat?.icon || "apps";

@@ -22,8 +22,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { AppProvider, useApp } from "@/context/AppContext";
-import { C } from "@/constants/colors";
+import { AppProvider, useApp, useColors } from "@/context/AppContext";
+import { TOGO_GREEN, TOGO_YELLOW, TOGO_RED } from "@/constants/colors";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -33,49 +33,52 @@ const queryClient = new QueryClient({
   },
 });
 
+const TOGO_CITIES = ["Lomé", "Kpalimé", "Kara", "Aného", "Sokodé", "Atakpamé"];
+
 function CustomSplash() {
   const logoScale = useRef(new Animated.Value(0.82)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const taglineOpacity = useRef(new Animated.Value(0)).current;
-  const dotAnim = useRef(new Animated.Value(0)).current;
+  const flagOpacity = useRef(new Animated.Value(0)).current;
+  const cityOpacity = useRef(new Animated.Value(0)).current;
+  const [cityIdx, setCityIdx] = useState(0);
 
   useEffect(() => {
     Animated.sequence([
+      Animated.timing(flagOpacity, { toValue: 1, duration: 300, useNativeDriver: false }),
       Animated.parallel([
-        Animated.timing(logoScale, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: false,
-        }),
-        Animated.timing(logoOpacity, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: false,
-        }),
+        Animated.timing(logoScale, { toValue: 1, duration: 600, useNativeDriver: false }),
+        Animated.timing(logoOpacity, { toValue: 1, duration: 500, useNativeDriver: false }),
       ]),
-      Animated.timing(taglineOpacity, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: false,
-      }),
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(dotAnim, { toValue: 1, duration: 500, useNativeDriver: false }),
-          Animated.timing(dotAnim, { toValue: 0, duration: 500, useNativeDriver: false }),
-        ]),
-        { iterations: 3 }
-      ),
+      Animated.timing(taglineOpacity, { toValue: 1, duration: 400, useNativeDriver: false }),
+      Animated.timing(cityOpacity, { toValue: 1, duration: 300, useNativeDriver: false }),
     ]).start();
+
+    const interval = setInterval(() => {
+      cityOpacity.setValue(0);
+      setCityIdx((i) => (i + 1) % TOGO_CITIES.length);
+      Animated.timing(cityOpacity, { toValue: 1, duration: 300, useNativeDriver: false }).start();
+    }, 600);
+    return () => clearInterval(interval);
   }, []);
 
   return (
     <View style={splash.root}>
-      {/* Background glow */}
+      {/* Togo flag top bar */}
+      <Animated.View style={[splash.flagBar, { opacity: flagOpacity }]}>
+        <View style={[splash.flagStripe, { backgroundColor: TOGO_GREEN }]} />
+        <View style={[splash.flagStripe, { backgroundColor: TOGO_YELLOW }]} />
+        <View style={[splash.flagStripe, { backgroundColor: TOGO_RED }]} />
+      </Animated.View>
+
+      {/* Glow */}
       <View style={splash.glowTop} />
       <View style={splash.glowBottom} />
 
       {/* Logo */}
-      <Animated.View style={[splash.logoWrap, { transform: [{ scale: logoScale }], opacity: logoOpacity }]}>
+      <Animated.View
+        style={[splash.logoWrap, { transform: [{ scale: logoScale }], opacity: logoOpacity }]}
+      >
         <View style={splash.iconRing}>
           <View style={splash.iconInner}>
             <Text style={splash.iconText}>N</Text>
@@ -89,31 +92,29 @@ function CustomSplash() {
 
       {/* Tagline */}
       <Animated.Text style={[splash.tagline, { opacity: taglineOpacity }]}>
-        Événements pan-africains
+        Événements du Togo
       </Animated.Text>
 
       {/* Gold accent line */}
       <Animated.View style={[splash.accentLine, { opacity: taglineOpacity }]} />
 
-      {/* Loader dots */}
-      <Animated.View style={[splash.loaderRow, { opacity: taglineOpacity }]}>
-        {[0, 1, 2].map((i) => {
-          const dotOpacity = dotAnim.interpolate({
-            inputRange: [0, 0.33 * (i + 1), 1],
-            outputRange: [0.2, 1, 0.2],
-            extrapolate: "clamp",
-          });
-          return (
-            <Animated.View key={i} style={[splash.loaderDot, { opacity: dotOpacity }]} />
-          );
-        })}
+      {/* Cycling city names */}
+      <Animated.Text style={[splash.cityName, { opacity: cityOpacity }]}>
+        {TOGO_CITIES[cityIdx]}
+      </Animated.Text>
+
+      {/* Togo flag bottom bar */}
+      <Animated.View style={[splash.flagBarBottom, { opacity: flagOpacity }]}>
+        <View style={[splash.flagStripe, { backgroundColor: TOGO_GREEN }]} />
+        <View style={[splash.flagStripe, { backgroundColor: TOGO_YELLOW }]} />
+        <View style={[splash.flagStripe, { backgroundColor: TOGO_RED }]} />
       </Animated.View>
     </View>
   );
 }
 
 function RootLayoutNav() {
-  const { appReady, hasOnboarded } = useApp();
+  const { appReady, hasOnboarded, isDark, colors: C } = useApp();
   const [showSplash, setShowSplash] = useState(true);
   const splashOpacity = useRef(new Animated.Value(1)).current;
 
@@ -130,13 +131,13 @@ function RootLayoutNav() {
           router.replace("/onboarding");
         }
       });
-    }, 2000);
+    }, 2200);
     return () => clearTimeout(timer);
   }, [appReady, hasOnboarded]);
 
   return (
     <>
-      <StatusBar style="light" backgroundColor={C.bg} />
+      <StatusBar style={isDark ? "light" : "dark"} backgroundColor={C.bg} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg } }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
@@ -147,7 +148,6 @@ function RootLayoutNav() {
         <Stack.Screen name="venue/[id]" options={{ headerShown: false, presentation: "card" }} />
       </Stack>
 
-      {/* Custom animated splash overlay */}
       {showSplash && (
         <Animated.View
           style={[StyleSheet.absoluteFill, { opacity: splashOpacity, zIndex: 999, pointerEvents: "none" as any }]}
@@ -162,10 +162,30 @@ function RootLayoutNav() {
 const splash = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: C.bg,
+    backgroundColor: "#0E1120",
     alignItems: "center",
     justifyContent: "center",
-    gap: 16,
+    gap: 14,
+  },
+  flagBar: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 6,
+    flexDirection: "row",
+  },
+  flagBarBottom: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 6,
+    flexDirection: "row",
+  },
+  flagStripe: {
+    flex: 1,
+    height: "100%",
   },
   glowTop: {
     position: "absolute",
@@ -175,7 +195,7 @@ const splash = StyleSheet.create({
     width: 320,
     height: 320,
     borderRadius: 160,
-    backgroundColor: C.lavender + "1A",
+    backgroundColor: "#9B8FE81A",
   },
   glowBottom: {
     position: "absolute",
@@ -184,7 +204,7 @@ const splash = StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: C.gold + "12",
+    backgroundColor: "#D4AF3712",
   },
   logoWrap: {
     alignItems: "center",
@@ -195,23 +215,23 @@ const splash = StyleSheet.create({
     height: 120,
     borderRadius: 60,
     borderWidth: 2,
-    borderColor: C.lavender + "55",
+    borderColor: "#9B8FE855",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: C.lavender + "12",
+    backgroundColor: "#9B8FE812",
   },
   iconInner: {
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: C.lavender,
+    backgroundColor: "#9B8FE8",
     alignItems: "center",
     justifyContent: "center",
   },
   iconText: {
     fontSize: 44,
     fontFamily: "Inter_700Bold",
-    color: C.bg,
+    color: "#0E1120",
     lineHeight: 52,
   },
   brandRow: {
@@ -221,36 +241,32 @@ const splash = StyleSheet.create({
   brandNo: {
     fontSize: 42,
     fontFamily: "Inter_700Bold",
-    color: C.text,
+    color: "#F0EDF8",
   },
   brandStress: {
     fontSize: 42,
     fontFamily: "Inter_700Bold",
-    color: C.lavender,
+    color: "#9B8FE8",
   },
   tagline: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "Inter_400Regular",
-    color: C.textMuted,
-    letterSpacing: 1.5,
+    color: "#8B89A6",
+    letterSpacing: 1.8,
     textTransform: "uppercase",
   },
   accentLine: {
     width: 48,
     height: 3,
     borderRadius: 2,
-    backgroundColor: C.gold,
+    backgroundColor: "#D4AF37",
   },
-  loaderRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 24,
-  },
-  loaderDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: C.lavender,
+  cityName: {
+    fontSize: 22,
+    fontFamily: "Inter_600SemiBold",
+    color: TOGO_YELLOW,
+    letterSpacing: 0.5,
+    marginTop: 4,
   },
 });
 

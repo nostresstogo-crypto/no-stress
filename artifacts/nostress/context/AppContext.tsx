@@ -8,9 +8,12 @@ import React, {
   ReactNode,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useColorScheme } from "react-native";
 import { Lang } from "@/constants/i18n";
+import { getThemeColors, ColorPalette } from "@/constants/colors";
 
 type UserRole = "user" | "structure" | "admin";
+type ThemeMode = "dark" | "light" | "system";
 
 export interface MyEvent {
   id: string;
@@ -75,6 +78,10 @@ interface AppContextValue {
   appReady: boolean;
   myEvents: MyEvent[];
   addMyEvent: (event: Omit<MyEvent, "id" | "status" | "createdAt">) => void;
+  themeMode: ThemeMode;
+  setThemeMode: (mode: ThemeMode) => void;
+  isDark: boolean;
+  colors: ColorPalette;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -87,9 +94,11 @@ const KEYS = {
   notifications: "ns_notifications",
   onboarded: "ns_onboarded",
   myEvents: "ns_my_events",
+  themeMode: "ns_theme_mode",
 };
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  const systemScheme = useColorScheme();
   const [lang, setLangState] = useState<Lang>("fr");
   const [user, setUserState] = useState<User | null>(null);
   const [token, setTokenState] = useState<string | null>(null);
@@ -100,10 +109,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [hasOnboarded, setHasOnboardedState] = useState<boolean>(false);
   const [appReady, setAppReady] = useState<boolean>(false);
   const [myEvents, setMyEvents] = useState<MyEvent[]>([]);
+  const [themeMode, setThemeModeState] = useState<ThemeMode>("dark");
+
+  const isDark = useMemo(() => {
+    if (themeMode === "system") return systemScheme !== "light";
+    return themeMode === "dark";
+  }, [themeMode, systemScheme]);
+
+  const colors = useMemo(() => getThemeColors(isDark), [isDark]);
 
   useEffect(() => {
     (async () => {
-      const [l, u, t, f, n, o, me] = await Promise.all([
+      const [l, u, t, f, n, o, me, tm] = await Promise.all([
         AsyncStorage.getItem(KEYS.lang),
         AsyncStorage.getItem(KEYS.user),
         AsyncStorage.getItem(KEYS.token),
@@ -111,6 +128,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         AsyncStorage.getItem(KEYS.notifications),
         AsyncStorage.getItem(KEYS.onboarded),
         AsyncStorage.getItem(KEYS.myEvents),
+        AsyncStorage.getItem(KEYS.themeMode),
       ]);
       if (l) setLangState(l as Lang);
       if (u) setUserState(JSON.parse(u));
@@ -119,6 +137,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (n) setNotifications(JSON.parse(n));
       if (o === "true") setHasOnboardedState(true);
       if (me) setMyEvents(JSON.parse(me));
+      if (tm) setThemeModeState(tm as ThemeMode);
       setAppReady(true);
     })();
   }, []);
@@ -140,18 +159,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     else await AsyncStorage.removeItem(KEYS.token);
   }, []);
 
-  const toggleFavorite = useCallback(
-    async (eventId: string) => {
-      setFavorites((prev) => {
-        const next = prev.includes(eventId)
-          ? prev.filter((id) => id !== eventId)
-          : [...prev, eventId];
-        AsyncStorage.setItem(KEYS.favorites, JSON.stringify(next));
-        return next;
-      });
-    },
-    []
-  );
+  const toggleFavorite = useCallback(async (eventId: string) => {
+    setFavorites((prev) => {
+      const next = prev.includes(eventId)
+        ? prev.filter((id) => id !== eventId)
+        : [...prev, eventId];
+      AsyncStorage.setItem(KEYS.favorites, JSON.stringify(next));
+      return next;
+    });
+  }, []);
 
   const isFavorite = useCallback(
     (eventId: string) => favorites.includes(eventId),
@@ -162,12 +178,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     (n: Omit<Notification, "id" | "read" | "createdAt">) => {
       setNotifications((prev) => {
         const next = [
-          {
-            ...n,
-            id: Date.now().toString(),
-            read: false,
-            createdAt: new Date().toISOString(),
-          },
+          { ...n, id: Date.now().toString(), read: false, createdAt: new Date().toISOString() },
           ...prev,
         ];
         AsyncStorage.setItem(KEYS.notifications, JSON.stringify(next));
@@ -213,6 +224,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const setThemeMode = useCallback(async (mode: ThemeMode) => {
+    setThemeModeState(mode);
+    await AsyncStorage.setItem(KEYS.themeMode, mode);
+  }, []);
+
   const unreadCount = useMemo(
     () => notifications.filter((n) => !n.read).length,
     [notifications]
@@ -220,54 +236,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AppContextValue>(
     () => ({
-      lang,
-      setLang,
-      user,
-      setUser,
-      token,
-      setToken,
-      favorites,
-      toggleFavorite,
-      isFavorite,
-      notifications,
-      addNotification,
-      markAllRead,
-      unreadCount,
-      selectedCity,
-      setSelectedCity,
-      selectedCategory,
-      setSelectedCategory,
+      lang, setLang,
+      user, setUser,
+      token, setToken,
+      favorites, toggleFavorite, isFavorite,
+      notifications, addNotification, markAllRead, unreadCount,
+      selectedCity, setSelectedCity,
+      selectedCategory, setSelectedCategory,
       logout,
-      hasOnboarded,
-      setHasOnboarded,
+      hasOnboarded, setHasOnboarded,
       appReady,
-      myEvents,
-      addMyEvent,
+      myEvents, addMyEvent,
+      themeMode, setThemeMode,
+      isDark, colors,
     }),
     [
-      lang,
-      setLang,
-      user,
-      setUser,
-      token,
-      setToken,
-      favorites,
-      toggleFavorite,
-      isFavorite,
-      notifications,
-      addNotification,
-      markAllRead,
-      unreadCount,
-      selectedCity,
-      setSelectedCity,
-      selectedCategory,
-      setSelectedCategory,
+      lang, setLang,
+      user, setUser,
+      token, setToken,
+      favorites, toggleFavorite, isFavorite,
+      notifications, addNotification, markAllRead, unreadCount,
+      selectedCity, setSelectedCity,
+      selectedCategory, setSelectedCategory,
       logout,
-      hasOnboarded,
-      setHasOnboarded,
+      hasOnboarded, setHasOnboarded,
       appReady,
-      myEvents,
-      addMyEvent,
+      myEvents, addMyEvent,
+      themeMode, setThemeMode,
+      isDark, colors,
     ]
   );
 
@@ -278,6 +274,11 @@ export function useApp() {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error("useApp must be used within AppProvider");
   return ctx;
+}
+
+export function useColors(): ColorPalette {
+  const { colors } = useApp();
+  return colors;
 }
 
 export function useT() {

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   Image,
   StyleSheet,
@@ -7,8 +7,8 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { C } from "@/constants/colors";
-import { useT } from "@/context/AppContext";
+import { useT, useColors } from "@/context/AppContext";
+import { ColorPalette } from "@/constants/colors";
 
 interface Venue {
   id: string;
@@ -27,8 +27,36 @@ interface VenueCardProps {
   compact?: boolean;
 }
 
+function makeStyles(C: ColorPalette) {
+  return StyleSheet.create({
+    card: {
+      backgroundColor: C.card,
+      borderRadius: 16,
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: C.border,
+      marginBottom: 12,
+    },
+    compact: { flexDirection: "row", alignItems: "center", borderRadius: 12 },
+    image: { width: "100%", height: 140 },
+    compactImage: { width: 72, height: 72 },
+    placeholder: { backgroundColor: C.card2, alignItems: "center", justifyContent: "center" },
+    info: { padding: 12, gap: 4 },
+    compactInfo: { flex: 1, padding: 10 },
+    nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+    name: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: C.text, flex: 1 },
+    compactName: { fontSize: 14 },
+    row: { flexDirection: "row", alignItems: "center", gap: 4, flexWrap: "wrap" },
+    meta: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textMuted },
+    dot: { color: C.textMuted, fontSize: 12 },
+    desc: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textMuted, marginTop: 4 },
+  });
+}
+
 export function VenueCard({ venue, onPress, compact = false }: VenueCardProps) {
   const t = useT();
+  const C = useColors();
+  const styles = useMemo(() => makeStyles(C), [C]);
 
   return (
     <TouchableOpacity
@@ -70,75 +98,3 @@ export function VenueCard({ venue, onPress, compact = false }: VenueCardProps) {
     </TouchableOpacity>
   );
 }
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: C.card,
-    borderRadius: 16,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: C.border,
-    marginBottom: 12,
-  },
-  compact: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 12,
-  },
-  image: {
-    width: "100%",
-    height: 140,
-  },
-  compactImage: {
-    width: 72,
-    height: 72,
-  },
-  placeholder: {
-    backgroundColor: C.card2,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  info: {
-    padding: 12,
-    gap: 4,
-  },
-  compactInfo: {
-    flex: 1,
-    padding: 10,
-  },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  name: {
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-    color: C.text,
-    flex: 1,
-  },
-  compactName: {
-    fontSize: 14,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    flexWrap: "wrap",
-  },
-  meta: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: C.textMuted,
-  },
-  dot: {
-    color: C.textMuted,
-    fontSize: 12,
-  },
-  desc: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    color: C.textMuted,
-    marginTop: 4,
-  },
-});

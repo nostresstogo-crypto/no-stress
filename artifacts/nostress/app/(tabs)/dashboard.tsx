@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 
 import { C } from "@/constants/colors";
-import { useT, useApp } from "@/context/AppContext";
+import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_SUBSCRIPTION_PLANS } from "@/constants/data";
 
 type DashTab = "events" | "venues" | "plan";
@@ -21,6 +21,8 @@ export default function DashboardScreen() {
   const t = useT();
   const { user, lang, myEvents } = useApp();
   const insets = useSafeAreaInsets();
+  const C = useColors();
+
   const [tab, setTab] = useState<DashTab>("events");
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 

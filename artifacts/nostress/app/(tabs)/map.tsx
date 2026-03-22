@@ -12,7 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { C } from "@/constants/colors";
-import { useT, useApp } from "@/context/AppContext";
+import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_VENUES, VENUE_TYPES, MOCK_CITIES } from "@/constants/data";
 import { MapWebView } from "@/components/MapWebView";
 import { router } from "expo-router";
@@ -241,6 +241,7 @@ window.addEventListener('message', function(e) {
 
 export default function MapScreen() {
   const t = useT();
+  const C = useColors();
   const { lang, selectedCity, setSelectedCity } = useApp();
   const insets = useSafeAreaInsets();
   const topInset = Platform.OS === "web" ? 67 : insets.top;
