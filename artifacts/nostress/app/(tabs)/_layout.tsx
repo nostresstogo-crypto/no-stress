@@ -19,8 +19,8 @@ function NativeTabLayout() {
         <Label>{t("home")}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="venues">
-        <Icon sf={{ default: "building.2", selected: "building.2.fill" }} />
-        <Label>{t("venues")}</Label>
+        <Icon sf={{ default: "map", selected: "map.fill" }} />
+        <Label>{t("map")}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="dashboard">
         <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
@@ -90,12 +90,12 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="venues"
         options={{
-          title: t("venues"),
+          title: t("map"),
           tabBarIcon: ({ color }) =>
             isIOS ? (
-              <SymbolView name="building.2.fill" tintColor={color} size={24} />
+              <SymbolView name="map.fill" tintColor={color} size={24} />
             ) : (
-              <Ionicons name="business" size={22} color={color} />
+              <Ionicons name="map" size={22} color={color} />
             ),
         }}
       />

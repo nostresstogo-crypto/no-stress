@@ -5,6 +5,7 @@ export const translations = {
     // Nav
     home: "Accueil",
     venues: "Lieux",
+    map: "Carte",
     tickets: "Billets",
     account: "Compte",
     admin: "Admin",
@@ -184,6 +185,7 @@ export const translations = {
     // Nav
     home: "Home",
     venues: "Venues",
+    map: "Map",
     tickets: "Tickets",
     account: "Account",
     admin: "Admin",
