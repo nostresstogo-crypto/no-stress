@@ -15,6 +15,7 @@ import { C } from "@/constants/colors";
 import { useT, useApp } from "@/context/AppContext";
 import { MOCK_VENUES, VENUE_TYPES, MOCK_CITIES } from "@/constants/data";
 import { MapWebView } from "@/components/MapWebView";
+import { router } from "expo-router";
 
 type Venue = (typeof MOCK_VENUES)[0];
 
@@ -433,6 +434,18 @@ export default function VenuesMapScreen() {
                 </View>
               </View>
             </View>
+
+            {/* Details button */}
+            <TouchableOpacity
+              style={styles.detailsBtn}
+              onPress={() => router.push(`/venue/${selectedVenue.id}` as any)}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.detailsBtnText}>
+                {lang === "fr" ? "Voir les détails" : "View details"}
+              </Text>
+              <Ionicons name="arrow-forward" size={15} color={C.bg} />
+            </TouchableOpacity>
           </View>
         )}
 
@@ -733,5 +746,20 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: C.textMuted,
     flex: 1,
+  },
+  detailsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: C.lavender,
+    borderRadius: 10,
+    paddingVertical: 11,
+    marginTop: 10,
+  },
+  detailsBtnText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: C.bg,
   },
 });
