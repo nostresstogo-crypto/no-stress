@@ -150,7 +150,8 @@ function RootLayoutNav() {
       {/* Custom animated splash overlay */}
       {showSplash && (
         <Animated.View
-          style={[StyleSheet.absoluteFill, { opacity: splashOpacity, zIndex: 999, pointerEvents: "none" as any }]}
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, { opacity: splashOpacity, zIndex: 999 }]}
         >
           <CustomSplash />
         </Animated.View>

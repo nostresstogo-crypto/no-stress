@@ -10,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -77,7 +78,11 @@ export default function VenueDetailScreen() {
           )}
 
           {/* Dark gradient overlay bottom */}
-          <View style={styles.heroOverlay} />
+          <LinearGradient
+            colors={["transparent", C.bg]}
+            locations={[0.5, 1.0]}
+            style={styles.heroOverlay}
+          />
 
           {/* Back button */}
           <TouchableOpacity
@@ -268,9 +273,6 @@ const styles = StyleSheet.create({
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
-    background: "transparent",
-    backgroundColor: "transparent",
-    backgroundImage: "linear-gradient(to bottom, transparent 50%, #0E1120 100%)" as any,
   },
   navBtn: {
     position: "absolute",

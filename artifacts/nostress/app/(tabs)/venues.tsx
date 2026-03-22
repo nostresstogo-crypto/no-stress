@@ -189,7 +189,12 @@ venues.forEach(function(v) {
     Object.keys(markers).forEach(function(id) {
       markers[id].setIcon(createMarkerIcon(id));
     });
-    window.parent.postMessage({ type: 'venueSelected', venueId: v.id }, '*');
+    var msg = JSON.stringify({ type: 'venueSelected', venueId: v.id });
+    if (window.ReactNativeWebView) {
+      window.ReactNativeWebView.postMessage(msg);
+    } else {
+      window.parent.postMessage({ type: 'venueSelected', venueId: v.id }, '*');
+    }
   });
 
   marker.addTo(map);
