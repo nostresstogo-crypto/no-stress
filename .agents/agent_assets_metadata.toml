@@ -1,0 +1,20 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "d2tYYjrnzWjWN9EEy3EDe"
+uri = "file://artifacts/nostress-web/public/images/hero-club.png"
+type = "image"
+title = "Vibrant night club scene"
+
+[[generated]]
+id = "lBXzCgLC_VU20-z7WzIAr"
+uri = "file://artifacts/nostress-web/public/images/beach-party.png"
+type = "image"
+title = "Beach party at sunset"
+
+[[generated]]
+id = "e9cAteESufQ5ItrjPu1vh"
+uri = "file://artifacts/nostress-web/public/images/festival.png"
+type = "image"
+title = "Outdoor music festival"
