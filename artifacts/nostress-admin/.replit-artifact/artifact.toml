@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/nostress-admin/"
+title = "NoStress Admin"
+version = "1.0.0"
+id = "artifacts/nostress-admin"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/nostress-admin/" ]
+localPort = 25579
+
+[services.development]
+run = "pnpm --filter @workspace/nostress-admin run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/nostress-admin", "run", "build" ]
+publicDir = "artifacts/nostress-admin/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25579"
+BASE_PATH = "/nostress-admin/"

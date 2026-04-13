@@ -7,6 +7,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import Privacy from "@/pages/Privacy";
 import AccountDeletion from "@/pages/AccountDeletion";
+import TermsOfUse from "@/pages/TermsOfUse";
 
 const queryClient = new QueryClient();
 
@@ -14,6 +15,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/conditions-utilisation" component={TermsOfUse} />
       <Route path="/politique-confidentialite" component={Privacy} />
       <Route path="/suppression-compte" component={AccountDeletion} />
       <Route component={NotFound} />

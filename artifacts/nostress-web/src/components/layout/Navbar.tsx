@@ -15,8 +15,9 @@ export function Navbar() {
 
   const links = [
     { href: "/", label: "Accueil" },
-    { href: "/politique-confidentialite", label: "Politique de confidentialité" },
-    { href: "/suppression-compte", label: "Suppression de compte" },
+    { href: "/conditions-utilisation", label: "CGU" },
+    { href: "/politique-confidentialite", label: "Confidentialité" },
+    { href: "/suppression-compte", label: "Supprimer mon compte" },
   ];
 
   return (

@@ -22,6 +22,9 @@ export function Footer() {
                 <Link href="/" className="text-muted-foreground hover:text-primary transition-colors">Accueil</Link>
               </li>
               <li>
+                <Link href="/conditions-utilisation" className="text-muted-foreground hover:text-primary transition-colors">Conditions d'utilisation</Link>
+              </li>
+              <li>
                 <Link href="/politique-confidentialite" className="text-muted-foreground hover:text-primary transition-colors">Politique de confidentialité</Link>
               </li>
               <li>

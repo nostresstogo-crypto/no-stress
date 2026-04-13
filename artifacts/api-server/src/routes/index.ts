@@ -6,6 +6,9 @@ import citiesRouter from "./cities";
 import authRouter from "./auth";
 import ticketsRouter from "./tickets";
 import subscriptionsRouter from "./subscriptions";
+import adminRouter from "./admin";
+import partnersRouter from "./partners";
+import deletionRequestsRouter from "./deletionRequests";
 
 const router: IRouter = Router();
 
@@ -16,5 +19,8 @@ router.use(citiesRouter);
 router.use(authRouter);
 router.use(ticketsRouter);
 router.use(subscriptionsRouter);
+router.use(adminRouter);
+router.use(partnersRouter);
+router.use(deletionRequestsRouter);
 
 export default router;
