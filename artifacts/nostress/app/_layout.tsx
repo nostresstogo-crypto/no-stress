@@ -11,11 +11,13 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
+  Dimensions,
   Platform,
   StyleSheet,
   Text,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -33,77 +35,201 @@ const queryClient = new QueryClient({
   },
 });
 
-const TOGO_CITIES = ["Lomé", "Kpalimé", "Kara", "Aného", "Sokodé", "Atakpamé"];
+const LAVENDER = "#9B8FE8";
+const GOLD = "#D4AF37";
+const BG = "#0E1120";
 
-function CustomSplash() {
-  const logoScale = useRef(new Animated.Value(0.82)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const taglineOpacity = useRef(new Animated.Value(0)).current;
-  const flagOpacity = useRef(new Animated.Value(0)).current;
-  const cityOpacity = useRef(new Animated.Value(0)).current;
-  const [cityIdx, setCityIdx] = useState(0);
+const FLOATING_ICONS = [
+  { name: "musical-notes", x: 0.15, y: 0.18, size: 22, color: TOGO_YELLOW, delay: 200 },
+  { name: "ticket", x: 0.82, y: 0.15, size: 20, color: GOLD, delay: 400 },
+  { name: "location", x: 0.88, y: 0.72, size: 18, color: TOGO_GREEN, delay: 600 },
+  { name: "camera", x: 0.12, y: 0.75, size: 20, color: TOGO_RED, delay: 300 },
+  { name: "mic", x: 0.78, y: 0.42, size: 16, color: LAVENDER, delay: 500 },
+  { name: "people", x: 0.22, y: 0.45, size: 17, color: TOGO_YELLOW, delay: 700 },
+  { name: "star", x: 0.5, y: 0.08, size: 14, color: GOLD, delay: 350 },
+  { name: "sparkles", x: 0.08, y: 0.35, size: 15, color: LAVENDER, delay: 450 },
+  { name: "flame", x: 0.92, y: 0.55, size: 16, color: TOGO_RED, delay: 550 },
+  { name: "heart", x: 0.65, y: 0.82, size: 14, color: LAVENDER, delay: 650 },
+] as const;
+
+const EQ_BARS = 12;
+
+function FloatingIcon({ icon, screenW, screenH }: { icon: typeof FLOATING_ICONS[number]; screenW: number; screenH: number }) {
+  const opacity = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(10)).current;
+  const loopRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
-    Animated.sequence([
-      Animated.timing(flagOpacity, { toValue: 1, duration: 300, useNativeDriver: false }),
+    const timer = setTimeout(() => {
       Animated.parallel([
-        Animated.timing(logoScale, { toValue: 1, duration: 600, useNativeDriver: false }),
-        Animated.timing(logoOpacity, { toValue: 1, duration: 500, useNativeDriver: false }),
-      ]),
-      Animated.timing(taglineOpacity, { toValue: 1, duration: 400, useNativeDriver: false }),
-      Animated.timing(cityOpacity, { toValue: 1, duration: 300, useNativeDriver: false }),
-    ]).start();
+        Animated.timing(opacity, { toValue: 0.35, duration: 600, useNativeDriver: false }),
+        Animated.timing(translateY, { toValue: 0, duration: 600, useNativeDriver: false }),
+      ]).start(() => {
+        loopRef.current = Animated.loop(
+          Animated.sequence([
+            Animated.timing(translateY, { toValue: -8, duration: 1800, useNativeDriver: false }),
+            Animated.timing(translateY, { toValue: 8, duration: 1800, useNativeDriver: false }),
+          ])
+        );
+        loopRef.current.start();
+      });
+    }, icon.delay + 400);
+    return () => { clearTimeout(timer); loopRef.current?.stop(); };
+  }, []);
 
-    const interval = setInterval(() => {
-      cityOpacity.setValue(0);
-      setCityIdx((i) => (i + 1) % TOGO_CITIES.length);
-      Animated.timing(cityOpacity, { toValue: 1, duration: 300, useNativeDriver: false }).start();
-    }, 600);
-    return () => clearInterval(interval);
+  return (
+    <Animated.View
+      style={{
+        position: "absolute",
+        left: icon.x * screenW - icon.size / 2,
+        top: icon.y * screenH - icon.size / 2,
+        opacity,
+        transform: [{ translateY }],
+      }}
+    >
+      <Ionicons name={icon.name as any} size={icon.size} color={icon.color} />
+    </Animated.View>
+  );
+}
+
+function EqBar({ index, total }: { index: number; total: number }) {
+  const height = useRef(new Animated.Value(4)).current;
+  const loopRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loopRef.current = Animated.loop(
+        Animated.sequence([
+          Animated.timing(height, { toValue: 8 + Math.random() * 28, duration: 300 + Math.random() * 200, useNativeDriver: false }),
+          Animated.timing(height, { toValue: 4 + Math.random() * 8, duration: 300 + Math.random() * 200, useNativeDriver: false }),
+        ])
+      );
+      loopRef.current.start();
+    }, index * 80 + 800);
+    return () => { clearTimeout(timer); loopRef.current?.stop(); };
+  }, []);
+
+  const center = total / 2;
+  const dist = Math.abs(index - center) / center;
+  const barColor = dist < 0.3 ? LAVENDER : dist < 0.6 ? GOLD : TOGO_GREEN + "88";
+
+  return (
+    <Animated.View
+      style={{
+        width: 4,
+        borderRadius: 2,
+        backgroundColor: barColor,
+        height,
+        opacity: 0.7,
+      }}
+    />
+  );
+}
+
+function CustomSplash() {
+  const { width: screenW, height: screenH } = Dimensions.get("window");
+
+  const flagOpacity = useRef(new Animated.Value(0)).current;
+  const ringScale = useRef(new Animated.Value(0.3)).current;
+  const ringOpacity = useRef(new Animated.Value(0)).current;
+  const pulseScale = useRef(new Animated.Value(1)).current;
+  const pulseOpacity = useRef(new Animated.Value(0)).current;
+  const brandOpacity = useRef(new Animated.Value(0)).current;
+  const brandY = useRef(new Animated.Value(20)).current;
+  const taglineOpacity = useRef(new Animated.Value(0)).current;
+  const taglineY = useRef(new Animated.Value(12)).current;
+  const eqOpacity = useRef(new Animated.Value(0)).current;
+  const mottoOpacity = useRef(new Animated.Value(0)).current;
+  const mottoY = useRef(new Animated.Value(8)).current;
+  const pulseLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  useEffect(() => {
+    const t = (v: Animated.Value, to: number, dur: number, native = false) =>
+      Animated.timing(v, { toValue: to, duration: dur, useNativeDriver: native });
+
+    const timers: ReturnType<typeof setTimeout>[] = [];
+
+    timers.push(setTimeout(() => t(flagOpacity, 1, 250).start(), 0));
+    timers.push(setTimeout(() => { t(ringScale, 1, 500).start(); t(ringOpacity, 1, 400).start(); }, 250));
+    timers.push(setTimeout(() => { t(brandOpacity, 1, 350).start(); t(brandY, 0, 350).start(); }, 700));
+    timers.push(setTimeout(() => { t(taglineOpacity, 1, 300).start(); t(taglineY, 0, 300).start(); }, 1000));
+    timers.push(setTimeout(() => {
+      t(mottoOpacity, 1, 300).start();
+      t(mottoY, 0, 300).start();
+      t(eqOpacity, 1, 400).start();
+      t(pulseOpacity, 0.3, 0).start();
+      pulseLoopRef.current = Animated.loop(
+        Animated.sequence([
+          Animated.parallel([t(pulseScale, 1.6, 1800), t(pulseOpacity, 0, 1800)]),
+          Animated.parallel([t(pulseScale, 1, 0), t(pulseOpacity, 0.3, 0)]),
+        ])
+      );
+      pulseLoopRef.current.start();
+    }, 1300));
+
+    return () => { timers.forEach(clearTimeout); pulseLoopRef.current?.stop(); };
   }, []);
 
   return (
     <View style={splash.root}>
-      {/* Togo flag top bar */}
       <Animated.View style={[splash.flagBar, { opacity: flagOpacity }]}>
         <View style={[splash.flagStripe, { backgroundColor: TOGO_GREEN }]} />
         <View style={[splash.flagStripe, { backgroundColor: TOGO_YELLOW }]} />
         <View style={[splash.flagStripe, { backgroundColor: TOGO_RED }]} />
       </Animated.View>
 
-      {/* Glow */}
       <View style={splash.glowTop} />
       <View style={splash.glowBottom} />
+      <View style={splash.glowCenter} />
 
-      {/* Logo */}
+      {FLOATING_ICONS.map((icon, i) => (
+        <FloatingIcon key={i} icon={icon} screenW={screenW} screenH={screenH} />
+      ))}
+
       <Animated.View
-        style={[splash.logoWrap, { transform: [{ scale: logoScale }], opacity: logoOpacity }]}
+        style={[
+          splash.pulseRing,
+          { transform: [{ scale: pulseScale }], opacity: pulseOpacity },
+        ]}
+      />
+
+      <Animated.View
+        style={[splash.logoWrap, { transform: [{ scale: ringScale }], opacity: ringOpacity }]}
       >
         <View style={splash.iconRing}>
           <View style={splash.iconInner}>
             <Text style={splash.iconText}>N</Text>
           </View>
         </View>
+      </Animated.View>
+
+      <Animated.View style={{ opacity: brandOpacity, transform: [{ translateY: brandY }] }}>
         <View style={splash.brandRow}>
           <Text style={splash.brandNo}>No</Text>
           <Text style={splash.brandStress}>Stress</Text>
         </View>
       </Animated.View>
 
-      {/* Tagline */}
-      <Animated.Text style={[splash.tagline, { opacity: taglineOpacity }]}>
-        Événements du Togo
-      </Animated.Text>
+      <Animated.View style={[splash.taglineRow, { opacity: taglineOpacity, transform: [{ translateY: taglineY }] }]}>
+        <View style={splash.accentLine} />
+        <Text style={splash.tagline}>ÉVÉNEMENTS DU TOGO</Text>
+        <View style={splash.accentLine} />
+      </Animated.View>
 
-      {/* Gold accent line */}
-      <Animated.View style={[splash.accentLine, { opacity: taglineOpacity }]} />
+      <Animated.View style={[splash.mottoRow, { opacity: mottoOpacity, transform: [{ translateY: mottoY }] }]}>
+        <Text style={splash.mottoWord}>Découvrez</Text>
+        <View style={[splash.mottoDot, { backgroundColor: TOGO_GREEN }]} />
+        <Text style={[splash.mottoWord, { color: LAVENDER }]}>Vibrez</Text>
+        <View style={[splash.mottoDot, { backgroundColor: TOGO_YELLOW }]} />
+        <Text style={[splash.mottoWord, { color: GOLD }]}>Sans stress</Text>
+      </Animated.View>
 
-      {/* Cycling city names */}
-      <Animated.Text style={[splash.cityName, { opacity: cityOpacity }]}>
-        {TOGO_CITIES[cityIdx]}
-      </Animated.Text>
+      <Animated.View style={[splash.eqWrap, { opacity: eqOpacity }]}>
+        {Array.from({ length: EQ_BARS }).map((_, i) => (
+          <EqBar key={i} index={i} total={EQ_BARS} />
+        ))}
+      </Animated.View>
 
-      {/* Togo flag bottom bar */}
       <Animated.View style={[splash.flagBarBottom, { opacity: flagOpacity }]}>
         <View style={[splash.flagStripe, { backgroundColor: TOGO_GREEN }]} />
         <View style={[splash.flagStripe, { backgroundColor: TOGO_YELLOW }]} />
@@ -131,7 +257,7 @@ function RootLayoutNav() {
           router.replace("/onboarding");
         }
       });
-    }, 2200);
+    }, 2800);
     return () => clearTimeout(timer);
   }, [appReady, hasOnboarded]);
 
@@ -162,17 +288,17 @@ function RootLayoutNav() {
 const splash = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#0E1120",
+    backgroundColor: BG,
     alignItems: "center",
     justifyContent: "center",
-    gap: 14,
+    gap: 16,
   },
   flagBar: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    height: 6,
+    height: 5,
     flexDirection: "row",
   },
   flagBarBottom: {
@@ -180,7 +306,7 @@ const splash = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 6,
+    height: 5,
     flexDirection: "row",
   },
   flagStripe: {
@@ -189,84 +315,122 @@ const splash = StyleSheet.create({
   },
   glowTop: {
     position: "absolute",
-    top: -80,
+    top: -100,
     left: "50%",
-    marginLeft: -160,
-    width: 320,
-    height: 320,
-    borderRadius: 160,
-    backgroundColor: "#9B8FE81A",
+    marginLeft: -180,
+    width: 360,
+    height: 360,
+    borderRadius: 180,
+    backgroundColor: LAVENDER + "12",
   },
   glowBottom: {
     position: "absolute",
-    bottom: 60,
-    right: -80,
+    bottom: 40,
+    right: -100,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: GOLD + "0C",
+  },
+  glowCenter: {
+    position: "absolute",
+    top: "35%",
+    left: "50%",
+    marginLeft: -100,
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: "#D4AF3712",
+    backgroundColor: LAVENDER + "08",
+  },
+  pulseRing: {
+    position: "absolute",
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    borderWidth: 2,
+    borderColor: LAVENDER + "40",
   },
   logoWrap: {
     alignItems: "center",
-    gap: 20,
   },
   iconRing: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    borderWidth: 2,
-    borderColor: "#9B8FE855",
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 2.5,
+    borderColor: LAVENDER + "55",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#9B8FE812",
+    backgroundColor: LAVENDER + "14",
   },
   iconInner: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: "#9B8FE8",
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: LAVENDER,
     alignItems: "center",
     justifyContent: "center",
   },
   iconText: {
-    fontSize: 44,
+    fontSize: 40,
     fontFamily: "Inter_700Bold",
-    color: "#0E1120",
-    lineHeight: 52,
+    color: BG,
+    lineHeight: 48,
   },
   brandRow: {
     flexDirection: "row",
     alignItems: "baseline",
   },
   brandNo: {
-    fontSize: 42,
+    fontSize: 38,
     fontFamily: "Inter_700Bold",
     color: "#F0EDF8",
   },
   brandStress: {
-    fontSize: 42,
+    fontSize: 38,
     fontFamily: "Inter_700Bold",
-    color: "#9B8FE8",
+    color: LAVENDER,
+  },
+  taglineRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   tagline: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    color: "#8B89A6",
-    letterSpacing: 1.8,
-    textTransform: "uppercase",
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    color: "#6B6D8A",
+    letterSpacing: 2.5,
   },
   accentLine: {
-    width: 48,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: "#D4AF37",
+    width: 28,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: GOLD + "88",
   },
-  cityName: {
-    fontSize: 22,
-    fontFamily: "Inter_600SemiBold",
-    color: TOGO_YELLOW,
-    letterSpacing: 0.5,
+  mottoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     marginTop: 4,
+  },
+  mottoWord: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: "#F0EDF8",
+  },
+  mottoDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  eqWrap: {
+    position: "absolute",
+    bottom: 60,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 5,
+    height: 40,
   },
 });
 
