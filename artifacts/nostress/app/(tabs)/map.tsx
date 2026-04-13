@@ -148,10 +148,10 @@ var map = L.map('map', {
   zoomControl: false,
   attributionControl: false,
   preferCanvas: true,
-}).setView([8, -2], 4);
+}).setView([8.6, 1.0], 7);
 
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-  maxZoom: 18,
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  maxZoom: 19,
   subdomains: 'abcd',
 }).addTo(map);
 

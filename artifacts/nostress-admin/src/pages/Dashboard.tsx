@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { api } from "@/lib/api";
 import { Link } from "wouter";
-import { Users, Clock, CheckCircle, XCircle, Trash2, ArrowRight, TrendingUp } from "lucide-react";
+import { Users, Clock, CheckCircle, XCircle, Trash2, ArrowRight, TrendingUp, FileText } from "lucide-react";
 
 interface Stats {
   pendingPartners: number;
@@ -10,6 +10,8 @@ interface Stats {
   rejectedPartners: number;
   totalDeletionRequests: number;
   pendingDeletionRequests: number;
+  pendingPublications: number;
+  totalPublications: number;
 }
 
 export default function Dashboard() {
@@ -55,6 +57,15 @@ export default function Dashboard() {
           urgent: stats.pendingDeletionRequests > 0,
           link: "/suppressions",
         },
+        {
+          title: "Publications à modérer",
+          value: stats.pendingPublications,
+          icon: FileText,
+          color: "text-blue-400",
+          bg: "bg-blue-400/10",
+          urgent: stats.pendingPublications > 0,
+          link: "/publications",
+        },
       ]
     : [];
 
@@ -66,7 +77,7 @@ export default function Dashboard() {
           <p className="text-muted-foreground mt-1">Vue d'ensemble de la plateforme NoStress</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-4 mb-8">
           {!stats
             ? Array(4)
                 .fill(0)
@@ -135,6 +146,24 @@ export default function Dashboard() {
                   <div className="flex items-center gap-3">
                     <Users className="w-4 h-4 text-primary" />
                     <span className="text-sm">Voir tous les partenaires</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+              </Link>
+              <Link href="/publications">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors group">
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-4 h-4 text-blue-400" />
+                    <span className="text-sm">Modérer les publications</span>
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                </div>
+              </Link>
+              <Link href="/statistiques">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 cursor-pointer transition-colors group">
+                  <div className="flex items-center gap-3">
+                    <TrendingUp className="w-4 h-4 text-green-400" />
+                    <span className="text-sm">Voir les statistiques d'inscription</span>
                   </div>
                   <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
                 </div>

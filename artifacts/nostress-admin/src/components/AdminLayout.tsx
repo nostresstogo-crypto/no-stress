@@ -9,12 +9,16 @@ import {
   LogOut,
   Shield,
   ChevronRight,
+  FileText,
+  BarChart2,
 } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { href: "/partenaires", label: "Partenaires", icon: Users },
+  { href: "/publications", label: "Publications", icon: FileText },
   { href: "/suppressions", label: "Suppressions de compte", icon: Trash2 },
+  { href: "/statistiques", label: "Statistiques", icon: BarChart2 },
 ];
 
 interface AdminLayoutProps {
@@ -38,7 +42,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </span>
         </div>
 
-        <nav className="flex-1 p-4 space-y-1">
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = location === item.href || location.startsWith(item.href + "/");
             const Icon = item.icon;

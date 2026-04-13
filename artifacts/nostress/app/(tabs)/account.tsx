@@ -176,7 +176,7 @@ function makeStyles(C: ColorPalette) {
 export default function AccountScreen() {
   const t = useT();
   const C = useColors();
-  const { user, lang, setLang, logout, favorites, notifications, markAllRead, unreadCount, isDark, themeMode, setThemeMode } = useApp();
+  const { user, lang, setLang, logout, favorites, notifications, markAllRead, unreadCount, isDark, themeMode, setThemeMode, locationNotificationsEnabled, setLocationNotificationsEnabled, selectedCity, nearbyEventsCount } = useApp();
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>("favorites");
   const topInset = Platform.OS === "web" ? 67 : insets.top;
@@ -297,6 +297,40 @@ export default function AccountScreen() {
             trackColor={{ false: C.border, true: C.lavender }}
           />
         </TouchableOpacity>
+
+        {user && user.role === "user" && (
+          <>
+            <View style={styles.settingDivider} />
+            <TouchableOpacity
+              style={styles.settingRow}
+              onPress={() => setLocationNotificationsEnabled(!locationNotificationsEnabled)}
+            >
+              <Ionicons
+                name={locationNotificationsEnabled ? "location" : "location-outline"}
+                size={20}
+                color={locationNotificationsEnabled ? C.lavender : C.textMuted}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.settingLabel}>
+                  {lang === "fr" ? "Alertes de proximité" : "Nearby alerts"}
+                </Text>
+                {selectedCity && nearbyEventsCount > 0 && locationNotificationsEnabled && (
+                  <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: C.lavender, marginTop: 1 }}>
+                    {lang === "fr"
+                      ? `${nearbyEventsCount} événement${nearbyEventsCount > 1 ? "s" : ""} à ${selectedCity}`
+                      : `${nearbyEventsCount} event${nearbyEventsCount > 1 ? "s" : ""} in ${selectedCity}`}
+                  </Text>
+                )}
+              </View>
+              <Switch
+                value={locationNotificationsEnabled}
+                onValueChange={setLocationNotificationsEnabled}
+                thumbColor={C.card}
+                trackColor={{ false: C.border, true: C.lavender }}
+              />
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
       {/* Tabs */}

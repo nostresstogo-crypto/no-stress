@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -15,6 +16,7 @@ import { router } from "expo-router";
 
 import { C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
+import { MOCK_CITIES } from "@/constants/data";
 
 type Mode = "login" | "register";
 type RegisterRole = "user" | "structure";
@@ -34,6 +36,18 @@ export default function AuthScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const [city, setCity] = useState("");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
+  const [cityModalVisible, setCityModalVisible] = useState(false);
+
+  const handleSelectCity = (c: typeof MOCK_CITIES[0]) => {
+    setCity(c.name);
+    setLatitude(c.latitude.toString());
+    setLongitude(c.longitude.toString());
+    setCityModalVisible(false);
+  };
 
   const handleSubmit = async () => {
     if (!email || !password) {
@@ -55,6 +69,9 @@ export default function AuthScreen() {
       phone,
       role,
       favorites: [],
+      city: registerRole === "structure" ? city : undefined,
+      latitude: registerRole === "structure" && latitude ? parseFloat(latitude) : undefined,
+      longitude: registerRole === "structure" && longitude ? parseFloat(longitude) : undefined,
     };
     await setUser(mockUser);
     await setToken("mock_token_" + Date.now());
@@ -72,12 +89,10 @@ export default function AuthScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Close button */}
         <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
           <Ionicons name="close" size={24} color={C.textMuted} />
         </TouchableOpacity>
 
-        {/* Logo / header */}
         <View style={styles.logoArea}>
           <View style={styles.logo}>
             <Text style={styles.logoLetter}>N</Text>
@@ -88,7 +103,6 @@ export default function AuthScreen() {
           </Text>
         </View>
 
-        {/* Mode toggle */}
         <View style={styles.modeToggle}>
           <TouchableOpacity
             style={[styles.modeBtn, mode === "login" && styles.modeBtnActive]}
@@ -108,11 +122,9 @@ export default function AuthScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Form */}
         <View style={styles.form}>
           {mode === "register" && (
             <>
-              {/* Account type selector */}
               <View style={styles.fieldGroup}>
                 <Text style={styles.fieldLabel}>{t("accountType")}</Text>
                 <View style={styles.roleRow}>
@@ -230,6 +242,74 @@ export default function AuthScreen() {
             </View>
           )}
 
+          {mode === "register" && registerRole === "structure" && (
+            <>
+              <View style={styles.sectionDivider}>
+                <Ionicons name="location" size={14} color={C.gold} />
+                <Text style={[styles.sectionLabel, { color: C.gold }]}>
+                  Localisation géographique
+                </Text>
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>Ville au Togo</Text>
+                <TouchableOpacity
+                  style={[styles.inputRow, { justifyContent: "space-between" }]}
+                  onPress={() => setCityModalVisible(true)}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <Ionicons name="location-outline" size={18} color={C.textMuted} />
+                    <Text style={[styles.input, { color: city ? C.text : C.textMuted }]}>
+                      {city || "Sélectionner une ville…"}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-down" size={16} color={C.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.coordRow}>
+                <View style={[styles.field, { flex: 1 }]}>
+                  <Text style={styles.fieldLabel}>Latitude</Text>
+                  <View style={styles.inputRow}>
+                    <Ionicons name="navigate-outline" size={16} color={C.textMuted} />
+                    <TextInput
+                      value={latitude}
+                      onChangeText={setLatitude}
+                      placeholder="6.1374"
+                      placeholderTextColor={C.textMuted}
+                      style={styles.input}
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
+                <View style={[styles.field, { flex: 1 }]}>
+                  <Text style={styles.fieldLabel}>Longitude</Text>
+                  <View style={styles.inputRow}>
+                    <Ionicons name="navigate-outline" size={16} color={C.textMuted} />
+                    <TextInput
+                      value={longitude}
+                      onChangeText={setLongitude}
+                      placeholder="1.2123"
+                      placeholderTextColor={C.textMuted}
+                      style={styles.input}
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                </View>
+              </View>
+
+              {city && latitude && longitude && (
+                <View style={styles.coordHint}>
+                  <Ionicons name="checkmark-circle" size={14} color={C.success} />
+                  <Text style={[styles.hintLabel, { color: C.success, fontSize: 12 }]}>
+                    Position enregistrée · {parseFloat(latitude).toFixed(4)}, {parseFloat(longitude).toFixed(4)}
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
+
           {!!error && (
             <View style={styles.errorRow}>
               <Ionicons name="alert-circle" size={16} color={C.error} />
@@ -274,9 +354,103 @@ export default function AuthScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={cityModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setCityModalVisible(false)}
+      >
+        <View style={[modal.root, { paddingTop: insets.top + 16 }]}>
+          <View style={modal.header}>
+            <Text style={modal.title}>Choisir une ville du Togo</Text>
+            <TouchableOpacity onPress={() => setCityModalVisible(false)} style={modal.closeBtn}>
+              <Ionicons name="close" size={22} color={C.textMuted} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}>
+            {MOCK_CITIES.map((c) => {
+              const selected = city === c.name;
+              return (
+                <TouchableOpacity
+                  key={c.id}
+                  style={[modal.item, selected && modal.itemActive]}
+                  onPress={() => handleSelectCity(c)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={modal.emoji}>{c.emoji}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[modal.cityName, selected && { color: C.gold }]}>{c.name}</Text>
+                    <Text style={modal.coords}>
+                      {c.latitude.toFixed(4)}, {c.longitude.toFixed(4)}
+                    </Text>
+                  </View>
+                  {selected && <Ionicons name="checkmark-circle" size={20} color={C.gold} />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
+
+const modal = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: C.bg,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+    marginBottom: 8,
+  },
+  title: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    color: C.text,
+  },
+  closeBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: C.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  item: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: C.border,
+    gap: 12,
+  },
+  itemActive: {
+    backgroundColor: C.gold + "12",
+  },
+  emoji: {
+    fontSize: 22,
+  },
+  cityName: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: C.text,
+  },
+  coords: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: C.textMuted,
+    marginTop: 2,
+  },
+});
 
 const styles = StyleSheet.create({
   root: {
@@ -431,6 +605,33 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Inter_400Regular",
     color: C.text,
+  },
+  sectionDivider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: C.border,
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+  },
+  coordRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  coordHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: C.success + "12",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: C.success + "30",
   },
   errorRow: {
     flexDirection: "row",

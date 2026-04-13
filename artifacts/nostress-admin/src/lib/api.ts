@@ -34,6 +34,8 @@ export const api = {
         rejectedPartners: number;
         totalDeletionRequests: number;
         pendingDeletionRequests: number;
+        pendingPublications: number;
+        totalPublications: number;
       }>("/admin/stats"),
   },
   partners: {
@@ -47,6 +49,15 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ reason }),
       }),
+  },
+  publications: {
+    list: () => request<PartnerEvent[]>("/admin/events"),
+    delete: (id: string) =>
+      request<{ message: string; notification: string; deleted: PartnerEvent }>(`/admin/events/${id}`, { method: "DELETE" }),
+  },
+  registrations: {
+    stats: (period: "day" | "week" | "month" | "year") =>
+      request<RegistrationStats>(`/admin/registrations/stats?period=${period}`),
   },
   deletionRequests: {
     list: (status?: string) =>
@@ -64,12 +75,30 @@ export interface Partner {
   businessType: string;
   phone: string;
   city: string;
+  latitude: number | null;
+  longitude: number | null;
   description: string | null;
   websiteUrl: string | null;
   status: "pending" | "approved" | "rejected";
   rejectionReason: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PartnerEvent {
+  id: string;
+  partnerId: string;
+  partnerName: string;
+  title: string;
+  description: string;
+  date: string;
+  time: string;
+  city: string;
+  category: string;
+  priceFCFA: number;
+  isFree: boolean;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
 }
 
 export interface DeletionRequest {
@@ -80,4 +109,11 @@ export interface DeletionRequest {
   reason: string | null;
   status: "pending" | "processed";
   createdAt: string;
+}
+
+export interface RegistrationStats {
+  partnerCount: number;
+  clientCount: number;
+  total: number;
+  buckets: { label: string; partners: number; clients: number }[];
 }

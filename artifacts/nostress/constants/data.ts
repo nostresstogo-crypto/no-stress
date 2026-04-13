@@ -41,12 +41,29 @@ export const VENUE_TYPES = [
 ];
 
 export const MOCK_CITIES = [
-  { id: "lome",      name: "Lomé",      country: "Togo", emoji: "🏙️", latitude: 6.1374,  longitude: 1.2123 },
-  { id: "kpalime",   name: "Kpalimé",   country: "Togo", emoji: "🌿", latitude: 6.9004,  longitude: 0.6237 },
-  { id: "kara",      name: "Kara",      country: "Togo", emoji: "🎭", latitude: 9.5511,  longitude: 1.1811 },
-  { id: "atakpame",  name: "Atakpamé",  country: "Togo", emoji: "🎵", latitude: 7.5328,  longitude: 1.1244 },
-  { id: "sokode",    name: "Sokodé",    country: "Togo", emoji: "🎪", latitude: 8.9833,  longitude: 1.1333 },
-  { id: "aneho",     name: "Aného",     country: "Togo", emoji: "🏖️", latitude: 6.2333,  longitude: 1.5833 },
+  { id: "lome",         name: "Lomé",           country: "Togo", emoji: "🏙️", latitude: 6.1374,  longitude: 1.2123 },
+  { id: "tsevie",       name: "Tsévié",          country: "Togo", emoji: "🏘️", latitude: 6.4247,  longitude: 1.2159 },
+  { id: "aneho",        name: "Aného",           country: "Togo", emoji: "🏖️", latitude: 6.2291,  longitude: 1.5970 },
+  { id: "vogan",        name: "Vogan",           country: "Togo", emoji: "🌾", latitude: 6.2676,  longitude: 1.5258 },
+  { id: "tabligbo",     name: "Tabligbo",        country: "Togo", emoji: "🌿", latitude: 6.5826,  longitude: 1.5013 },
+  { id: "notse",        name: "Notsé",           country: "Togo", emoji: "🎶", latitude: 6.9495,  longitude: 1.1715 },
+  { id: "kpalime",      name: "Kpalimé",         country: "Togo", emoji: "🌿", latitude: 6.9004,  longitude: 0.6237 },
+  { id: "badou",        name: "Badou",           country: "Togo", emoji: "🏞️", latitude: 7.5769,  longitude: 0.5979 },
+  { id: "amlame",       name: "Amlamé",          country: "Togo", emoji: "🌱", latitude: 7.3667,  longitude: 0.9167 },
+  { id: "atakpame",     name: "Atakpamé",        country: "Togo", emoji: "🎵", latitude: 7.5328,  longitude: 1.1244 },
+  { id: "blitta",       name: "Blitta",          country: "Togo", emoji: "🌻", latitude: 8.3167,  longitude: 0.9833 },
+  { id: "sotouboua",    name: "Sotouboua",       country: "Togo", emoji: "🌄", latitude: 8.5667,  longitude: 0.9833 },
+  { id: "sokode",       name: "Sokodé",          country: "Togo", emoji: "🎪", latitude: 8.9833,  longitude: 1.1333 },
+  { id: "tchamba",      name: "Tchamba",         country: "Togo", emoji: "🏔️", latitude: 9.0333,  longitude: 1.4167 },
+  { id: "kara",         name: "Kara",            country: "Togo", emoji: "🎭", latitude: 9.5511,  longitude: 1.1811 },
+  { id: "bassar",       name: "Bassar",          country: "Togo", emoji: "⛏️", latitude: 9.2534,  longitude: 0.7812 },
+  { id: "niamtougou",   name: "Niamtougou",      country: "Togo", emoji: "✈️", latitude: 9.7665,  longitude: 1.0972 },
+  { id: "kande",        name: "Kandé",           country: "Togo", emoji: "🏡", latitude: 9.9447,  longitude: 1.0695 },
+  { id: "guerin_kouka", name: "Guérin-Kouka",    country: "Togo", emoji: "🌲", latitude: 9.8667,  longitude: 0.5833 },
+  { id: "pagouda",      name: "Pagouda",         country: "Togo", emoji: "🗻", latitude: 9.7444,  longitude: 1.3333 },
+  { id: "mango",        name: "Mango",           country: "Togo", emoji: "🥭", latitude: 10.3651, longitude: 0.4714 },
+  { id: "dapaong",      name: "Dapaong",         country: "Togo", emoji: "🌅", latitude: 10.8667, longitude: 0.2167 },
+  { id: "cinkasse",     name: "Cinkassé",        country: "Togo", emoji: "🌐", latitude: 10.9833, longitude: -0.0167 },
 ];
 
 export const MOCK_EVENTS = [

@@ -4,6 +4,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   ReactNode,
 } from "react";
@@ -11,6 +12,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useColorScheme } from "react-native";
 import { Lang } from "@/constants/i18n";
 import { getThemeColors, ColorPalette } from "@/constants/colors";
+import { MOCK_EVENTS, MOCK_CITIES } from "@/constants/data";
 
 type UserRole = "user" | "structure" | "admin";
 type ThemeMode = "dark" | "light" | "system";
@@ -82,6 +84,9 @@ interface AppContextValue {
   setThemeMode: (mode: ThemeMode) => void;
   isDark: boolean;
   colors: ColorPalette;
+  locationNotificationsEnabled: boolean;
+  setLocationNotificationsEnabled: (enabled: boolean) => void;
+  nearbyEventsCount: number;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -95,6 +100,8 @@ const KEYS = {
   onboarded: "ns_onboarded",
   myEvents: "ns_my_events",
   themeMode: "ns_theme_mode",
+  locationNotif: "ns_location_notif",
+  lastNotifCity: "ns_last_notif_city",
 };
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -110,6 +117,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [appReady, setAppReady] = useState<boolean>(false);
   const [myEvents, setMyEvents] = useState<MyEvent[]>([]);
   const [themeMode, setThemeModeState] = useState<ThemeMode>("dark");
+  const [locationNotificationsEnabled, setLocationNotificationsEnabledState] = useState<boolean>(true);
+  const notifiedCityRef = useRef<string>("");
 
   const isDark = useMemo(() => {
     if (themeMode === "system") return systemScheme !== "light";
@@ -120,7 +129,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const [l, u, t, f, n, o, me, tm] = await Promise.all([
+      const [l, u, t, f, n, o, me, tm, ln, lnc] = await Promise.all([
         AsyncStorage.getItem(KEYS.lang),
         AsyncStorage.getItem(KEYS.user),
         AsyncStorage.getItem(KEYS.token),
@@ -129,6 +138,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         AsyncStorage.getItem(KEYS.onboarded),
         AsyncStorage.getItem(KEYS.myEvents),
         AsyncStorage.getItem(KEYS.themeMode),
+        AsyncStorage.getItem(KEYS.locationNotif),
+        AsyncStorage.getItem(KEYS.lastNotifCity),
       ]);
       if (l) setLangState(l as Lang);
       if (u) setUserState(JSON.parse(u));
@@ -138,6 +149,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (o === "true") setHasOnboardedState(true);
       if (me) setMyEvents(JSON.parse(me));
       if (tm) setThemeModeState(tm as ThemeMode);
+      if (ln !== null) setLocationNotificationsEnabledState(ln === "true");
+      if (lnc) notifiedCityRef.current = lnc;
       setAppReady(true);
     })();
   }, []);
@@ -229,6 +242,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await AsyncStorage.setItem(KEYS.themeMode, mode);
   }, []);
 
+  const setLocationNotificationsEnabled = useCallback(async (enabled: boolean) => {
+    setLocationNotificationsEnabledState(enabled);
+    await AsyncStorage.setItem(KEYS.locationNotif, enabled ? "true" : "false");
+  }, []);
+
+  const nearbyEventsCount = useMemo(() => {
+    const city = selectedCity || (user?.role === "user" ? "" : "");
+    if (!city) return 0;
+    return MOCK_EVENTS.filter(
+      (e) => e.status === "approved" && e.city.toLowerCase() === city.toLowerCase()
+    ).length;
+  }, [selectedCity, user]);
+
+  useEffect(() => {
+    if (!locationNotificationsEnabled || !user || user.role !== "user") return;
+    const city = selectedCity;
+    if (!city || city === notifiedCityRef.current) return;
+    const upcomingInCity = MOCK_EVENTS.filter(
+      (e) => e.status === "approved" && e.city.toLowerCase() === city.toLowerCase()
+    );
+    if (upcomingInCity.length === 0) return;
+    notifiedCityRef.current = city;
+    AsyncStorage.setItem(KEYS.lastNotifCity, city);
+    const cityObj = MOCK_CITIES.find((c) => c.name === city);
+    const emoji = cityObj ? cityObj.emoji + " " : "";
+    const count = upcomingInCity.length;
+    setNotifications((prev) => {
+      const next = [
+        {
+          id: "loc_" + Date.now().toString(),
+          title: `${emoji}${count} event${count > 1 ? "s" : ""} near ${city}!`,
+          titleFr: `${emoji}${count} événement${count > 1 ? "s" : ""} près de ${city} !`,
+          body: upcomingInCity.slice(0, 3).map((e) => e.titleFr).join(", ") + (count > 3 ? `… +${count - 3}` : ""),
+          bodyFr: upcomingInCity.slice(0, 3).map((e) => e.titleFr).join(", ") + (count > 3 ? `… +${count - 3}` : ""),
+          read: false,
+          createdAt: new Date().toISOString(),
+        },
+        ...prev,
+      ];
+      AsyncStorage.setItem(KEYS.notifications, JSON.stringify(next));
+      return next;
+    });
+  }, [locationNotificationsEnabled, selectedCity, user]);
+
   const unreadCount = useMemo(
     () => notifications.filter((n) => !n.read).length,
     [notifications]
@@ -249,6 +306,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       myEvents, addMyEvent,
       themeMode, setThemeMode,
       isDark, colors,
+      locationNotificationsEnabled, setLocationNotificationsEnabled,
+      nearbyEventsCount,
     }),
     [
       lang, setLang,
@@ -264,6 +323,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       myEvents, addMyEvent,
       themeMode, setThemeMode,
       isDark, colors,
+      locationNotificationsEnabled, setLocationNotificationsEnabled,
+      nearbyEventsCount,
     ]
   );
 

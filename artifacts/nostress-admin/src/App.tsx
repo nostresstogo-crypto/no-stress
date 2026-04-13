@@ -8,12 +8,13 @@ import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Partners from "@/pages/Partners";
 import DeletionRequests from "@/pages/DeletionRequests";
+import Publications from "@/pages/Publications";
+import Statistics from "@/pages/Statistics";
 
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
   const { admin, isLoading } = useAuth();
-  const [location] = useLocation();
 
   if (isLoading) {
     return (
@@ -44,8 +45,14 @@ function Router() {
       <Route path="/partenaires">
         <ProtectedRoute component={Partners} />
       </Route>
+      <Route path="/publications">
+        <ProtectedRoute component={Publications} />
+      </Route>
       <Route path="/suppressions">
         <ProtectedRoute component={DeletionRequests} />
+      </Route>
+      <Route path="/statistiques">
+        <ProtectedRoute component={Statistics} />
       </Route>
       <Route path="/">
         {!isLoading && admin ? <Redirect to="/dashboard" /> : <Redirect to="/login" />}

@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { partners, partnerEvents } from "./partners";
 
 const router: IRouter = Router();
 
@@ -56,12 +57,18 @@ router.get("/admin/me", requireAdmin, (req: any, res) => {
 });
 
 router.get("/admin/stats", requireAdmin, (_req, res) => {
+  const pendingPartners = partners.filter((p: any) => p.status === "pending").length;
+  const approvedPartners = partners.filter((p: any) => p.status === "approved").length;
+  const rejectedPartners = partners.filter((p: any) => p.status === "rejected").length;
+  const pendingPublications = partnerEvents.filter((e: any) => e.status === "pending").length;
   res.json({
-    pendingPartners: 2,
-    approvedPartners: 1,
-    rejectedPartners: 1,
+    pendingPartners,
+    approvedPartners,
+    rejectedPartners,
     totalDeletionRequests: 3,
     pendingDeletionRequests: 2,
+    pendingPublications,
+    totalPublications: partnerEvents.length,
   });
 });
 
