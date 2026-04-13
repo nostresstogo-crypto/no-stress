@@ -35,7 +35,7 @@ const BUSINESS_TYPES = [
 
 export default function AuthScreen() {
   const t = useT();
-  const { setUser, setToken, lang } = useApp();
+  const { setUser, setToken, lang, addNotification } = useApp();
   const insets = useSafeAreaInsets();
   const C = useColors();
 
@@ -117,6 +117,12 @@ export default function AuthScreen() {
         };
         await setUser(mockUser);
         await setToken("mock_token_" + Date.now());
+        addNotification({
+          title: "Partner request submitted!",
+          titleFr: "Demande partenaire envoyée !",
+          body: "Your partner account request is under review. You will be notified once approved.",
+          bodyFr: "Votre demande de compte partenaire est en cours d'examen. Vous serez notifié(e) dès son approbation.",
+        });
         setLoading(false);
         setRegisteredEmail(email);
         setRegistrationSuccess(true);
@@ -124,31 +130,34 @@ export default function AuthScreen() {
       }
 
       await new Promise((r) => setTimeout(r, 900));
-      const role = mode === "register"
+
+      let role: "admin" | "structure" | "user" = mode === "register"
         ? registerRole
         : email.includes("admin") ? "admin" as const
-        : email.includes("partner") || email.includes("structure") || email.includes("partenaire") ? "structure" as const
         : "user" as const;
 
       let partnerStatus: "pending" | "approved" | "rejected" | undefined;
-      if (role === "structure") {
+      let partnerData: any = null;
+
+      if (mode === "login") {
         try {
           const statusRes = await fetch(`${API_BASE}/partners/status?email=${encodeURIComponent(email)}`);
           if (statusRes.ok) {
-            const data = await statusRes.json();
-            partnerStatus = data.status;
-          } else {
-            partnerStatus = "pending";
+            partnerData = await statusRes.json();
+            role = "structure";
+            partnerStatus = partnerData.status;
           }
-        } catch {
-          partnerStatus = "pending";
-        }
+        } catch {}
+      }
+
+      if (role === "structure" && !partnerStatus) {
+        partnerStatus = "pending";
       }
 
       const mockUser = {
         id: "u_" + Date.now(),
         email,
-        name: name || email.split("@")[0],
+        name: name || partnerData?.businessName || email.split("@")[0],
         phone,
         role,
         favorites: [],
@@ -159,6 +168,22 @@ export default function AuthScreen() {
       };
       await setUser(mockUser);
       await setToken("mock_token_" + Date.now());
+
+      if (mode === "register" && role === "user") {
+        addNotification({
+          title: "Welcome to NoStress! 🎉",
+          titleFr: "Bienvenue sur NoStress ! 🎉",
+          body: "Your account has been created. Discover the best events in Togo!",
+          bodyFr: "Votre compte a été créé avec succès. Découvrez les meilleurs événements au Togo !",
+        });
+      } else if (mode === "login" && role === "structure" && partnerStatus === "approved") {
+        addNotification({
+          title: "Welcome back!",
+          titleFr: "Bon retour !",
+          body: "Your partner account is active. Manage your events and venues from the dashboard.",
+          bodyFr: "Votre compte partenaire est actif. Gérez vos événements et lieux depuis le tableau de bord.",
+        });
+      }
     } catch (e) {
       setError(lang === "fr" ? "Erreur réseau. Vérifiez votre connexion." : "Network error. Check your connection.");
     }

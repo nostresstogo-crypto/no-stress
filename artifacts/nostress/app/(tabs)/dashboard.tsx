@@ -47,7 +47,7 @@ const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
 
 export default function DashboardScreen() {
   const t = useT();
-  const { user, lang, myEvents, setUser } = useApp();
+  const { user, lang, myEvents, setUser, addNotification } = useApp();
   const insets = useSafeAreaInsets();
   const C = useColors();
 
@@ -135,6 +135,21 @@ export default function DashboardScreen() {
         setPartnerRejectReason(data.rejectionReason ?? null);
         if (status !== user.partnerStatus) {
           setUser({ ...user, partnerStatus: status });
+          if (status === "approved" && user.partnerStatus !== "approved") {
+            addNotification({
+              title: "Account approved! 🎊",
+              titleFr: "Compte approuvé ! 🎊",
+              body: "Your partner account has been approved. You can now publish events and venues.",
+              bodyFr: "Votre compte partenaire a été approuvé. Vous pouvez maintenant publier des événements et des lieux.",
+            });
+          } else if (status === "rejected" && user.partnerStatus !== "rejected") {
+            addNotification({
+              title: "Account request update",
+              titleFr: "Mise à jour de votre demande",
+              body: data.rejectionReason || "Your partner account request was not approved. Contact support for more information.",
+              bodyFr: data.rejectionReason || "Votre demande de compte partenaire n'a pas été approuvée. Contactez le support pour plus d'informations.",
+            });
+          }
         }
       })
       .catch(() => {
