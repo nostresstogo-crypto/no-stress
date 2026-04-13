@@ -16,7 +16,6 @@ import {
   Trash2,
   FileText,
   CheckCircle,
-  Clock,
   AlertTriangle,
   MapPin,
   Calendar,
@@ -37,12 +36,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   culture: "Culturel",
   comedy: "Comédie",
   liveMusic: "Musique live",
-};
-
-const STATUS_STYLES: Record<string, { label: string; color: string; bg: string }> = {
-  pending: { label: "En attente", color: "text-yellow-400", bg: "bg-yellow-400/10" },
-  approved: { label: "Approuvée", color: "text-green-400", bg: "bg-green-400/10" },
-  rejected: { label: "Rejetée", color: "text-destructive", bg: "bg-destructive/10" },
 };
 
 function formatDate(iso: string) {
@@ -123,7 +116,7 @@ export default function Publications() {
 
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground">Gestion des publications</h1>
-          <p className="text-muted-foreground mt-1">Modérer les événements publiés par les partenaires</p>
+          <p className="text-muted-foreground mt-1">Surveiller et supprimer les publications non conformes à nos conditions</p>
         </div>
 
         <div className="mb-4">
@@ -158,9 +151,7 @@ export default function Publications() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filtered.map((ev) => {
-                  const st = STATUS_STYLES[ev.status] || STATUS_STYLES.pending;
-                  return (
+                {filtered.map((ev) => (
                     <tr key={ev.id} className="hover:bg-muted/20 transition-colors">
                       <td className="px-4 py-3">
                         <div>
@@ -188,9 +179,9 @@ export default function Publications() {
                         <span className="text-sm text-muted-foreground">{CATEGORY_LABELS[ev.category] || ev.category}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${st.bg} ${st.color}`}>
-                          {ev.status === "pending" ? <Clock className="w-3 h-3" /> : <CheckCircle className="w-3 h-3" />}
-                          {st.label}
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-400/10 text-green-400">
+                          <CheckCircle className="w-3 h-3" />
+                          Actif
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -205,8 +196,7 @@ export default function Publications() {
                         </Button>
                       </td>
                     </tr>
-                  );
-                })}
+                  ))}
               </tbody>
             </table>
           )}

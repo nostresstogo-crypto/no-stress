@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
+  ActivityIndicator,
   Platform,
   ScrollView,
   StyleSheet,
@@ -16,15 +17,44 @@ import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_SUBSCRIPTION_PLANS } from "@/constants/data";
 
 type DashTab = "events" | "venues" | "plan";
+type PartnerCheckStatus = "loading" | "pending" | "approved" | "rejected" | null;
+
+const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
+  : "/api";
 
 export default function DashboardScreen() {
   const t = useT();
-  const { user, lang, myEvents } = useApp();
+  const { user, lang, myEvents, setUser } = useApp();
   const insets = useSafeAreaInsets();
   const C = useColors();
 
   const [tab, setTab] = useState<DashTab>("events");
+  const [partnerCheck, setPartnerCheck] = useState<PartnerCheckStatus>(null);
+  const [partnerRejectReason, setPartnerRejectReason] = useState<string | null>(null);
   const topInset = Platform.OS === "web" ? 67 : insets.top;
+
+  useEffect(() => {
+    if (!user || user.role !== "structure") return;
+    if (user.partnerStatus === "approved") {
+      setPartnerCheck("approved");
+      return;
+    }
+    setPartnerCheck("loading");
+    fetch(`${API_BASE}/partners/status?email=${encodeURIComponent(user.email)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const status: PartnerCheckStatus = data.status ?? "pending";
+        setPartnerCheck(status);
+        setPartnerRejectReason(data.rejectionReason ?? null);
+        if (status !== user.partnerStatus) {
+          setUser({ ...user, partnerStatus: status });
+        }
+      })
+      .catch(() => {
+        setPartnerCheck(user.partnerStatus ?? "pending");
+      });
+  }, [user?.email, user?.role]);
 
   /* ── Not logged in ── */
   if (!user) {
@@ -77,6 +107,83 @@ export default function DashboardScreen() {
         </View>
       </View>
     );
+  }
+
+  /* ── Partner status gate ── */
+  if (user.role === "structure") {
+    if (partnerCheck === "loading" || partnerCheck === null) {
+      return (
+        <View style={[styles.root, { paddingTop: topInset, justifyContent: "center", alignItems: "center" }]}>
+          <ActivityIndicator size="large" color={C.lavender} />
+          <Text style={[styles.gateSub, { marginTop: 16 }]}>
+            {lang === "fr" ? "Vérification de votre compte..." : "Checking your account..."}
+          </Text>
+        </View>
+      );
+    }
+
+    if (partnerCheck === "pending") {
+      return (
+        <View style={[styles.root, { paddingTop: topInset }]}>
+          <View style={styles.gateBox}>
+            <View style={[styles.gateIcon, { backgroundColor: "#F59E0B22" }]}>
+              <Ionicons name="time-outline" size={40} color="#F59E0B" />
+            </View>
+            <Text style={styles.gateTitle}>
+              {lang === "fr" ? "Compte en cours de validation" : "Account under review"}
+            </Text>
+            <Text style={styles.gateSub}>
+              {lang === "fr"
+                ? "Votre demande de compte partenaire a été soumise et est en cours d'examen par notre équipe. Vous serez notifié dès son approbation (délai : 24–48h)."
+                : "Your partner account request has been submitted and is being reviewed by our team. You will be notified once approved (24–48h)."}
+            </Text>
+            <View style={{ marginTop: 20, backgroundColor: "#F59E0B11", borderRadius: 12, borderWidth: 1, borderColor: "#F59E0B44", padding: 14, width: "100%" }}>
+              <Text style={{ color: "#F59E0B", fontSize: 12, textAlign: "center", lineHeight: 18 }}>
+                {lang === "fr"
+                  ? "⏳ En attente d'approbation de l'administrateur NoStress"
+                  : "⏳ Awaiting approval from NoStress admin"}
+              </Text>
+            </View>
+          </View>
+        </View>
+      );
+    }
+
+    if (partnerCheck === "rejected") {
+      return (
+        <View style={[styles.root, { paddingTop: topInset }]}>
+          <View style={styles.gateBox}>
+            <View style={[styles.gateIcon, { backgroundColor: C.error + "22" }]}>
+              <Ionicons name="close-circle-outline" size={40} color={C.error} />
+            </View>
+            <Text style={styles.gateTitle}>
+              {lang === "fr" ? "Demande refusée" : "Request declined"}
+            </Text>
+            <Text style={styles.gateSub}>
+              {lang === "fr"
+                ? "Votre demande de compte partenaire a été refusée par l'équipe NoStress."
+                : "Your partner account request was declined by the NoStress team."}
+            </Text>
+            {partnerRejectReason ? (
+              <View style={{ marginTop: 16, backgroundColor: C.error + "11", borderRadius: 12, borderWidth: 1, borderColor: C.error + "44", padding: 14, width: "100%" }}>
+                <Text style={{ color: C.error, fontSize: 12, textAlign: "center", lineHeight: 18 }}>
+                  {lang === "fr" ? "Motif : " : "Reason: "}{partnerRejectReason}
+                </Text>
+              </View>
+            ) : null}
+            <TouchableOpacity
+              style={[styles.gateBtn, { backgroundColor: C.textMuted, marginTop: 20 }]}
+              onPress={() => router.push("/auth")}
+            >
+              <Ionicons name="mail-outline" size={18} color={C.bg} />
+              <Text style={styles.gateBtnText}>
+                {lang === "fr" ? "Contacter le support" : "Contact support"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
   }
 
   /* ── Partner or Admin ── */

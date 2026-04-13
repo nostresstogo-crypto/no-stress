@@ -23,7 +23,7 @@ type RegisterRole = "user" | "structure";
 
 export default function AuthScreen() {
   const t = useT();
-  const { setUser, setToken } = useApp();
+  const { setUser, setToken, lang } = useApp();
   const insets = useSafeAreaInsets();
   const C = useColors();
 
@@ -49,6 +49,10 @@ export default function AuthScreen() {
     setCityModalVisible(false);
   };
 
+  const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
+    ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
+    : "/api";
+
   const handleSubmit = async () => {
     if (!email || !password) {
       setError(t("error"));
@@ -56,25 +60,89 @@ export default function AuthScreen() {
     }
     setError("");
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 900));
-    const role = mode === "register"
-      ? registerRole
-      : email.includes("admin") ? "admin" as const
-      : email.includes("partner") || email.includes("structure") || email.includes("partenaire") ? "structure" as const
-      : "user" as const;
-    const mockUser = {
-      id: "u_" + Date.now(),
-      email,
-      name: name || email.split("@")[0],
-      phone,
-      role,
-      favorites: [],
-      city: registerRole === "structure" ? city : undefined,
-      latitude: registerRole === "structure" && latitude ? parseFloat(latitude) : undefined,
-      longitude: registerRole === "structure" && longitude ? parseFloat(longitude) : undefined,
-    };
-    await setUser(mockUser);
-    await setToken("mock_token_" + Date.now());
+
+    try {
+      if (mode === "register" && registerRole === "structure") {
+        if (!name || !phone || !city) {
+          setError(lang === "fr" ? "Veuillez remplir tous les champs requis." : "Please fill all required fields.");
+          setLoading(false);
+          return;
+        }
+        const res = await fetch(`${API_BASE}/partners/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            contactName: name,
+            businessName: name,
+            businessType: "other",
+            phone,
+            city,
+            latitude,
+            longitude,
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          setError(err.error || (lang === "fr" ? "Erreur lors de l'inscription." : "Registration error."));
+          setLoading(false);
+          return;
+        }
+        const mockUser = {
+          id: "u_" + Date.now(),
+          email,
+          name,
+          phone,
+          role: "structure" as const,
+          favorites: [],
+          partnerStatus: "pending" as const,
+        };
+        await setUser(mockUser);
+        await setToken("mock_token_" + Date.now());
+        setLoading(false);
+        router.back();
+        return;
+      }
+
+      await new Promise((r) => setTimeout(r, 900));
+      const role = mode === "register"
+        ? registerRole
+        : email.includes("admin") ? "admin" as const
+        : email.includes("partner") || email.includes("structure") || email.includes("partenaire") ? "structure" as const
+        : "user" as const;
+
+      let partnerStatus: "pending" | "approved" | "rejected" | undefined;
+      if (role === "structure") {
+        try {
+          const statusRes = await fetch(`${API_BASE}/partners/status?email=${encodeURIComponent(email)}`);
+          if (statusRes.ok) {
+            const data = await statusRes.json();
+            partnerStatus = data.status;
+          } else {
+            partnerStatus = "pending";
+          }
+        } catch {
+          partnerStatus = "pending";
+        }
+      }
+
+      const mockUser = {
+        id: "u_" + Date.now(),
+        email,
+        name: name || email.split("@")[0],
+        phone,
+        role,
+        favorites: [],
+        city: role === "structure" ? city : undefined,
+        latitude: role === "structure" && latitude ? parseFloat(latitude) : undefined,
+        longitude: role === "structure" && longitude ? parseFloat(longitude) : undefined,
+        partnerStatus,
+      };
+      await setUser(mockUser);
+      await setToken("mock_token_" + Date.now());
+    } catch (e) {
+      setError(lang === "fr" ? "Erreur réseau. Vérifiez votre connexion." : "Network error. Check your connection.");
+    }
     setLoading(false);
     router.back();
   };

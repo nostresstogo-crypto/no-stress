@@ -135,7 +135,7 @@ const partnerEvents: any[] = [
     category: "concerts",
     priceFCFA: 8000,
     isFree: false,
-    status: "pending",
+    status: "approved",
     createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
   },
 ];
@@ -159,6 +159,23 @@ router.get("/partners", (req, res) => {
     return res.json(partners.filter((p) => p.status === status));
   }
   res.json(partners);
+});
+
+router.get("/partners/status", (req, res) => {
+  const { email } = req.query;
+  if (!email || typeof email !== "string") {
+    return res.status(400).json({ error: "Email requis." });
+  }
+  const partner = partners.find((p) => p.email === email);
+  if (!partner) {
+    return res.status(404).json({ error: "Partenaire introuvable." });
+  }
+  res.json({
+    status: partner.status,
+    rejectionReason: partner.rejectionReason ?? null,
+    businessName: partner.businessName,
+    partnerId: partner.id,
+  });
 });
 
 router.get("/partners/approved-map", (_req, res) => {

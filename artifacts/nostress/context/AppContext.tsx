@@ -44,6 +44,8 @@ interface User {
   role: UserRole;
   avatarUrl?: string;
   favorites: string[];
+  partnerStatus?: "pending" | "approved" | "rejected";
+  partnerRejectionReason?: string;
 }
 
 interface Notification {
