@@ -1,13 +1,21 @@
 import nodemailer from "nodemailer";
 
-const SMTP_USER = "nostresstogo@gmail.com";
+const SMTP_HOST = process.env.SMTP_HOST || "smtp-relay.brevo.com";
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || "587", 10);
+const SMTP_USER = process.env.SMTP_USER || "";
 const SMTP_PASS = process.env.SMTP_PASS;
+const FROM_EMAIL = "nostresstogo@gmail.com";
 const ADMIN_EMAIL = "nostresstogo@gmail.com";
 
 function createTransporter() {
-  if (!SMTP_PASS) return null;
+  if (!SMTP_PASS || !SMTP_USER) {
+    console.warn("[EMAIL] SMTP not configured (SMTP_USER or SMTP_PASS missing)");
+    return null;
+  }
   return nodemailer.createTransport({
-    service: "gmail",
+    host: SMTP_HOST,
+    port: SMTP_PORT,
+    secure: false,
     auth: {
       user: SMTP_USER,
       pass: SMTP_PASS,
@@ -23,7 +31,7 @@ async function sendMail(options: { to: string; subject: string; html: string }) 
   }
   try {
     await transporter.sendMail({
-      from: `"NoStress Togo" <${SMTP_USER}>`,
+      from: `"NoStress Togo" <${FROM_EMAIL}>`,
       ...options,
     });
     console.info("[EMAIL] Sent to:", options.to, "—", options.subject);
