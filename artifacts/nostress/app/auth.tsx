@@ -21,6 +21,18 @@ import { MOCK_CITIES } from "@/constants/data";
 type Mode = "login" | "register";
 type RegisterRole = "user" | "structure";
 
+const BUSINESS_TYPES = [
+  { key: "nightclub", labelFr: "Boîte de nuit", labelEn: "Nightclub" },
+  { key: "bar", labelFr: "Bar", labelEn: "Bar" },
+  { key: "restaurant", labelFr: "Restaurant", labelEn: "Restaurant" },
+  { key: "festival", labelFr: "Festival", labelEn: "Festival" },
+  { key: "beach", labelFr: "Beach Club", labelEn: "Beach Club" },
+  { key: "concerts", labelFr: "Salle de concert", labelEn: "Concert Hall" },
+  { key: "sport", labelFr: "Sport & loisirs", labelEn: "Sport & Leisure" },
+  { key: "culture", labelFr: "Culturel / Artistique", labelEn: "Cultural / Artistic" },
+  { key: "other", labelFr: "Autre", labelEn: "Other" },
+];
+
 export default function AuthScreen() {
   const t = useT();
   const { setUser, setToken, lang } = useApp();
@@ -41,6 +53,11 @@ export default function AuthScreen() {
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
   const [cityModalVisible, setCityModalVisible] = useState(false);
+  const [businessType, setBusinessType] = useState("");
+  const [businessTypeModal, setBusinessTypeModal] = useState(false);
+  const [description, setDescription] = useState("");
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState("");
 
   const handleSelectCity = (c: typeof MOCK_CITIES[0]) => {
     setCity(c.name);
@@ -63,8 +80,8 @@ export default function AuthScreen() {
 
     try {
       if (mode === "register" && registerRole === "structure") {
-        if (!name || !phone || !city) {
-          setError(lang === "fr" ? "Veuillez remplir tous les champs requis." : "Please fill all required fields.");
+        if (!name || !phone || !city || !businessType) {
+          setError(lang === "fr" ? "Veuillez remplir tous les champs requis (nom, téléphone, ville, type d'activité)." : "Please fill all required fields (name, phone, city, business type).");
           setLoading(false);
           return;
         }
@@ -75,11 +92,12 @@ export default function AuthScreen() {
             email,
             contactName: name,
             businessName: name,
-            businessType: "other",
+            businessType,
             phone,
             city,
             latitude,
             longitude,
+            description: description || null,
           }),
         });
         if (!res.ok) {
@@ -100,7 +118,8 @@ export default function AuthScreen() {
         await setUser(mockUser);
         await setToken("mock_token_" + Date.now());
         setLoading(false);
-        router.back();
+        setRegisteredEmail(email);
+        setRegistrationSuccess(true);
         return;
       }
 
@@ -146,6 +165,44 @@ export default function AuthScreen() {
     setLoading(false);
     router.back();
   };
+
+  if (registrationSuccess) {
+    return (
+      <View style={[styles.root, { justifyContent: "center", alignItems: "center", paddingHorizontal: 28 }]}>
+        <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: C.success + "22", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+          <Ionicons name="checkmark-circle" size={52} color={C.success} />
+        </View>
+        <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: C.text, textAlign: "center", marginBottom: 10 }}>
+          {lang === "fr" ? "Demande envoyée !" : "Request submitted!"}
+        </Text>
+        <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: C.textMuted, textAlign: "center", lineHeight: 22, marginBottom: 24 }}>
+          {lang === "fr"
+            ? `Votre demande de compte partenaire a été soumise avec succès. Notre équipe va analyser votre dossier et vous contacterons à l'adresse`
+            : `Your partner account request has been successfully submitted. Our team will review your file and contact you at`}
+          {" "}
+          <Text style={{ color: C.lavender, fontFamily: "Inter_600SemiBold" }}>{registeredEmail}</Text>
+          {" "}
+          {lang === "fr" ? "dans un délai de 24 à 48h." : "within 24 to 48 hours."}
+        </Text>
+        <View style={{ backgroundColor: C.gold + "11", borderRadius: 12, borderWidth: 1, borderColor: C.gold + "44", padding: 14, width: "100%", marginBottom: 24 }}>
+          <Text style={{ color: C.gold, fontSize: 12, textAlign: "center", lineHeight: 18, fontFamily: "Inter_500Medium" }}>
+            {lang === "fr"
+              ? "Vous recevrez un email de confirmation dès que votre compte sera validé par l'administrateur."
+              : "You will receive a confirmation email once your account is approved by the administrator."}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={{ backgroundColor: C.lavender, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32, flexDirection: "row", alignItems: "center", gap: 8 }}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="home-outline" size={18} color={C.bg} />
+          <Text style={{ color: C.bg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+            {lang === "fr" ? "Accueil" : "Home"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -375,6 +432,48 @@ export default function AuthScreen() {
                   </Text>
                 </View>
               )}
+
+              <View style={styles.sectionDivider}>
+                <Ionicons name="business" size={14} color={C.gold} />
+                <Text style={[styles.sectionLabel, { color: C.gold }]}>
+                  {lang === "fr" ? "Type d'activité" : "Business type"}
+                </Text>
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>{lang === "fr" ? "Type d'établissement *" : "Establishment type *"}</Text>
+                <TouchableOpacity
+                  style={[styles.inputRow, { justifyContent: "space-between" }]}
+                  onPress={() => setBusinessTypeModal(true)}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <Ionicons name="grid-outline" size={18} color={C.textMuted} />
+                    <Text style={[styles.input, { color: businessType ? C.text : C.textMuted }]}>
+                      {businessType
+                        ? BUSINESS_TYPES.find(b => b.key === businessType)?.[lang === "fr" ? "labelFr" : "labelEn"] ?? businessType
+                        : (lang === "fr" ? "Sélectionner un type…" : "Select a type…")}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-down" size={16} color={C.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>{lang === "fr" ? "Description de votre activité" : "Activity description"}</Text>
+                <View style={[styles.inputRow, { alignItems: "flex-start", paddingTop: 10, paddingBottom: 10 }]}>
+                  <Ionicons name="document-text-outline" size={18} color={C.textMuted} style={{ marginTop: 2 }} />
+                  <TextInput
+                    value={description}
+                    onChangeText={setDescription}
+                    placeholder={lang === "fr" ? "Décrivez votre établissement, ce que vous proposez…" : "Describe your establishment and what you offer…"}
+                    placeholderTextColor={C.textMuted}
+                    style={[styles.input, { minHeight: 72, textAlignVertical: "top" }]}
+                    multiline
+                    numberOfLines={3}
+                  />
+                </View>
+              </View>
             </>
           )}
 
@@ -422,6 +521,41 @@ export default function AuthScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={businessTypeModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setBusinessTypeModal(false)}
+      >
+        <View style={[modal.root, { paddingTop: insets.top + 16 }]}>
+          <View style={modal.header}>
+            <Text style={modal.title}>{lang === "fr" ? "Type d'activité" : "Business type"}</Text>
+            <TouchableOpacity onPress={() => setBusinessTypeModal(false)} style={modal.closeBtn}>
+              <Ionicons name="close" size={22} color={C.textMuted} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 20, paddingHorizontal: 16, paddingTop: 8 }}>
+            {BUSINESS_TYPES.map((bt) => {
+              const selected = businessType === bt.key;
+              const label = lang === "fr" ? bt.labelFr : bt.labelEn;
+              return (
+                <TouchableOpacity
+                  key={bt.key}
+                  style={[modal.item, selected && modal.itemActive]}
+                  onPress={() => { setBusinessType(bt.key); setBusinessTypeModal(false); }}
+                  activeOpacity={0.7}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={[modal.cityName, selected && { color: C.gold }]}>{label}</Text>
+                  </View>
+                  {selected && <Ionicons name="checkmark-circle" size={20} color={C.gold} />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </Modal>
 
       <Modal
         visible={cityModalVisible}

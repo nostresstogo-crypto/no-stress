@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import {
   ActivityIndicator,
   Platform,
@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 
 import { C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
@@ -34,12 +34,8 @@ export default function DashboardScreen() {
   const [partnerRejectReason, setPartnerRejectReason] = useState<string | null>(null);
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
-  useEffect(() => {
+  const checkPartnerStatus = useCallback(() => {
     if (!user || user.role !== "structure") return;
-    if (user.partnerStatus === "approved") {
-      setPartnerCheck("approved");
-      return;
-    }
     setPartnerCheck("loading");
     fetch(`${API_BASE}/partners/status?email=${encodeURIComponent(user.email)}`)
       .then((r) => r.json())
@@ -55,6 +51,12 @@ export default function DashboardScreen() {
         setPartnerCheck(user.partnerStatus ?? "pending");
       });
   }, [user?.email, user?.role]);
+
+  useFocusEffect(
+    useCallback(() => {
+      checkPartnerStatus();
+    }, [checkPartnerStatus])
+  );
 
   /* ── Not logged in ── */
   if (!user) {
@@ -144,6 +146,15 @@ export default function DashboardScreen() {
                   : "⏳ Awaiting approval from NoStress admin"}
               </Text>
             </View>
+            <TouchableOpacity
+              style={[styles.gateBtn, { backgroundColor: C.card, borderWidth: 1, borderColor: C.border, marginTop: 16 }]}
+              onPress={() => checkPartnerStatus()}
+            >
+              <Ionicons name="refresh-outline" size={18} color={C.text} />
+              <Text style={[styles.gateBtnText, { color: C.text }]}>
+                {lang === "fr" ? "Vérifier le statut" : "Check status"}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
       );

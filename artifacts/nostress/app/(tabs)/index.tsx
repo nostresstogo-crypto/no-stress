@@ -2,6 +2,8 @@ import React, { useState, useMemo } from "react";
 import {
   Dimensions,
   FlatList,
+  Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -71,6 +73,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const [venueModal, setVenueModal] = useState<typeof MOCK_VENUES[0] | null>(null);
   const styles = useMemo(() => makeStyles(C), [C]);
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
@@ -227,11 +230,90 @@ export default function HomeScreen() {
               </View>
             </View>
             {popularVenues.map((venue) => (
-              <VenueCard key={venue.id} venue={venue} compact />
+              <VenueCard key={venue.id} venue={venue} compact onPress={() => setVenueModal(venue)} />
             ))}
           </View>
         )}
       </ScrollView>
+
+      <Modal
+        visible={!!venueModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setVenueModal(null)}
+      >
+        {venueModal && (
+          <View style={{ flex: 1, backgroundColor: C.bg }}>
+            <View style={{ position: "relative" }}>
+              {venueModal.imageUrl ? (
+                <Image
+                  source={{ uri: venueModal.imageUrl }}
+                  style={{ width: "100%", height: 220 }}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={{ width: "100%", height: 160, backgroundColor: C.card2, alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name="business" size={48} color={C.lavender} />
+                </View>
+              )}
+              <TouchableOpacity
+                onPress={() => setVenueModal(null)}
+                style={{ position: "absolute", top: insets.top + 12, right: 16, backgroundColor: "rgba(0,0,0,0.5)", borderRadius: 20, width: 36, height: 36, alignItems: "center", justifyContent: "center" }}
+              >
+                <Ionicons name="close" size={20} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 24 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: C.text, flex: 1 }}>{venueModal.name}</Text>
+                {venueModal.isVerified && <Ionicons name="checkmark-circle" size={20} color={C.lavender} />}
+              </View>
+
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 16 }}>
+                <View style={{ backgroundColor: C.lavender + "22", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <Ionicons name="business-outline" size={12} color={C.lavender} />
+                  <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: C.lavender }}>{venueModal.type}</Text>
+                </View>
+                <View style={{ backgroundColor: C.card2, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, flexDirection: "row", alignItems: "center", gap: 4 }}>
+                  <Ionicons name="location-outline" size={12} color={C.textMuted} />
+                  <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: C.textMuted }}>{venueModal.city}</Text>
+                </View>
+              </View>
+
+              {venueModal.description ? (
+                <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: C.textMuted, lineHeight: 22, marginBottom: 20 }}>
+                  {venueModal.description}
+                </Text>
+              ) : null}
+
+              {venueModal.address ? (
+                <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: C.card, borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: C.border }}>
+                  <Ionicons name="map-outline" size={18} color={C.gold} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 11, fontFamily: "Inter_500Medium", color: C.textMuted, marginBottom: 2 }}>
+                      {lang === "fr" ? "Adresse" : "Address"}
+                    </Text>
+                    <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: C.text }}>
+                      {venueModal.address}
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+
+              <TouchableOpacity
+                style={{ backgroundColor: C.lavender, borderRadius: 14, paddingVertical: 14, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8, marginTop: 8 }}
+                onPress={() => { setVenueModal(null); router.push("/(tabs)/map"); }}
+              >
+                <Ionicons name="map" size={18} color={C.bg} />
+                <Text style={{ color: C.bg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>
+                  {lang === "fr" ? "Voir sur la carte" : "View on map"}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        )}
+      </Modal>
     </View>
   );
 }
