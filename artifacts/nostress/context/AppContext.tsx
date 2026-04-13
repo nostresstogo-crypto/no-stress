@@ -71,6 +71,7 @@ interface AppContextValue {
   notifications: Notification[];
   addNotification: (n: Omit<Notification, "id" | "read" | "createdAt">) => void;
   markAllRead: () => void;
+  removeNotification: (id: string) => void;
   unreadCount: number;
   selectedCity: string;
   setSelectedCity: (city: string) => void;
@@ -228,7 +229,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const newEvent: MyEvent = {
           ...eventData,
           id: "ev_" + Date.now(),
-          status: "pending",
+          status: "approved",
           createdAt: new Date().toISOString(),
         };
         const next = [newEvent, ...prev];
@@ -238,6 +239,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     []
   );
+
+  const removeNotification = useCallback((id: string) => {
+    setNotifications((prev) => {
+      const next = prev.filter((n) => n.id !== id);
+      AsyncStorage.setItem(KEYS.notifications, JSON.stringify(next));
+      return next;
+    });
+  }, []);
 
   const setThemeMode = useCallback(async (mode: ThemeMode) => {
     setThemeModeState(mode);
@@ -299,7 +308,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       user, setUser,
       token, setToken,
       favorites, toggleFavorite, isFavorite,
-      notifications, addNotification, markAllRead, unreadCount,
+      notifications, addNotification, markAllRead, removeNotification, unreadCount,
       selectedCity, setSelectedCity,
       selectedCategory, setSelectedCategory,
       logout,
@@ -316,7 +325,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       user, setUser,
       token, setToken,
       favorites, toggleFavorite, isFavorite,
-      notifications, addNotification, markAllRead, unreadCount,
+      notifications, addNotification, markAllRead, removeNotification, unreadCount,
       selectedCity, setSelectedCity,
       selectedCategory, setSelectedCategory,
       logout,

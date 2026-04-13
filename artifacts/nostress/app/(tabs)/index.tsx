@@ -69,7 +69,7 @@ function makeStyles(C: ColorPalette) {
 export default function HomeScreen() {
   const t = useT();
   const C = useColors();
-  const { lang, selectedCity, setSelectedCity, selectedCategory, setSelectedCategory } = useApp();
+  const { lang, selectedCity, setSelectedCity, selectedCategory, setSelectedCategory, myEvents } = useApp();
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -78,8 +78,32 @@ export default function HomeScreen() {
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
+  const allEvents = useMemo(() => {
+    const partnerApproved = myEvents
+      .filter((e) => e.status === "approved")
+      .map((e) => ({
+        id: e.id,
+        title: e.titleEn || e.titleFr,
+        titleFr: e.titleFr,
+        category: e.category,
+        city: e.city,
+        venue: e.venue,
+        venueId: undefined as string | undefined,
+        date: e.date,
+        time: e.time,
+        description: e.descriptionEn || e.descriptionFr,
+        descriptionFr: e.descriptionFr,
+        priceFCFA: e.priceFCFA,
+        isFree: e.isFree,
+        isSponsored: e.isSponsored,
+        imageUrl: e.imageUrl || undefined,
+        status: "approved" as const,
+      }));
+    return [...MOCK_EVENTS, ...partnerApproved];
+  }, [myEvents]);
+
   const filteredEvents = useMemo(() => {
-    return MOCK_EVENTS.filter((e) => {
+    return allEvents.filter((e) => {
       const matchCity = !selectedCity || e.city.toLowerCase() === selectedCity.toLowerCase() ||
         MOCK_VENUES.find((v) => v.id === e.venueId)?.city.toLowerCase().includes(selectedCity.toLowerCase());
       const matchCat = !selectedCategory || e.category === selectedCategory;
@@ -87,10 +111,10 @@ export default function HomeScreen() {
         (e.titleFr && e.titleFr.toLowerCase().includes(search.toLowerCase()));
       return matchCity && matchCat && matchSearch;
     });
-  }, [selectedCity, selectedCategory, search]);
+  }, [allEvents, selectedCity, selectedCategory, search]);
 
   const featuredEvents = filteredEvents.filter((e) => e.isSponsored);
-  const allEvents = filteredEvents.filter((e) => !e.isSponsored);
+  const regularEvents = filteredEvents.filter((e) => !e.isSponsored);
   const popularVenues = MOCK_VENUES.filter((v) => v.isVerified).slice(0, 4);
 
   const onRefresh = () => {
@@ -193,7 +217,7 @@ export default function HomeScreen() {
         )}
 
         {/* All Events */}
-        {allEvents.length > 0 && (
+        {regularEvents.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
@@ -202,7 +226,7 @@ export default function HomeScreen() {
               </View>
               <Text style={styles.countText}>{filteredEvents.length}</Text>
             </View>
-            {allEvents.map((event) => (
+            {regularEvents.map((event) => (
               <EventCard
                 key={event.id}
                 event={event}

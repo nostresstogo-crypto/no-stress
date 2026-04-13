@@ -1,20 +1,39 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 
 import { C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
-import { MOCK_SUBSCRIPTION_PLANS } from "@/constants/data";
+import { MOCK_SUBSCRIPTION_PLANS, MOCK_CITIES } from "@/constants/data";
+
+interface MyVenue {
+  id: string;
+  name: string;
+  type: string;
+  city: string;
+  address: string;
+  description: string;
+  createdAt: string;
+}
+
+const VENUE_TYPES_FR = ["Boîte de nuit", "Bar", "Restaurant", "Salle de concert", "Plage", "Stade", "Salle culturelle", "Autre"];
+const VENUE_TYPES_EN = ["Nightclub", "Bar", "Restaurant", "Concert Hall", "Beach", "Stadium", "Cultural Center", "Other"];
+const NS_MY_VENUES_KEY = "ns_my_venues";
 
 type DashTab = "events" | "venues" | "plan";
 type PartnerCheckStatus = "loading" | "pending" | "approved" | "rejected" | null;
@@ -33,6 +52,72 @@ export default function DashboardScreen() {
   const [partnerCheck, setPartnerCheck] = useState<PartnerCheckStatus>(null);
   const [partnerRejectReason, setPartnerRejectReason] = useState<string | null>(null);
   const topInset = Platform.OS === "web" ? 67 : insets.top;
+
+  const [myVenues, setMyVenues] = useState<MyVenue[]>([]);
+  const [showVenueModal, setShowVenueModal] = useState(false);
+  const [venueName, setVenueName] = useState("");
+  const [venueType, setVenueType] = useState("");
+  const [venueCity, setVenueCity] = useState("");
+  const [venueAddress, setVenueAddress] = useState("");
+  const [venueDesc, setVenueDesc] = useState("");
+
+  useEffect(() => {
+    AsyncStorage.getItem(NS_MY_VENUES_KEY).then((v) => {
+      if (v) setMyVenues(JSON.parse(v));
+    });
+  }, []);
+
+  const openVenueModal = () => {
+    setVenueName(""); setVenueType(""); setVenueCity(""); setVenueAddress(""); setVenueDesc("");
+    setShowVenueModal(true);
+  };
+
+  const saveVenue = () => {
+    if (!venueName.trim()) {
+      Alert.alert(lang === "fr" ? "Nom requis" : "Name required", lang === "fr" ? "Veuillez entrer un nom pour le lieu." : "Please enter a name for the venue.");
+      return;
+    }
+    if (!venueCity.trim()) {
+      Alert.alert(lang === "fr" ? "Ville requise" : "City required", lang === "fr" ? "Veuillez sélectionner une ville." : "Please select a city.");
+      return;
+    }
+    const newVenue: MyVenue = {
+      id: "ven_" + Date.now(),
+      name: venueName.trim(),
+      type: venueType || (lang === "fr" ? "Autre" : "Other"),
+      city: venueCity.trim(),
+      address: venueAddress.trim(),
+      description: venueDesc.trim(),
+      createdAt: new Date().toISOString(),
+    };
+    setMyVenues((prev) => {
+      const next = [newVenue, ...prev];
+      AsyncStorage.setItem(NS_MY_VENUES_KEY, JSON.stringify(next));
+      return next;
+    });
+    setShowVenueModal(false);
+  };
+
+  const deleteVenue = (id: string) => {
+    Alert.alert(
+      lang === "fr" ? "Supprimer ce lieu ?" : "Delete this venue?",
+      lang === "fr" ? "Cette action est irréversible." : "This action cannot be undone.",
+      [
+        { text: lang === "fr" ? "Annuler" : "Cancel", style: "cancel" },
+        {
+          text: lang === "fr" ? "Supprimer" : "Delete",
+          style: "destructive",
+          onPress: () => {
+            setMyVenues((prev) => {
+              const next = prev.filter((v) => v.id !== id);
+              AsyncStorage.setItem(NS_MY_VENUES_KEY, JSON.stringify(next));
+              return next;
+            });
+          },
+        },
+      ]
+    );
+  };
 
   const checkPartnerStatus = useCallback(() => {
     if (!user || user.role !== "structure") return;
@@ -233,7 +318,7 @@ export default function DashboardScreen() {
         {/* Stats */}
         <View style={styles.statsRow}>
           <StatCard icon="calendar" value={myEvents.length} label={t("myEvents")} color={C.lavender} />
-          <StatCard icon="business" value={0} label={t("myVenues")} color={C.gold} />
+          <StatCard icon="business" value={myVenues.length} label={t("myVenues")} color={C.gold} />
           <StatCard icon="people" value={0} label="Participants" color={C.success} />
         </View>
 
@@ -314,19 +399,39 @@ export default function DashboardScreen() {
         {/* ── Venues tab ── */}
         {tab === "venues" && (
           <>
-            <TouchableOpacity style={styles.createBtn} onPress={() => {}}>
+            <TouchableOpacity style={styles.createBtn} onPress={openVenueModal}>
               <Ionicons name="add-circle" size={20} color={C.bg} />
               <Text style={styles.createBtnText}>{t("createVenue")}</Text>
             </TouchableOpacity>
-            <View style={styles.empty}>
-              <Ionicons name="business-outline" size={44} color={C.border} />
-              <Text style={styles.emptyTitle}>{t("noVenues")}</Text>
-              <Text style={styles.emptySub}>
-                {lang === "fr"
-                  ? "Ajoutez votre premier lieu pour le référencer sur NoStress."
-                  : "Add your first venue to list it on NoStress."}
-              </Text>
-            </View>
+            {myVenues.length === 0 ? (
+              <View style={styles.empty}>
+                <Ionicons name="business-outline" size={44} color={C.border} />
+                <Text style={styles.emptyTitle}>{t("noVenues")}</Text>
+                <Text style={styles.emptySub}>
+                  {lang === "fr"
+                    ? "Ajoutez votre premier lieu pour le référencer sur NoStress."
+                    : "Add your first venue to list it on NoStress."}
+                </Text>
+              </View>
+            ) : (
+              myVenues.map((venue) => (
+                <View key={venue.id} style={styles.venueRow}>
+                  <View style={[styles.venueIconBox, { backgroundColor: C.gold + "22" }]}>
+                    <Ionicons name="business" size={20} color={C.gold} />
+                  </View>
+                  <View style={styles.eventInfo}>
+                    <Text style={styles.eventTitle}>{venue.name}</Text>
+                    <Text style={styles.eventMeta}>{venue.type} · {venue.city}</Text>
+                    {venue.address ? (
+                      <Text style={styles.eventMeta}>{venue.address}</Text>
+                    ) : null}
+                  </View>
+                  <TouchableOpacity onPress={() => deleteVenue(venue.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name="trash-outline" size={18} color={C.error} />
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
           </>
         )}
 
@@ -384,6 +489,111 @@ export default function DashboardScreen() {
           </>
         )}
       </ScrollView>
+
+      {/* ── Venue Creation Modal ── */}
+      <Modal visible={showVenueModal} animationType="slide" transparent onRequestClose={() => setShowVenueModal(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalSheet, { backgroundColor: C.card }]}>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: C.text }]}>
+                  {lang === "fr" ? "Nouveau lieu" : "New Venue"}
+                </Text>
+                <TouchableOpacity onPress={() => setShowVenueModal(false)}>
+                  <Ionicons name="close" size={22} color={C.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 460 }}>
+                <Text style={[styles.modalLabel, { color: C.textMuted }]}>
+                  {lang === "fr" ? "Nom du lieu *" : "Venue name *"}
+                </Text>
+                <TextInput
+                  style={[styles.modalInput, { backgroundColor: C.bg, borderColor: C.border, color: C.text }]}
+                  placeholder={lang === "fr" ? "Ex : Club Évasion" : "e.g. Club Évasion"}
+                  placeholderTextColor={C.textMuted}
+                  value={venueName}
+                  onChangeText={setVenueName}
+                />
+
+                <Text style={[styles.modalLabel, { color: C.textMuted }]}>
+                  {lang === "fr" ? "Type de lieu" : "Venue type"}
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    {(lang === "fr" ? VENUE_TYPES_FR : VENUE_TYPES_EN).map((type) => (
+                      <TouchableOpacity
+                        key={type}
+                        onPress={() => setVenueType(type)}
+                        style={[styles.typeChip, {
+                          backgroundColor: venueType === type ? C.lavender : C.bg,
+                          borderColor: venueType === type ? C.lavender : C.border,
+                        }]}
+                      >
+                        <Text style={[styles.typeChipText, { color: venueType === type ? C.bg : C.textMuted }]}>
+                          {type}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
+
+                <Text style={[styles.modalLabel, { color: C.textMuted }]}>
+                  {lang === "fr" ? "Ville *" : "City *"}
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    {MOCK_CITIES.map((c) => (
+                      <TouchableOpacity
+                        key={c.name}
+                        onPress={() => setVenueCity(c.name)}
+                        style={[styles.typeChip, {
+                          backgroundColor: venueCity === c.name ? C.gold : C.bg,
+                          borderColor: venueCity === c.name ? C.gold : C.border,
+                        }]}
+                      >
+                        <Text style={[styles.typeChipText, { color: venueCity === c.name ? C.bg : C.textMuted }]}>
+                          {c.emoji} {c.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
+
+                <Text style={[styles.modalLabel, { color: C.textMuted }]}>
+                  {lang === "fr" ? "Adresse" : "Address"}
+                </Text>
+                <TextInput
+                  style={[styles.modalInput, { backgroundColor: C.bg, borderColor: C.border, color: C.text }]}
+                  placeholder={lang === "fr" ? "Ex : Rue 15, Quartier Be, Lomé" : "e.g. Rue 15, Quartier Be, Lomé"}
+                  placeholderTextColor={C.textMuted}
+                  value={venueAddress}
+                  onChangeText={setVenueAddress}
+                />
+
+                <Text style={[styles.modalLabel, { color: C.textMuted }]}>
+                  {lang === "fr" ? "Description" : "Description"}
+                </Text>
+                <TextInput
+                  style={[styles.modalInput, { backgroundColor: C.bg, borderColor: C.border, color: C.text, height: 80, textAlignVertical: "top" }]}
+                  placeholder={lang === "fr" ? "Décrivez votre lieu…" : "Describe your venue…"}
+                  placeholderTextColor={C.textMuted}
+                  value={venueDesc}
+                  onChangeText={setVenueDesc}
+                  multiline
+                />
+              </ScrollView>
+
+              <TouchableOpacity style={[styles.createBtn, { marginTop: 16 }]} onPress={saveVenue}>
+                <Ionicons name="checkmark-circle" size={20} color={C.bg} />
+                <Text style={styles.createBtnText}>
+                  {lang === "fr" ? "Enregistrer le lieu" : "Save Venue"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -683,4 +893,72 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   currentBadgeText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.bg },
+
+  venueRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: C.card,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: C.border,
+    gap: 12,
+  },
+  venueIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: Platform.OS === "ios" ? 40 : 24,
+    gap: 0,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+  },
+  modalLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    marginBottom: 6,
+    marginTop: 4,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    marginBottom: 12,
+  },
+  typeChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  typeChipText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+  },
 });

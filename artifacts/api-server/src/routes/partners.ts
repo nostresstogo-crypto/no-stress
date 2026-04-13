@@ -258,7 +258,7 @@ router.delete("/admin/events/:id", (req, res) => {
   if (idx === -1) return res.status(404).json({ error: "Publication introuvable." });
   const [deleted] = partnerEvents.splice(idx, 1);
   const partner = partners.find((p) => p.id === deleted.partnerId);
-  const autoMessage = `Bonjour ${partner?.businessName ?? "Partenaire"},\n\nNous avons supprimé votre publication "${deleted.title}" car elle ne respecte pas nos Conditions Générales d'Utilisation et/ou notre charte éthique.\n\nNoStress s'engage à offrir un contenu de qualité, sûr et respectueux à tous ses utilisateurs.\n\nPour toute question, contactez notre équipe à support@nostress.tg.\n\nCordialement,\nL'équipe NoStress`;
+  const autoMessage = `Bonjour ${partner?.businessName ?? "Partenaire"},\n\nNous avons supprimé votre publication "${deleted.title}" car elle ne respecte pas nos Conditions Générales d'Utilisation et/ou notre charte éthique.\n\nNoStress s'engage à offrir un contenu de qualité, sûr et respectueux à tous ses utilisateurs.\n\nPour toute question, contactez notre équipe à nostresstogo@gmail.com.\n\nCordialement,\nL'équipe NoStress`;
   res.json({ message: "Publication supprimée et notification envoyée.", notification: autoMessage, deleted });
 });
 

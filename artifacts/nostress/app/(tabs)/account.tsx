@@ -176,7 +176,7 @@ function makeStyles(C: ColorPalette) {
 export default function AccountScreen() {
   const t = useT();
   const C = useColors();
-  const { user, lang, setLang, logout, favorites, notifications, markAllRead, unreadCount, isDark, themeMode, setThemeMode, locationNotificationsEnabled, setLocationNotificationsEnabled, selectedCity, nearbyEventsCount } = useApp();
+  const { user, lang, setLang, logout, favorites, notifications, markAllRead, removeNotification, unreadCount, isDark, themeMode, setThemeMode, locationNotificationsEnabled, setLocationNotificationsEnabled, selectedCity, nearbyEventsCount } = useApp();
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>("favorites");
   const topInset = Platform.OS === "web" ? 67 : insets.top;
@@ -384,6 +384,13 @@ export default function AccountScreen() {
                 <Text style={styles.notifBody}>{lang === "fr" ? n.bodyFr : n.body}</Text>
                 <Text style={styles.notifDate}>{new Date(n.createdAt).toLocaleDateString()}</Text>
               </View>
+              <TouchableOpacity
+                onPress={() => removeNotification(n.id)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={{ padding: 4 }}
+              >
+                <Ionicons name="close-circle-outline" size={20} color={C.textMuted} />
+              </TouchableOpacity>
             </View>
           ))
         ) : (
