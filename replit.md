@@ -39,7 +39,10 @@ artifacts/
 | GET | `/api/admin/partners` | Bearer | Liste partenaires |
 | PATCH | `/api/admin/partners/:id/status` | Bearer | Approuver/rejeter |
 | GET/DELETE | `/api/admin/events` | Bearer | Gestion publications |
+| DELETE | `/api/admin/partners/:id` | Bearer | Supprimer compte partenaire + email |
+| DELETE | `/api/admin/users/:id` | Bearer | Supprimer compte utilisateur + email |
 | GET | `/api/admin/registrations/stats?period=` | Bearer | Statistiques (day/week/month/year) |
+| POST | `/api/account/deletion-request` | — | Demande de suppression de compte |
 | GET | `/api/partners/approved-map` | — | Partenaires approuvés avec coordonnées |
 | POST | `/api/partners/register` | — | Inscription partenaire |
 
@@ -63,6 +66,8 @@ Toutes les données sont en mémoire (pas de DB). Les tableaux `partners`, `part
 - Splash screen animé : icônes flottantes, equalizer, pulse ring, palette lavender/coral/cyan
 - Mode sombre/clair/système
 - Bilingue FR/EN
+- Suppression de compte avec choix de motif (6 raisons localisées FR/EN)
+- Sélection d'image native (galerie/caméra) pour création d'événements et lieux (expo-image-picker)
 
 ### Panel admin (nostress-admin)
 - Authentification admin sécurisée
@@ -70,6 +75,8 @@ Toutes les données sont en mémoire (pas de DB). Les tableaux `partners`, `part
 - Gestion partenaires (approbation/rejet) avec carte interactive (Leaflet, CartoDB Voyager)
 - Gestion publications (événements des partenaires) avec message de notification auto-généré
 - Demandes de suppression de compte
+- Suppression de comptes partenaires (avec motif + email d'avertissement automatique)
+- Suppression de publications (avec motif + email d'avertissement automatique)
 - Statistiques d'inscriptions : barres Recharts par jour/semaine/mois/année
 
 ### Site public (nostress-web)
@@ -83,4 +90,9 @@ Toutes les données sont en mémoire (pas de DB). Les tableaux `partners`, `part
 
 - URL de base admin : `BASE_URL` strip `/nostress-admin` puis ajoute `/api`
 - expo-location v19 installé sur l'app mobile
+- expo-image-picker installé pour sélection d'images (galerie/caméra)
+- Emails : SMTP via Brevo (smtp-relay.brevo.com:587), FROM nostresstogo@gmail.com
+- Emails envoyés : bienvenue, inscription partenaire, approbation/rejet, avertissement publication, suppression de compte
+- Toutes les entrées dynamiques dans les emails sont échappées (escapeHtml) contre l'injection HTML
+- Tous les endpoints admin DELETE nécessitent `requireAdmin` middleware (Bearer token)
 - Workflows Replit gèrent chaque artifact séparément

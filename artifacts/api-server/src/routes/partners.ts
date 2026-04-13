@@ -4,7 +4,10 @@ import {
   sendPartnerRegistrationEmailToAdmin,
   sendPartnerApprovalEmail,
   sendPartnerRejectionEmail,
+  sendPublicationWarningEmail,
+  sendAccountDeletedEmail,
 } from "../email.js";
+import { requireAdmin } from "./admin.js";
 
 const router: IRouter = Router();
 
@@ -264,13 +267,32 @@ router.get("/admin/events", (_req, res) => {
   res.json(partnerEvents);
 });
 
-router.delete("/admin/events/:id", (req, res) => {
+router.delete("/admin/events/:id", requireAdmin, (req: any, res) => {
   const idx = partnerEvents.findIndex((e) => e.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: "Publication introuvable." });
+  const { reason } = req.body || {};
+  const deleteReason = reason || "Publication non conforme aux Conditions Générales d'Utilisation.";
   const [deleted] = partnerEvents.splice(idx, 1);
   const partner = partners.find((p) => p.id === deleted.partnerId);
-  const autoMessage = `Bonjour ${partner?.businessName ?? "Partenaire"},\n\nNous avons supprimé votre publication "${deleted.title}" car elle ne respecte pas nos Conditions Générales d'Utilisation et/ou notre charte éthique.\n\nNoStress s'engage à offrir un contenu de qualité, sûr et respectueux à tous ses utilisateurs.\n\nPour toute question, contactez notre équipe à nostresstogo@gmail.com.\n\nCordialement,\nL'équipe NoStress`;
-  res.json({ message: "Publication supprimée et notification envoyée.", notification: autoMessage, deleted });
+  const autoMessage = `Bonjour ${partner?.businessName ?? "Partenaire"},\n\nNous avons supprimé votre publication "${deleted.title}" car elle ne respecte pas nos Conditions Générales d'Utilisation et/ou notre charte éthique.\n\nMotif : ${deleteReason}\n\nNoStress s'engage à offrir un contenu de qualité, sûr et respectueux à tous ses utilisateurs.\n\n⚠️ Avertissement : En cas de récidive, votre compte partenaire pourra être suspendu ou supprimé.\n\nPour toute question, contactez notre équipe à nostresstogo@gmail.com.\n\nCordialement,\nL'équipe NoStress`;
+  if (partner?.email) {
+    sendPublicationWarningEmail(partner.email, partner.businessName, deleted.title, deleteReason).catch(() => {});
+  }
+  res.json({ message: "Publication supprimée et avertissement envoyé au partenaire.", notification: autoMessage, deleted });
+});
+
+router.delete("/admin/partners/:id", requireAdmin, (req: any, res) => {
+  const idx = partners.findIndex((p) => p.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: "Partenaire introuvable." });
+  const { reason } = req.body || {};
+  const deleteReason = reason || "Compte jugé frauduleux ou non conforme.";
+  const [deleted] = partners.splice(idx, 1);
+  const eventsRemoved = partnerEvents.filter((e) => e.partnerId === deleted.id).length;
+  for (let i = partnerEvents.length - 1; i >= 0; i--) {
+    if (partnerEvents[i].partnerId === deleted.id) partnerEvents.splice(i, 1);
+  }
+  sendAccountDeletedEmail(deleted.email, deleted.contactName || deleted.businessName, deleteReason).catch(() => {});
+  res.json({ message: `Compte partenaire supprimé. ${eventsRemoved} publication(s) retirée(s). Email d'avertissement envoyé.`, deleted });
 });
 
 router.get("/admin/registrations/stats", (req, res) => {

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import {
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -15,6 +16,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 
 import { C } from "@/constants/colors";
 import { useT, useApp } from "@/context/AppContext";
@@ -346,15 +348,74 @@ export default function CreateEventScreen() {
         <SectionHeader icon="image" label={t("formSectionMedia")} />
 
         <Field label={t("imageUrl")}>
-          <TextInput
-            style={styles.input}
-            placeholder="https://images.unsplash.com/..."
-            placeholderTextColor={C.textMuted}
-            value={form.imageUrl}
-            onChangeText={(v) => setField("imageUrl", v)}
-            keyboardType="url"
-            autoCapitalize="none"
-          />
+          {form.imageUrl ? (
+            <View style={{ borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: C.border }}>
+              <Image source={{ uri: form.imageUrl }} style={{ width: "100%", height: 180, borderRadius: 12 }} resizeMode="cover" />
+              <TouchableOpacity
+                style={{
+                  position: "absolute", top: 8, right: 8, backgroundColor: C.error,
+                  borderRadius: 16, width: 32, height: 32, alignItems: "center", justifyContent: "center",
+                }}
+                onPress={() => setField("imageUrl", "")}
+              >
+                <Ionicons name="close" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+                  backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: 12,
+                  paddingVertical: 32,
+                }}
+                onPress={async () => {
+                  const result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: ["images"],
+                    allowsEditing: true,
+                    aspect: [16, 9],
+                    quality: 0.8,
+                  });
+                  if (!result.canceled && result.assets[0]) {
+                    setField("imageUrl", result.assets[0].uri);
+                  }
+                }}
+              >
+                <Ionicons name="images-outline" size={22} color={C.lavender} />
+                <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: C.lavender }}>
+                  {lang === "fr" ? "Choisir une photo" : "Choose a photo"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+                  backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: 12,
+                  paddingVertical: 32,
+                }}
+                onPress={async () => {
+                  const perm = await ImagePicker.requestCameraPermissionsAsync();
+                  if (!perm.granted) {
+                    Alert.alert(lang === "fr" ? "Permission requise" : "Permission required",
+                      lang === "fr" ? "Autorisez l'accès à la caméra." : "Allow camera access.");
+                    return;
+                  }
+                  const result = await ImagePicker.launchCameraAsync({
+                    allowsEditing: true,
+                    aspect: [16, 9],
+                    quality: 0.8,
+                  });
+                  if (!result.canceled && result.assets[0]) {
+                    setField("imageUrl", result.assets[0].uri);
+                  }
+                }}
+              >
+                <Ionicons name="camera-outline" size={22} color={C.gold} />
+                <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: C.gold }}>
+                  {lang === "fr" ? "Prendre une photo" : "Take a photo"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </Field>
 
         {/* Error summary */}

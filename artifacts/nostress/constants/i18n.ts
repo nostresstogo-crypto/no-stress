@@ -174,6 +174,26 @@ export const translations = {
     onboarding3Title: "Billets en un clic",
     onboarding3Sub: "Réservez vos places instantanément, recevez votre QR code et entrez sans stress.",
 
+    // Account deletion
+    deleteAccount: "Supprimer mon compte",
+    deleteAccountTitle: "Supprimer votre compte",
+    deleteAccountDesc: "Cette action est irréversible. Toutes vos données seront supprimées définitivement.",
+    deleteAccountReason: "Pourquoi souhaitez-vous supprimer votre compte ?",
+    deleteAccountConfirm: "Confirmer la suppression",
+    deleteAccountSuccess: "Votre demande de suppression a été envoyée. Elle sera traitée sous 30 jours.",
+    deleteReasonNotUseful: "Je n'utilise plus l'application",
+    deleteReasonPrivacy: "Préoccupations de confidentialité",
+    deleteReasonBadExperience: "Mauvaise expérience utilisateur",
+    deleteReasonTooManyNotifs: "Trop de notifications",
+    deleteReasonFoundAlternative: "J'ai trouvé une alternative",
+    deleteReasonOther: "Autre raison",
+    selectReason: "Veuillez sélectionner une raison",
+
+    // Media picker
+    pickImage: "Choisir une photo",
+    takePhoto: "Prendre une photo",
+    removePhoto: "Retirer la photo",
+
     // Common
     loading: "Chargement...",
     error: "Erreur",
@@ -353,6 +373,26 @@ export const translations = {
     onboarding2Sub: "Dive into the best concerts, festivals and parties. The stage energy at your fingertips.",
     onboarding3Title: "Tickets in one tap",
     onboarding3Sub: "Book your spots instantly, get your QR code and enter stress-free.",
+
+    // Account deletion
+    deleteAccount: "Delete my account",
+    deleteAccountTitle: "Delete your account",
+    deleteAccountDesc: "This action is irreversible. All your data will be permanently deleted.",
+    deleteAccountReason: "Why do you want to delete your account?",
+    deleteAccountConfirm: "Confirm deletion",
+    deleteAccountSuccess: "Your deletion request has been submitted. It will be processed within 30 days.",
+    deleteReasonNotUseful: "I no longer use the app",
+    deleteReasonPrivacy: "Privacy concerns",
+    deleteReasonBadExperience: "Bad user experience",
+    deleteReasonTooManyNotifs: "Too many notifications",
+    deleteReasonFoundAlternative: "I found an alternative",
+    deleteReasonOther: "Other reason",
+    selectReason: "Please select a reason",
+
+    // Media picker
+    pickImage: "Choose a photo",
+    takePhoto: "Take a photo",
+    removePhoto: "Remove photo",
 
     // Common
     loading: "Loading...",

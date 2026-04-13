@@ -1,9 +1,12 @@
 import { Router, type IRouter } from "express";
-import { sendWelcomeEmail } from "../email.js";
+import { sendWelcomeEmail, sendAccountDeletedEmail } from "../email.js";
+import { requireAdmin } from "./admin.js";
 
 const router: IRouter = Router();
 
 const users: any[] = [];
+
+export { users };
 
 router.post("/auth/login", (req, res) => {
   const { email, password } = req.body;
@@ -48,6 +51,16 @@ router.post("/auth/register", (req, res) => {
   const token = `mock_token_${Date.now()}`;
   res.status(201).json({ token, user });
   sendWelcomeEmail(email, name).catch(() => {});
+});
+
+router.delete("/admin/users/:id", requireAdmin, (req: any, res) => {
+  const idx = users.findIndex((u: any) => u.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: "Utilisateur introuvable." });
+  const { reason } = req.body || {};
+  const deleteReason = reason || "Compte jugé frauduleux ou non conforme.";
+  const [deleted] = users.splice(idx, 1);
+  sendAccountDeletedEmail(deleted.email, deleted.name, deleteReason).catch(() => {});
+  res.json({ message: "Compte utilisateur supprimé. Email d'avertissement envoyé.", deleted });
 });
 
 export default router;

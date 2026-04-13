@@ -49,6 +49,7 @@ export default function Publications() {
   const [selected, setSelected] = useState<PartnerEvent | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteReason, setDeleteReason] = useState("");
   const [notifMsg, setNotifMsg] = useState<string | null>(null);
   const [notifOpen, setNotifOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -77,12 +78,13 @@ export default function Publications() {
     if (!selected) return;
     setDeleteLoading(true);
     try {
-      const result = await api.publications.delete(selected.id);
+      const result = await api.publications.delete(selected.id, deleteReason || undefined);
       setNotifMsg(result.notification);
       setDeleteOpen(false);
+      setDeleteReason("");
       setNotifOpen(true);
       load();
-      showToast(`Publication "${selected.title}" supprimée.`);
+      showToast(`Publication "${selected.title}" supprimée. Avertissement envoyé au partenaire.`);
     } catch (err: any) {
       showToast(err.message, "error");
     } finally {
@@ -218,8 +220,19 @@ export default function Publications() {
           <div className="bg-yellow-400/10 border border-yellow-400/30 rounded-lg p-3 flex gap-2">
             <AlertTriangle className="w-4 h-4 text-yellow-400 flex-shrink-0 mt-0.5" />
             <p className="text-xs text-yellow-300">
-              Cette action est irréversible. La publication sera supprimée et le partenaire sera notifié automatiquement.
+              Cette action est irréversible. La publication sera supprimée et un email d'avertissement sera envoyé automatiquement au partenaire.
             </p>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-foreground">Motif de la suppression (recommandé)</label>
+            <textarea
+              value={deleteReason}
+              onChange={(e) => setDeleteReason(e.target.value)}
+              placeholder="Ex: Contenu inapproprié, informations trompeuses, publicité interdite..."
+              rows={3}
+              className="w-full mt-1.5 px-3 py-2 bg-background border border-border rounded-md text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+            />
           </div>
 
           <DialogFooter>

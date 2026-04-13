@@ -26,6 +26,7 @@ import {
   Mail,
   Calendar,
   AlertTriangle,
+  Trash2,
 } from "lucide-react";
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
@@ -83,6 +84,8 @@ export default function Partners() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [deletePartnerOpen, setDeletePartnerOpen] = useState(false);
+  const [deletePartnerReason, setDeletePartnerReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
@@ -132,6 +135,23 @@ export default function Partners() {
       setRejectOpen(false);
       setDetailOpen(false);
       setRejectReason("");
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeletePartner = async () => {
+    if (!selected) return;
+    setActionLoading(true);
+    try {
+      await api.partners.delete(selected.id, deletePartnerReason || "Compte jugé frauduleux ou non conforme.");
+      showToast(`Compte "${selected.businessName}" supprimé. Email d'avertissement envoyé.`);
+      loadPartners();
+      setDeletePartnerOpen(false);
+      setDetailOpen(false);
+      setDeletePartnerReason("");
     } catch (err: any) {
       showToast(err.message, "error");
     } finally {
@@ -252,6 +272,15 @@ export default function Partners() {
                             </Button>
                           </>
                         )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-destructive border-destructive/30 hover:bg-destructive/10 h-7 text-xs gap-1"
+                          onClick={() => { setSelected(partner); setDeletePartnerOpen(true); }}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Supprimer
+                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"
@@ -411,6 +440,53 @@ export default function Partners() {
               disabled={actionLoading}
             >
               {actionLoading ? "En cours..." : "Confirmer le rejet"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deletePartnerOpen} onOpenChange={setDeletePartnerOpen}>
+        <DialogContent className="bg-card border-border max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="w-5 h-5" />
+              Supprimer le compte partenaire
+            </DialogTitle>
+            <DialogDescription>
+              Supprimer définitivement le compte de <strong>{selected?.businessName}</strong> et toutes ses publications. Un email d'avertissement sera envoyé automatiquement.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 flex gap-2">
+              <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-destructive">
+                Cette action est irréversible. Toutes les publications du partenaire seront supprimées.
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="delete-partner-reason">Motif de la suppression</Label>
+              <Textarea
+                id="delete-partner-reason"
+                value={deletePartnerReason}
+                onChange={(e) => setDeletePartnerReason(e.target.value)}
+                placeholder="Ex: Compte frauduleux, contenu illicite, usurpation d'identité..."
+                rows={3}
+                className="bg-background mt-1.5"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeletePartnerOpen(false); setDeletePartnerReason(""); }}>
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeletePartner}
+              disabled={actionLoading}
+            >
+              {actionLoading ? "Suppression..." : "Supprimer le compte"}
             </Button>
           </DialogFooter>
         </DialogContent>

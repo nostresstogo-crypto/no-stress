@@ -1,5 +1,14 @@
 import nodemailer from "nodemailer";
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 const SMTP_HOST = process.env.SMTP_HOST || "smtp-relay.brevo.com";
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || "587", 10);
 const SMTP_USER = process.env.SMTP_USER || "";
@@ -50,15 +59,18 @@ const baseStyle = `
   overflow: hidden;
 `;
 
-const headerHtml = (title: string) => `
+const headerHtml = (title: string) => {
+  const safeTitle = escapeHtml(title);
+  return `
   <div style="background: linear-gradient(135deg, #7c6af7 0%, #5b4fcf 100%); padding: 32px 32px 24px; text-align: center;">
     <div style="font-size: 28px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px;">NoStress</div>
     <div style="font-size: 13px; color: rgba(255,255,255,0.7); margin-top: 4px;">Découvrez les événements du Togo</div>
     <div style="height: 1px; background: rgba(255,255,255,0.2); margin: 20px 0 0;"></div>
   </div>
   <div style="padding: 32px;">
-    <h2 style="margin: 0 0 16px; font-size: 22px; color: #ffffff;">${title}</h2>
+    <h2 style="margin: 0 0 16px; font-size: 22px; color: #ffffff;">${safeTitle}</h2>
 `;
+};
 
 const footerHtml = `
   </div>
@@ -183,7 +195,68 @@ export async function sendPartnerApprovalEmail(to: string, contactName: string, 
   });
 }
 
+export async function sendPublicationWarningEmail(to: string, partnerName: string, publicationTitle: string, reason: string) {
+  const safeName = escapeHtml(partnerName);
+  const safeTitle = escapeHtml(publicationTitle);
+  const safeReason = escapeHtml(reason);
+  await sendMail({
+    to,
+    subject: "⚠️ Publication supprimée – NoStress",
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml(`Avertissement, ${partnerName}`)}
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 0 0 16px;">
+          Votre publication <strong style="color: #e8e8f0;">"${safeTitle}"</strong> a été supprimée par l'équipe NoStress car elle ne respecte pas nos Conditions Générales d'Utilisation et/ou notre charte éthique.
+        </p>
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #f0c040;">
+          <p style="margin: 0 0 8px; font-size: 13px; color: #6b6d8a; text-transform: uppercase; letter-spacing: 0.5px;">Motif</p>
+          <p style="margin: 0; font-size: 14px; color: #b0b2cc; line-height: 1.6;">${safeReason}</p>
+        </div>
+        <div style="background: #e0525215; border-radius: 12px; padding: 16px; margin: 16px 0; border: 1px solid #e0525233;">
+          <p style="margin: 0; font-size: 13px; color: #e05252; line-height: 1.6;">
+            ⚠️ <strong>Avertissement :</strong> En cas de récidive, votre compte partenaire pourra être suspendu ou supprimé définitivement.
+          </p>
+        </div>
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 16px 0 0;">
+          Si vous pensez qu'il s'agit d'une erreur, contactez-nous à 
+          <a href="mailto:nostresstogo@gmail.com" style="color: #7c6af7;">nostresstogo@gmail.com</a>.<br><br>
+          <strong style="color: #e8e8f0;">L'équipe NoStress</strong>
+        </p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}
+
+export async function sendAccountDeletedEmail(to: string, name: string, reason: string) {
+  const safeReason = escapeHtml(reason);
+  await sendMail({
+    to,
+    subject: "🚫 Votre compte a été supprimé – NoStress",
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml(`Bonjour ${name},`)}
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 0 0 16px;">
+          Votre compte sur NoStress a été supprimé par notre équipe de modération pour non-respect de nos Conditions Générales d'Utilisation.
+        </p>
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #e05252;">
+          <p style="margin: 0 0 8px; font-size: 13px; color: #6b6d8a; text-transform: uppercase; letter-spacing: 0.5px;">Motif</p>
+          <p style="margin: 0; font-size: 14px; color: #b0b2cc; line-height: 1.6;">${safeReason}</p>
+        </div>
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 16px 0 0;">
+          Si vous pensez qu'il s'agit d'une erreur, contactez-nous à 
+          <a href="mailto:nostresstogo@gmail.com" style="color: #7c6af7;">nostresstogo@gmail.com</a>.<br><br>
+          <strong style="color: #e8e8f0;">L'équipe NoStress</strong>
+        </p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}
+
 export async function sendPartnerRejectionEmail(to: string, contactName: string, businessName: string, reason: string) {
+  const safeBusiness = escapeHtml(businessName);
+  const safeReason = escapeHtml(reason);
   await sendMail({
     to,
     subject: "ℹ️ Mise à jour de votre demande partenaire – NoStress",
@@ -191,11 +264,11 @@ export async function sendPartnerRejectionEmail(to: string, contactName: string,
       <div style="${baseStyle}">
         ${headerHtml(`Bonjour ${contactName},`)}
         <p style="color: #b0b2cc; line-height: 1.7; margin: 0 0 16px;">
-          Après examen, votre demande d'inscription pour <strong style="color: #e8e8f0;">${businessName}</strong> n'a pas pu être acceptée pour le moment.
+          Après examen, votre demande d'inscription pour <strong style="color: #e8e8f0;">${safeBusiness}</strong> n'a pas pu être acceptée pour le moment.
         </p>
         <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #e05252;">
           <p style="margin: 0 0 8px; font-size: 13px; color: #6b6d8a; text-transform: uppercase; letter-spacing: 0.5px;">Motif</p>
-          <p style="margin: 0; font-size: 14px; color: #b0b2cc; line-height: 1.6;">${reason}</p>
+          <p style="margin: 0; font-size: 14px; color: #b0b2cc; line-height: 1.6;">${safeReason}</p>
         </div>
         <p style="color: #b0b2cc; line-height: 1.7; margin: 16px 0 0;">
           Si vous pensez qu'il s'agit d'une erreur ou souhaitez soumettre une nouvelle demande, contactez-nous à 

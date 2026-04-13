@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
+  Alert,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -18,6 +20,19 @@ import { EventCard } from "@/components/EventCard";
 import { ColorPalette } from "@/constants/colors";
 
 type Tab = "favorites" | "notifications";
+
+const DELETION_REASONS = [
+  { key: "not_useful", labelFr: "Je n'utilise plus l'application", labelEn: "I no longer use the app" },
+  { key: "privacy", labelFr: "Préoccupations de confidentialité", labelEn: "Privacy concerns" },
+  { key: "bad_experience", labelFr: "Mauvaise expérience utilisateur", labelEn: "Bad user experience" },
+  { key: "too_many_notifs", labelFr: "Trop de notifications", labelEn: "Too many notifications" },
+  { key: "found_alternative", labelFr: "J'ai trouvé une alternative", labelEn: "I found an alternative" },
+  { key: "other", labelFr: "Autre raison", labelEn: "Other reason" },
+] as const;
+
+const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
+  : "/api";
 
 function makeStyles(C: ColorPalette) {
   return StyleSheet.create({
@@ -179,8 +194,48 @@ export default function AccountScreen() {
   const { user, lang, setLang, logout, favorites, notifications, markAllRead, removeNotification, unreadCount, isDark, themeMode, setThemeMode, locationNotificationsEnabled, setLocationNotificationsEnabled, selectedCity, nearbyEventsCount } = useApp();
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>("favorites");
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [deleteReason, setDeleteReason] = useState<string | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const styles = useMemo(() => makeStyles(C), [C]);
+
+  const handleDeleteAccount = async () => {
+    if (!deleteReason || !user) return;
+    setDeleteLoading(true);
+    try {
+      const reasonLabel = DELETION_REASONS.find((r) => r.key === deleteReason);
+      const reasonText = lang === "fr" ? reasonLabel?.labelFr : reasonLabel?.labelEn;
+      const res = await fetch(`${API_BASE}/account/deletion-request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: user.email,
+          name: user.name,
+          accountType: user.role === "structure" ? "partner" : "user",
+          reason: reasonText || deleteReason,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Erreur serveur");
+      }
+      setDeleteModalVisible(false);
+      setDeleteReason(null);
+      Alert.alert(
+        lang === "fr" ? "Demande envoyée" : "Request submitted",
+        t("deleteAccountSuccess"),
+        [{ text: "OK", onPress: () => logout() }]
+      );
+    } catch {
+      Alert.alert(
+        t("error"),
+        lang === "fr" ? "Impossible d'envoyer la demande. Réessayez." : "Could not send request. Please try again."
+      );
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   const favoriteEvents = MOCK_EVENTS.filter((e) => favorites.includes(e.id));
 
@@ -406,6 +461,112 @@ export default function AccountScreen() {
         <Ionicons name="log-out-outline" size={20} color={C.error} />
         <Text style={styles.logoutText}>{t("logout")}</Text>
       </TouchableOpacity>
+
+      {/* Delete Account */}
+      <TouchableOpacity
+        style={[styles.logoutBtn, { borderColor: C.error, backgroundColor: C.error + "10", marginTop: 0 }]}
+        onPress={() => setDeleteModalVisible(true)}
+      >
+        <Ionicons name="trash-outline" size={20} color={C.error} />
+        <Text style={styles.logoutText}>{t("deleteAccount")}</Text>
+      </TouchableOpacity>
+
+      {/* Delete Account Modal */}
+      <Modal visible={deleteModalVisible} animationType="slide" transparent onRequestClose={() => setDeleteModalVisible(false)}>
+        <View style={{
+          flex: 1,
+          backgroundColor: "rgba(0,0,0,0.6)",
+          justifyContent: "flex-end",
+        }}>
+          <View style={{
+            backgroundColor: C.card,
+            borderTopLeftRadius: 24,
+            borderTopRightRadius: 24,
+            padding: 24,
+            paddingBottom: Platform.OS === "ios" ? 40 : 24,
+            maxHeight: "80%",
+          }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: C.error }}>
+                {t("deleteAccountTitle")}
+              </Text>
+              <TouchableOpacity onPress={() => { setDeleteModalVisible(false); setDeleteReason(null); }}>
+                <Ionicons name="close" size={24} color={C.textMuted} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: C.textMuted, marginBottom: 20, lineHeight: 20 }}>
+              {t("deleteAccountDesc")}
+            </Text>
+
+            <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text, marginBottom: 12 }}>
+              {t("deleteAccountReason")}
+            </Text>
+
+            <ScrollView style={{ maxHeight: 260 }} showsVerticalScrollIndicator={false}>
+              {DELETION_REASONS.map((r) => {
+                const label = lang === "fr" ? r.labelFr : r.labelEn;
+                const selected = deleteReason === r.key;
+                return (
+                  <TouchableOpacity
+                    key={r.key}
+                    onPress={() => setDeleteReason(r.key)}
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 12,
+                      paddingVertical: 14,
+                      paddingHorizontal: 16,
+                      marginBottom: 8,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: selected ? C.error : C.border,
+                      backgroundColor: selected ? C.error + "12" : C.bg,
+                    }}
+                  >
+                    <Ionicons
+                      name={selected ? "radio-button-on" : "radio-button-off"}
+                      size={20}
+                      color={selected ? C.error : C.textMuted}
+                    />
+                    <Text style={{
+                      flex: 1,
+                      fontSize: 14,
+                      fontFamily: selected ? "Inter_600SemiBold" : "Inter_400Regular",
+                      color: selected ? C.error : C.text,
+                    }}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            <TouchableOpacity
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                paddingVertical: 16,
+                borderRadius: 12,
+                backgroundColor: deleteReason ? C.error : C.error + "40",
+                marginTop: 16,
+                opacity: deleteLoading ? 0.6 : 1,
+              }}
+              disabled={!deleteReason || deleteLoading}
+              onPress={handleDeleteAccount}
+            >
+              <Ionicons name="trash" size={18} color="#fff" />
+              <Text style={{ fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff" }}>
+                {deleteLoading
+                  ? (lang === "fr" ? "Suppression..." : "Deleting...")
+                  : t("deleteAccountConfirm")}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -16,6 +17,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 
 import { C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
@@ -28,6 +30,7 @@ interface MyVenue {
   city: string;
   address: string;
   description: string;
+  imageUrl?: string;
   createdAt: string;
 }
 
@@ -60,6 +63,7 @@ export default function DashboardScreen() {
   const [venueCity, setVenueCity] = useState("");
   const [venueAddress, setVenueAddress] = useState("");
   const [venueDesc, setVenueDesc] = useState("");
+  const [venueImageUrl, setVenueImageUrl] = useState("");
 
   useEffect(() => {
     AsyncStorage.getItem(NS_MY_VENUES_KEY).then((v) => {
@@ -68,7 +72,7 @@ export default function DashboardScreen() {
   }, []);
 
   const openVenueModal = () => {
-    setVenueName(""); setVenueType(""); setVenueCity(""); setVenueAddress(""); setVenueDesc("");
+    setVenueName(""); setVenueType(""); setVenueCity(""); setVenueAddress(""); setVenueDesc(""); setVenueImageUrl("");
     setShowVenueModal(true);
   };
 
@@ -88,6 +92,7 @@ export default function DashboardScreen() {
       city: venueCity.trim(),
       address: venueAddress.trim(),
       description: venueDesc.trim(),
+      imageUrl: venueImageUrl || undefined,
       createdAt: new Date().toISOString(),
     };
     setMyVenues((prev) => {
@@ -582,6 +587,78 @@ export default function DashboardScreen() {
                   onChangeText={setVenueDesc}
                   multiline
                 />
+
+                <Text style={[styles.modalLabel, { color: C.textMuted }]}>
+                  {lang === "fr" ? "Photo du lieu" : "Venue photo"}
+                </Text>
+                {venueImageUrl ? (
+                  <View style={{ borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: C.border, marginBottom: 12 }}>
+                    <Image source={{ uri: venueImageUrl }} style={{ width: "100%", height: 140, borderRadius: 12 }} resizeMode="cover" />
+                    <TouchableOpacity
+                      style={{
+                        position: "absolute", top: 6, right: 6, backgroundColor: C.error,
+                        borderRadius: 14, width: 28, height: 28, alignItems: "center", justifyContent: "center",
+                      }}
+                      onPress={() => setVenueImageUrl("")}
+                    >
+                      <Ionicons name="close" size={16} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
+                    <TouchableOpacity
+                      style={{
+                        flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+                        backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, borderRadius: 10,
+                        paddingVertical: 20,
+                      }}
+                      onPress={async () => {
+                        const result = await ImagePicker.launchImageLibraryAsync({
+                          mediaTypes: ["images"],
+                          allowsEditing: true,
+                          aspect: [16, 9],
+                          quality: 0.8,
+                        });
+                        if (!result.canceled && result.assets[0]) {
+                          setVenueImageUrl(result.assets[0].uri);
+                        }
+                      }}
+                    >
+                      <Ionicons name="images-outline" size={18} color={C.lavender} />
+                      <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: C.lavender }}>
+                        {lang === "fr" ? "Galerie" : "Gallery"}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={{
+                        flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+                        backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, borderRadius: 10,
+                        paddingVertical: 20,
+                      }}
+                      onPress={async () => {
+                        const perm = await ImagePicker.requestCameraPermissionsAsync();
+                        if (!perm.granted) {
+                          Alert.alert(lang === "fr" ? "Permission requise" : "Permission required",
+                            lang === "fr" ? "Autorisez l'accès à la caméra." : "Allow camera access.");
+                          return;
+                        }
+                        const result = await ImagePicker.launchCameraAsync({
+                          allowsEditing: true,
+                          aspect: [16, 9],
+                          quality: 0.8,
+                        });
+                        if (!result.canceled && result.assets[0]) {
+                          setVenueImageUrl(result.assets[0].uri);
+                        }
+                      }}
+                    >
+                      <Ionicons name="camera-outline" size={18} color={C.gold} />
+                      <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: C.gold }}>
+                        {lang === "fr" ? "Caméra" : "Camera"}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </ScrollView>
 
               <TouchableOpacity style={[styles.createBtn, { marginTop: 16 }]} onPress={saveVenue}>

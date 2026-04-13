@@ -49,11 +49,19 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ reason }),
       }),
+    delete: (id: string, reason: string) =>
+      request<{ message: string; deleted: Partner }>(`/admin/partners/${id}`, {
+        method: "DELETE",
+        body: JSON.stringify({ reason }),
+      }),
   },
   publications: {
     list: () => request<PartnerEvent[]>("/admin/events"),
-    delete: (id: string) =>
-      request<{ message: string; notification: string; deleted: PartnerEvent }>(`/admin/events/${id}`, { method: "DELETE" }),
+    delete: (id: string, reason?: string) =>
+      request<{ message: string; notification: string; deleted: PartnerEvent }>(`/admin/events/${id}`, {
+        method: "DELETE",
+        body: JSON.stringify({ reason }),
+      }),
   },
   registrations: {
     stats: (period: "day" | "week" | "month" | "year") =>
