@@ -146,18 +146,17 @@ var map = L.map('map', {
   preferCanvas: false,
 }).setView([8.6, 1.0], 7);
 
-/* Satellite tiles — Esri World Imagery */
-L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+/* CartoDB Dark Matter — fond noir uniquement Togo */
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
   maxZoom: 19,
-  attribution: 'Tiles &copy; Esri',
+  minZoom: 6,
+  subdomains: 'abcd',
+  attribution: '&copy; CartoDB',
 }).addTo(map);
 
-/* Dark semi-transparent overlay for better contrast */
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png', {
-  maxZoom: 19,
-  subdomains: 'abcd',
-  opacity: 0.55,
-}).addTo(map);
+/* Limiter la carte aux bounds du Togo */
+var togoBounds = L.latLngBounds([[6.0, -0.2], [11.2, 1.9]]);
+map.setMaxBounds(togoBounds.pad(0.15));
 
 L.control.zoom({ position: 'topright' }).addTo(map);
 
