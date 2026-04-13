@@ -1,4 +1,5 @@
 import { Router, type IRouter } from "express";
+import { sendWelcomeEmail } from "../email.js";
 
 const router: IRouter = Router();
 
@@ -46,6 +47,7 @@ router.post("/auth/register", (req, res) => {
   users.push(user);
   const token = `mock_token_${Date.now()}`;
   res.status(201).json({ token, user });
+  sendWelcomeEmail(email, name).catch(() => {});
 });
 
 export default router;

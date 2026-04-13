@@ -1,4 +1,10 @@
 import { Router, type IRouter } from "express";
+import {
+  sendPartnerRegistrationEmailToPartner,
+  sendPartnerRegistrationEmailToAdmin,
+  sendPartnerApprovalEmail,
+  sendPartnerRejectionEmail,
+} from "../email.js";
 
 const router: IRouter = Router();
 
@@ -222,6 +228,8 @@ router.post("/partners/register", (req, res) => {
   partners.push(partner);
   registrationLog.push({ type: "partner", date: new Date().toISOString() });
   res.status(201).json({ message: "Demande d'inscription soumise avec succès. Elle sera examinée sous 48h.", partner });
+  sendPartnerRegistrationEmailToPartner(email, contactName, businessName).catch(() => {});
+  sendPartnerRegistrationEmailToAdmin(email, contactName, businessName, businessType, city, phone).catch(() => {});
 });
 
 router.get("/partners/:id", (req, res) => {
@@ -237,16 +245,19 @@ router.post("/admin/partners/:id/approve", (req, res) => {
   partner.rejectionReason = null;
   partner.updatedAt = new Date().toISOString();
   res.json({ message: "Partenaire approuvé avec succès.", partner });
+  sendPartnerApprovalEmail(partner.email, partner.contactName, partner.businessName).catch(() => {});
 });
 
 router.post("/admin/partners/:id/reject", (req, res) => {
   const partner = partners.find((p) => p.id === req.params.id);
   if (!partner) return res.status(404).json({ error: "Partenaire introuvable." });
   const { reason } = req.body;
+  const rejectionReason = reason || "Demande rejetée par l'administrateur.";
   partner.status = "rejected";
-  partner.rejectionReason = reason || "Demande rejetée par l'administrateur.";
+  partner.rejectionReason = rejectionReason;
   partner.updatedAt = new Date().toISOString();
   res.json({ message: "Partenaire rejeté.", partner });
+  sendPartnerRejectionEmail(partner.email, partner.contactName, partner.businessName, rejectionReason).catch(() => {});
 });
 
 router.get("/admin/events", (_req, res) => {
