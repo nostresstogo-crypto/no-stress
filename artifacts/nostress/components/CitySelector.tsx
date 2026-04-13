@@ -25,21 +25,25 @@ export function CitySelector({ value, onChange }: CitySelectorProps) {
   const [open, setOpen] = useState(false);
   const insets = useSafeAreaInsets();
   const cities = MOCK_CITIES;
-  const label = value ? cities.find((c) => c.id === value)?.name ?? value : t("allCities");
+  const hasCity = !!value;
 
   return (
     <>
-      <TouchableOpacity style={styles.selector} onPress={() => setOpen(true)}>
-        <Ionicons name="location" size={16} color={C.gold} />
-        <Text style={styles.label}>{label}</Text>
-        <Ionicons name="chevron-down" size={14} color={C.textMuted} />
+      <TouchableOpacity
+        style={[styles.selector, hasCity && { borderColor: C.lavender, backgroundColor: C.lavender + "18" }]}
+        onPress={() => setOpen(true)}
+      >
+        <Ionicons name="location" size={16} color={hasCity ? C.lavender : C.gold} />
+        <Text style={[styles.label, hasCity && { color: C.lavender }]}>Villes</Text>
+        {hasCity && <View style={[styles.activeDot, { backgroundColor: C.lavender }]} />}
+        <Ionicons name="chevron-down" size={14} color={hasCity ? C.lavender : C.textMuted} />
       </TouchableOpacity>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
         <Pressable style={styles.backdrop} onPress={() => setOpen(false)} />
         <View style={[styles.sheet, { paddingBottom: insets.bottom + 16 }]}>
           <View style={styles.handle} />
-          <Text style={styles.sheetTitle}>{t("city")}</Text>
+          <Text style={styles.sheetTitle}>Villes</Text>
           <FlatList
             data={[{ id: "", name: t("allCities"), country: "" }, ...cities]}
             keyExtractor={(c) => c.id}
@@ -83,9 +87,14 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
-    fontFamily: "Inter_500Medium",
+    fontFamily: "Inter_600SemiBold",
     color: C.text,
-    flex: 1,
+  },
+  activeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 2,
   },
   backdrop: {
     flex: 1,
