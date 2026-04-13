@@ -169,10 +169,10 @@ export const translations = {
     onboardingChooseLang: "Choisissez votre langue",
     onboarding1Title: "Bienvenue sur NoStress",
     onboarding1Sub: "L'application des événements pan-africains — concerts, festivals, soirées et bien plus.",
-    onboarding2Title: "Billets en quelques clics",
-    onboarding2Sub: "Réservez vos places et payez avec Flooz, T-Money ou MIX by YAS.",
-    onboarding3Title: "6 villes du Togo",
-    onboarding3Sub: "Lomé, Kpalimé, Kara, Aného et bien d'autres. Découvrez les événements près de chez vous.",
+    onboarding2Title: "Vivez l'ambiance",
+    onboarding2Sub: "Plongez dans les meilleurs concerts, festivals et soirées. L'énergie de la scène à portée de main.",
+    onboarding3Title: "Billets en un clic",
+    onboarding3Sub: "Réservez vos places instantanément, recevez votre QR code et entrez sans stress.",
 
     // Common
     loading: "Chargement...",
@@ -349,10 +349,10 @@ export const translations = {
     onboardingChooseLang: "Choose your language",
     onboarding1Title: "Welcome to NoStress",
     onboarding1Sub: "The pan-African events app — concerts, festivals, nightlife and so much more.",
-    onboarding2Title: "Tickets in seconds",
-    onboarding2Sub: "Book your spots and pay with Flooz, T-Money or MIX by YAS.",
-    onboarding3Title: "6 cities in Togo",
-    onboarding3Sub: "Lomé, Kpalimé, Kara, Aného and more. Discover events near you.",
+    onboarding2Title: "Feel the vibe",
+    onboarding2Sub: "Dive into the best concerts, festivals and parties. The stage energy at your fingertips.",
+    onboarding3Title: "Tickets in one tap",
+    onboarding3Sub: "Book your spots instantly, get your QR code and enter stress-free.",
 
     // Common
     loading: "Loading...",

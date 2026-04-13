@@ -70,7 +70,7 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               {[
                 { icon: Calendar, title: "Découverte", desc: "Trouvez des événements exclusifs et des soirées secrètes." },
-                { icon: Ticket, title: "Billetterie Mobile", desc: "Achetez vos tickets via Flooz, T-Money ou MIX by YAS." },
+                { icon: Ticket, title: "Billetterie Mobile", desc: "Achetez vos tickets en un clic et recevez votre QR code instantanément." },
                 { icon: MapPin, title: "Carte Interactive", desc: "Localisez les lieux les plus chauds autour de vous." },
                 { icon: Smartphone, title: "Espace Partenaire", desc: "Gérez vos événements directement depuis l'application." }
               ].map((feature, i) => (
@@ -138,34 +138,6 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Cities */}
-        <section className="py-24 bg-card border-y border-border">
-          <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl md:text-5xl font-bold mb-12">Le Togo vibre avec nous</h2>
-            <div className="flex flex-wrap justify-center gap-4 max-w-4xl mx-auto">
-              {[
-                { name: "Lomé", color: "bg-[#006A4E]/20 text-[#006A4E] border-[#006A4E]/30 dark:text-[#006A4E] dark:bg-[#006A4E]/20" },
-                { name: "Kpalimé", color: "bg-[#FFCD00]/20 text-[#FFCD00] border-[#FFCD00]/30 dark:text-[#FFCD00] dark:bg-[#FFCD00]/20" },
-                { name: "Kara", color: "bg-[#D21034]/20 text-[#D21034] border-[#D21034]/30 dark:text-[#D21034] dark:bg-[#D21034]/20" },
-                { name: "Aného", color: "bg-primary/20 text-primary border-primary/30" },
-                { name: "Sokodé", color: "bg-secondary/20 text-secondary border-secondary/30" },
-                { name: "Atakpamé", color: "bg-muted text-foreground border-border" }
-              ].map((city, i) => (
-                <motion.div 
-                  key={city.name}
-                  className={`px-8 py-4 rounded-full border text-xl font-bold ${city.color}`}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.3, delay: i * 0.1 }}
-                >
-                  {city.name}
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* Pricing */}
         <section className="py-24 bg-background">
           <div className="container mx-auto px-4">
@@ -179,7 +151,7 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
               {[
                 { name: "Gratuit", price: "0 FCFA", desc: "Pour les petits événements", features: ["1 événement actif", "Scan de billets basique", "Support par email"] },
-                { name: "Pro", price: "15 000 FCFA", suffix: "/mois", desc: "Pour les clubs et promoteurs", popular: true, features: ["Événements illimités", "Paiements T-Money/Flooz", "Dashboard analytique", "Support prioritaire"] },
+                { name: "Pro", price: "15 000 FCFA", suffix: "/mois", desc: "Pour les clubs et promoteurs", popular: true, features: ["Événements illimités", "Paiements sécurisés", "Dashboard analytique", "Support prioritaire"] },
                 { name: "Premium", price: "45 000 FCFA", suffix: "/mois", desc: "Pour les grands festivals", features: ["Fonctions Pro", "Mise en avant sur l'app", "Accès API", "Account manager dédié"] }
               ].map((plan, i) => (
                 <div key={i} className={`p-8 rounded-2xl border ${plan.popular ? 'border-primary bg-card relative' : 'border-border bg-card'}`}>
@@ -214,7 +186,7 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {[
                 { 
-                  quote: "Enfin une appli qui comprend comment on fait la fête à Lomé ! Je n'ai plus besoin de faire la queue pour mes billets, tout se passe sur T-Money directement dans l'app.", 
+                  quote: "Enfin une appli qui comprend comment on fait la fête à Lomé ! Je n'ai plus besoin de faire la queue pour mes billets, tout se fait directement dans l'app.", 
                   name: "Komi A.", 
                   role: "Étudiant",
                   initials: "KA"

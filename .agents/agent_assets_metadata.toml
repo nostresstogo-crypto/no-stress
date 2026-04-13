@@ -18,3 +18,9 @@ id = "e9cAteESufQ5ItrjPu1vh"
 uri = "file://artifacts/nostress-web/public/images/festival.png"
 type = "image"
 title = "Outdoor music festival"
+
+[[generated]]
+id = "YVpqE9Ss7ZUpncWOn9IGr"
+uri = "file://artifacts/nostress/assets/images/concert-crowd.png"
+type = "image"
+title = "concert crowd night"

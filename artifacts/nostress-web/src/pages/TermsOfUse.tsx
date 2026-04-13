@@ -28,7 +28,7 @@ export default function TermsOfUse() {
             </p>
             <ul>
               <li>Découvrir des événements locaux (concerts, festivals, soirées, etc.).</li>
-              <li>Acheter des billets électroniques via les solutions de paiement mobile local (Flooz, T-Money, MIX by YAS).</li>
+              <li>Acheter des billets électroniques via les solutions de paiement mobile intégrées.</li>
               <li>Consulter les lieux et établissements partenaires vérifiés.</li>
               <li>Gérer leurs billets et favoris depuis leur profil.</li>
             </ul>

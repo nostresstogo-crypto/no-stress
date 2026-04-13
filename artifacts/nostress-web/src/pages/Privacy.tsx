@@ -45,9 +45,9 @@ export default function Privacy() {
               <li><strong>Autorités légales :</strong> Si la loi togolaise l'exige.</li>
             </ul>
 
-            <h2>5. Paiements mobiles (Flooz, T-Money, MIX by YAS)</h2>
+            <h2>5. Paiements mobiles</h2>
             <p>
-              NoStress intègre les solutions de paiement mobile locales pour faciliter l'achat de billets. Lorsque vous utilisez Flooz, T-Money ou MIX by YAS, les transactions sont traitées directement par ces opérateurs. Nous ne stockons pas vos codes PIN ou informations bancaires sensibles.
+              NoStress intègre des solutions de paiement mobile sécurisées pour faciliter l'achat de billets. Les transactions sont traitées par des opérateurs de confiance. Nous ne stockons pas vos codes PIN ou informations bancaires sensibles.
             </p>
 
             <h2>6. Droits des utilisateurs</h2>

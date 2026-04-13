@@ -25,8 +25,6 @@ import { StatusBar } from "expo-status-bar";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider, useApp, useColors } from "@/context/AppContext";
-import { TOGO_GREEN, TOGO_YELLOW, TOGO_RED } from "@/constants/colors";
-
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient({
@@ -37,18 +35,20 @@ const queryClient = new QueryClient({
 
 const LAVENDER = "#9B8FE8";
 const GOLD = "#D4AF37";
+const CORAL = "#FF6B8A";
+const CYAN = "#00D4FF";
 const BG = "#0E1120";
 
 const FLOATING_ICONS = [
-  { name: "musical-notes", x: 0.15, y: 0.18, size: 22, color: TOGO_YELLOW, delay: 200 },
+  { name: "musical-notes", x: 0.15, y: 0.18, size: 22, color: CORAL, delay: 200 },
   { name: "ticket", x: 0.82, y: 0.15, size: 20, color: GOLD, delay: 400 },
-  { name: "location", x: 0.88, y: 0.72, size: 18, color: TOGO_GREEN, delay: 600 },
-  { name: "camera", x: 0.12, y: 0.75, size: 20, color: TOGO_RED, delay: 300 },
+  { name: "location", x: 0.88, y: 0.72, size: 18, color: CYAN, delay: 600 },
+  { name: "camera", x: 0.12, y: 0.75, size: 20, color: LAVENDER, delay: 300 },
   { name: "mic", x: 0.78, y: 0.42, size: 16, color: LAVENDER, delay: 500 },
-  { name: "people", x: 0.22, y: 0.45, size: 17, color: TOGO_YELLOW, delay: 700 },
+  { name: "people", x: 0.22, y: 0.45, size: 17, color: CORAL, delay: 700 },
   { name: "star", x: 0.5, y: 0.08, size: 14, color: GOLD, delay: 350 },
-  { name: "sparkles", x: 0.08, y: 0.35, size: 15, color: LAVENDER, delay: 450 },
-  { name: "flame", x: 0.92, y: 0.55, size: 16, color: TOGO_RED, delay: 550 },
+  { name: "sparkles", x: 0.08, y: 0.35, size: 15, color: CYAN, delay: 450 },
+  { name: "flame", x: 0.92, y: 0.55, size: 16, color: CORAL, delay: 550 },
   { name: "heart", x: 0.65, y: 0.82, size: 14, color: LAVENDER, delay: 650 },
 ] as const;
 
@@ -111,7 +111,7 @@ function EqBar({ index, total }: { index: number; total: number }) {
 
   const center = total / 2;
   const dist = Math.abs(index - center) / center;
-  const barColor = dist < 0.3 ? LAVENDER : dist < 0.6 ? GOLD : TOGO_GREEN + "88";
+  const barColor = dist < 0.3 ? LAVENDER : dist < 0.6 ? CORAL : CYAN + "88";
 
   return (
     <Animated.View
@@ -172,10 +172,10 @@ function CustomSplash() {
 
   return (
     <View style={splash.root}>
-      <Animated.View style={[splash.flagBar, { opacity: flagOpacity }]}>
-        <View style={[splash.flagStripe, { backgroundColor: TOGO_GREEN }]} />
-        <View style={[splash.flagStripe, { backgroundColor: TOGO_YELLOW }]} />
-        <View style={[splash.flagStripe, { backgroundColor: TOGO_RED }]} />
+      <Animated.View style={[splash.accentBar, { opacity: flagOpacity }]}>
+        <View style={[splash.accentSegment, { backgroundColor: LAVENDER }]} />
+        <View style={[splash.accentSegment, { backgroundColor: CORAL }]} />
+        <View style={[splash.accentSegment, { backgroundColor: CYAN }]} />
       </Animated.View>
 
       <View style={splash.glowTop} />
@@ -218,9 +218,9 @@ function CustomSplash() {
 
       <Animated.View style={[splash.mottoRow, { opacity: mottoOpacity, transform: [{ translateY: mottoY }] }]}>
         <Text style={splash.mottoWord}>Découvrez</Text>
-        <View style={[splash.mottoDot, { backgroundColor: TOGO_GREEN }]} />
+        <View style={[splash.mottoDot, { backgroundColor: CORAL }]} />
         <Text style={[splash.mottoWord, { color: LAVENDER }]}>Vibrez</Text>
-        <View style={[splash.mottoDot, { backgroundColor: TOGO_YELLOW }]} />
+        <View style={[splash.mottoDot, { backgroundColor: CYAN }]} />
         <Text style={[splash.mottoWord, { color: GOLD }]}>Sans stress</Text>
       </Animated.View>
 
@@ -230,10 +230,10 @@ function CustomSplash() {
         ))}
       </Animated.View>
 
-      <Animated.View style={[splash.flagBarBottom, { opacity: flagOpacity }]}>
-        <View style={[splash.flagStripe, { backgroundColor: TOGO_GREEN }]} />
-        <View style={[splash.flagStripe, { backgroundColor: TOGO_YELLOW }]} />
-        <View style={[splash.flagStripe, { backgroundColor: TOGO_RED }]} />
+      <Animated.View style={[splash.accentBarBottom, { opacity: flagOpacity }]}>
+        <View style={[splash.accentSegment, { backgroundColor: LAVENDER }]} />
+        <View style={[splash.accentSegment, { backgroundColor: CORAL }]} />
+        <View style={[splash.accentSegment, { backgroundColor: CYAN }]} />
       </Animated.View>
     </View>
   );
@@ -293,23 +293,23 @@ const splash = StyleSheet.create({
     justifyContent: "center",
     gap: 16,
   },
-  flagBar: {
+  accentBar: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    height: 5,
+    height: 3,
     flexDirection: "row",
   },
-  flagBarBottom: {
+  accentBarBottom: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    height: 5,
+    height: 3,
     flexDirection: "row",
   },
-  flagStripe: {
+  accentSegment: {
     flex: 1,
     height: "100%",
   },

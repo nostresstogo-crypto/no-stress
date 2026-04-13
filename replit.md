@@ -58,8 +58,9 @@ Toutes les données sont en mémoire (pas de DB). Les tableaux `partners`, `part
   - Toggle "Alertes de proximité" dans les paramètres du compte (clients uniquement)
   - Affiche le nombre d'événements dans la ville sélectionnée
   - Persiste via AsyncStorage
-- Authentification client + partenaire + onboarding
+- Authentification client + partenaire + onboarding (3 slides : bienvenue, concert live, billetterie)
 - Sélecteur de ville (23 villes togolaises avec coordonnées GPS)
+- Splash screen animé : icônes flottantes, equalizer, pulse ring, palette lavender/coral/cyan
 - Mode sombre/clair/système
 - Bilingue FR/EN
 
@@ -72,7 +73,7 @@ Toutes les données sont en mémoire (pas de DB). Les tableaux `partners`, `part
 - Statistiques d'inscriptions : barres Recharts par jour/semaine/mois/année
 
 ### Site public (nostress-web)
-- Landing page marketing NoStress
+- Landing page marketing NoStress (sans section villes)
 
 ## Villes (MOCK_CITIES)
 

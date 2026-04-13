@@ -3,6 +3,7 @@ import {
   Animated,
   Dimensions,
   FlatList,
+  Image,
   Platform,
   StyleSheet,
   Text,
@@ -14,7 +15,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { TOGO_GREEN, TOGO_YELLOW, TOGO_RED } from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
 import { translations, Lang } from "@/constants/i18n";
 
@@ -22,6 +22,8 @@ const { width: SCREEN_W } = Dimensions.get("window");
 
 const LAVENDER = "#9B8FE8";
 const GOLD = "#D4AF37";
+const CORAL = "#FF6B8A";
+const CYAN = "#00D4FF";
 const BG = "#0E1120";
 
 type Slide = {
@@ -36,41 +38,32 @@ type Slide = {
 
 const SLIDES: Slide[] = [
   {
-    key: "lome",
-    icon: "partly-sunny-outline",
-    iconColor: TOGO_YELLOW,
-    glowColor: TOGO_YELLOW,
-    accentColor: TOGO_YELLOW,
+    key: "welcome",
+    icon: "sparkles",
+    iconColor: LAVENDER,
+    glowColor: LAVENDER,
+    accentColor: LAVENDER,
     titleKey: "onboarding1Title",
     subKey: "onboarding1Sub",
   },
   {
-    key: "tickets",
-    icon: "ticket-outline",
-    iconColor: GOLD,
-    glowColor: GOLD,
-    accentColor: GOLD,
+    key: "concert",
+    icon: "people",
+    iconColor: CORAL,
+    glowColor: CORAL,
+    accentColor: CORAL,
     titleKey: "onboarding2Title",
     subKey: "onboarding2Sub",
   },
   {
-    key: "cities",
-    icon: "map-outline",
-    iconColor: TOGO_GREEN,
-    glowColor: TOGO_GREEN,
-    accentColor: TOGO_GREEN,
+    key: "tickets",
+    icon: "ticket-outline",
+    iconColor: CYAN,
+    glowColor: CYAN,
+    accentColor: CYAN,
     titleKey: "onboarding3Title",
     subKey: "onboarding3Sub",
   },
-];
-
-const TOGO_CITIES_ONBOARD = [
-  { name: "Lomé", icon: "star" as const },
-  { name: "Kpalimé", icon: "leaf" as const },
-  { name: "Kara", icon: "flash" as const },
-  { name: "Aného", icon: "water" as const },
-  { name: "Sokodé", icon: "flame" as const },
-  { name: "Atakpamé", icon: "sunny" as const },
 ];
 
 export default function OnboardingScreen() {
@@ -116,21 +109,18 @@ export default function OnboardingScreen() {
 
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
-      {/* Togo flag accent stripe at top */}
-      <View style={styles.flagStripe}>
-        <View style={[styles.flagSegment, { backgroundColor: TOGO_GREEN }]} />
-        <View style={[styles.flagSegment, { backgroundColor: TOGO_YELLOW }]} />
-        <View style={[styles.flagSegment, { backgroundColor: TOGO_RED }]} />
+      <View style={styles.accentStripe}>
+        <View style={[styles.accentSeg, { backgroundColor: LAVENDER }]} />
+        <View style={[styles.accentSeg, { backgroundColor: CORAL }]} />
+        <View style={[styles.accentSeg, { backgroundColor: CYAN }]} />
       </View>
 
-      {/* Skip button */}
       {!isLast && (
         <TouchableOpacity style={styles.skipBtn} onPress={skip}>
           <Text style={styles.skipText}>{t("onboardingSkip")}</Text>
         </TouchableOpacity>
       )}
 
-      {/* Slides */}
       <Animated.FlatList
         ref={flatRef as any}
         data={SLIDES}
@@ -157,9 +147,7 @@ export default function OnboardingScreen() {
         )}
       />
 
-      {/* Bottom controls */}
       <View style={[styles.bottom, { paddingBottom: insets.bottom + 24 }]}>
-        {/* Dots */}
         <View style={styles.dots}>
           {SLIDES.map((s, i) => {
             const inputRange = [
@@ -186,7 +174,6 @@ export default function OnboardingScreen() {
           })}
         </View>
 
-        {/* CTA button */}
         <TouchableOpacity
           style={[styles.ctaBtn, { backgroundColor: activeSlide.accentColor }]}
           onPress={goNext}
@@ -244,20 +231,29 @@ function SlideView({
   return (
     <View style={styles.slide}>
       <Animated.View style={[styles.slideInner, { transform: [{ scale }], opacity }]}>
-        {/* Glow blob */}
         <View style={[styles.glow, { backgroundColor: slide.glowColor + "18" }]} />
 
-        {/* Icon circle */}
-        <View
-          style={[
-            styles.iconCircle,
-            { backgroundColor: slide.iconColor + "18", borderColor: slide.iconColor + "40" },
-          ]}
-        >
-          <Ionicons name={slide.icon as any} size={72} color={slide.iconColor} />
-        </View>
+        {index === 1 ? (
+          <View style={styles.concertImageWrap}>
+            <Image
+              source={require("@/assets/images/concert-crowd.png")}
+              style={styles.concertImage}
+              resizeMode="cover"
+            />
+            <View style={styles.concertOverlay} />
+            <Ionicons name="musical-notes" size={48} color="#fff" style={styles.concertIcon} />
+          </View>
+        ) : (
+          <View
+            style={[
+              styles.iconCircle,
+              { backgroundColor: slide.iconColor + "18", borderColor: slide.iconColor + "40" },
+            ]}
+          >
+            <Ionicons name={slide.icon as any} size={72} color={slide.iconColor} />
+          </View>
+        )}
 
-        {/* Brand mark on first slide */}
         {index === 0 && (
           <View style={styles.brandMark}>
             <Text style={styles.brandNo}>No</Text>
@@ -265,20 +261,9 @@ function SlideView({
           </View>
         )}
 
-        {/* Togo flag mini on first slide */}
-        {index === 0 && (
-          <View style={styles.togoFlag}>
-            <View style={[styles.flagBand, { backgroundColor: TOGO_GREEN }]} />
-            <View style={[styles.flagBand, { backgroundColor: TOGO_YELLOW }]} />
-            <View style={[styles.flagBand, { backgroundColor: TOGO_RED }]} />
-          </View>
-        )}
-
-        {/* Slide text */}
         <Text style={styles.slideTitle}>{t(slide.titleKey)}</Text>
         <Text style={styles.slideSub}>{t(slide.subKey)}</Text>
 
-        {/* Language selector on first slide */}
         {index === 0 && (
           <View style={styles.langRow}>
             <Text style={styles.langLabel}>{t("onboardingChooseLang")}</Text>
@@ -305,25 +290,33 @@ function SlideView({
           </View>
         )}
 
-        {/* Payment methods on second slide */}
         {index === 1 && (
-          <View style={styles.pillsRow}>
-            {["Flooz", "T-Money", "MIX by YAS"].map((p) => (
-              <View key={p} style={[styles.featurePill, { borderColor: GOLD + "55" }]}>
-                <Ionicons name="phone-portrait-outline" size={13} color={GOLD} />
-                <Text style={[styles.featurePillText, { color: GOLD }]}>{p}</Text>
+          <View style={styles.vibeRow}>
+            {[
+              { label: "Concerts", icon: "mic" as const, color: CORAL },
+              { label: "Festivals", icon: "bonfire" as const, color: GOLD },
+              { label: lang === "fr" ? "Soirées" : "Parties", icon: "moon" as const, color: CYAN },
+            ].map((v) => (
+              <View key={v.label} style={[styles.vibePill, { borderColor: v.color + "55" }]}>
+                <Ionicons name={v.icon} size={14} color={v.color} />
+                <Text style={[styles.vibePillText, { color: v.color }]}>{v.label}</Text>
               </View>
             ))}
           </View>
         )}
 
-        {/* Togo cities grid on third slide */}
         {index === 2 && (
-          <View style={styles.cityGrid}>
-            {TOGO_CITIES_ONBOARD.map((c) => (
-              <View key={c.name} style={[styles.cityChip, { borderColor: TOGO_GREEN + "60" }]}>
-                <Ionicons name={c.icon} size={11} color={TOGO_GREEN} />
-                <Text style={[styles.cityChipText, { color: "#F0EDF8" }]}>{c.name}</Text>
+          <View style={styles.featureList}>
+            {[
+              { icon: "flash" as const, label: lang === "fr" ? "Réservation instantanée" : "Instant booking", color: CYAN },
+              { icon: "qr-code" as const, label: lang === "fr" ? "QR code sécurisé" : "Secure QR code", color: LAVENDER },
+              { icon: "shield-checkmark" as const, label: lang === "fr" ? "Paiement sécurisé" : "Secure payment", color: CORAL },
+            ].map((f) => (
+              <View key={f.label} style={styles.featureItem}>
+                <View style={[styles.featureIcon, { backgroundColor: f.color + "18" }]}>
+                  <Ionicons name={f.icon} size={18} color={f.color} />
+                </View>
+                <Text style={styles.featureText}>{f.label}</Text>
               </View>
             ))}
           </View>
@@ -338,11 +331,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: BG,
   },
-  flagStripe: {
+  accentStripe: {
     flexDirection: "row",
-    height: 5,
+    height: 3,
   },
-  flagSegment: {
+  accentSeg: {
     flex: 1,
   },
   skipBtn: {
@@ -384,6 +377,28 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 8,
   },
+  concertImageWrap: {
+    width: 260,
+    height: 180,
+    borderRadius: 24,
+    overflow: "hidden",
+    marginBottom: 8,
+    position: "relative",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  concertImage: {
+    width: "100%",
+    height: "100%",
+  },
+  concertOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(14, 17, 32, 0.35)",
+  },
+  concertIcon: {
+    position: "absolute",
+    opacity: 0.9,
+  },
   brandMark: {
     flexDirection: "row",
     alignItems: "baseline",
@@ -397,17 +412,6 @@ const styles = StyleSheet.create({
   brandStress: {
     fontSize: 32,
     fontFamily: "Inter_700Bold",
-  },
-  togoFlag: {
-    flexDirection: "row",
-    height: 4,
-    width: 80,
-    borderRadius: 2,
-    overflow: "hidden",
-    marginBottom: 8,
-  },
-  flagBand: {
-    flex: 1,
   },
   slideTitle: {
     fontSize: 26,
@@ -450,12 +454,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#161829",
   },
   langBtnActiveFR: {
-    borderColor: TOGO_GREEN,
-    backgroundColor: TOGO_GREEN + "18",
-  },
-  langBtnActiveEN: {
     borderColor: LAVENDER,
     backgroundColor: LAVENDER + "18",
+  },
+  langBtnActiveEN: {
+    borderColor: CYAN,
+    backgroundColor: CYAN + "18",
   },
   langFlag: {
     fontSize: 18,
@@ -469,14 +473,14 @@ const styles = StyleSheet.create({
     color: "#F0EDF8",
     fontFamily: "Inter_600SemiBold",
   },
-  pillsRow: {
+  vibeRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
     gap: 8,
     marginTop: 4,
   },
-  featurePill: {
+  vibePill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -486,30 +490,37 @@ const styles = StyleSheet.create({
     backgroundColor: "#161829",
     borderWidth: 1,
   },
-  featurePillText: {
+  vibePillText: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
   },
-  cityGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "center",
-    gap: 8,
-    marginTop: 4,
+  featureList: {
+    width: "100%",
+    gap: 12,
+    marginTop: 8,
   },
-  cityChip: {
+  featureItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 16,
+    gap: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 14,
     backgroundColor: "#161829",
     borderWidth: 1,
+    borderColor: "#2A2D45",
   },
-  cityChipText: {
-    fontSize: 13,
+  featureIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  featureText: {
+    fontSize: 15,
     fontFamily: "Inter_500Medium",
+    color: "#F0EDF8",
   },
   bottom: {
     paddingHorizontal: 24,
