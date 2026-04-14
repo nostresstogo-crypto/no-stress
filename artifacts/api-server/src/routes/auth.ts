@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { sendWelcomeEmail, sendAccountDeletedEmail } from "../email.js";
 import { requireAdmin } from "./admin.js";
+import { partners } from "./partners.js";
 
 const router: IRouter = Router();
 
@@ -13,7 +14,30 @@ router.post("/auth/login", (req, res) => {
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password are required" });
   }
-  let user = users.find((u) => u.email === email);
+
+  const partner = partners.find((p: any) => p.email === email);
+  if (partner) {
+    const token = `mock_token_${Date.now()}`;
+    return res.json({
+      token,
+      user: {
+        id: partner.id,
+        email: partner.email,
+        name: partner.contactName || partner.businessName,
+        phone: partner.phone,
+        role: "structure",
+        favorites: [],
+        partnerStatus: partner.status,
+        partnerRejectionReason: partner.rejectionReason ?? null,
+        businessName: partner.businessName,
+        city: partner.city,
+        latitude: partner.latitude,
+        longitude: partner.longitude,
+      },
+    });
+  }
+
+  let user = users.find((u: any) => u.email === email);
   if (!user) {
     user = {
       id: `u_${Date.now()}`,
@@ -34,9 +58,13 @@ router.post("/auth/register", (req, res) => {
   if (!email || !password || !name) {
     return res.status(400).json({ error: "Email, password, and name are required" });
   }
-  const existing = users.find((u) => u.email === email);
-  if (existing) {
-    return res.status(409).json({ error: "User already exists" });
+  const existingUser = users.find((u: any) => u.email === email);
+  if (existingUser) {
+    return res.status(409).json({ error: "Un compte existe déjà avec cet email." });
+  }
+  const existingPartner = partners.find((p: any) => p.email === email);
+  if (existingPartner) {
+    return res.status(409).json({ error: "Cet email est déjà associé à un compte partenaire. Utilisez la connexion." });
   }
   const user = {
     id: `u_${Date.now()}`,

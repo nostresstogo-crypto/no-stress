@@ -35,6 +35,8 @@ artifacts/
 
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
+| POST | `/api/auth/login` | — | Connexion client/partenaire (détecte auto le rôle) |
+| POST | `/api/auth/register` | — | Inscription client |
 | POST | `/api/admin/login` | — | Connexion admin |
 | GET | `/api/admin/partners` | Bearer | Liste partenaires |
 | PATCH | `/api/admin/partners/:id/status` | Bearer | Approuver/rejeter |
@@ -44,6 +46,7 @@ artifacts/
 | GET | `/api/admin/registrations/stats?period=` | Bearer | Statistiques (day/week/month/year) |
 | POST | `/api/account/deletion-request` | — | Demande de suppression de compte |
 | GET | `/api/partners/approved-map` | — | Partenaires approuvés avec coordonnées |
+| GET | `/api/partners/status?email=` | — | Vérifier statut partenaire |
 | POST | `/api/partners/register` | — | Inscription partenaire |
 
 ## Données mock

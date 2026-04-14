@@ -128,7 +128,10 @@ export default function DashboardScreen() {
     if (!user || user.role !== "structure") return;
     setPartnerCheck("loading");
     fetch(`${API_BASE}/partners/status?email=${encodeURIComponent(user.email)}`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("not found");
+        return r.json();
+      })
       .then((data) => {
         const status: PartnerCheckStatus = data.status ?? "pending";
         setPartnerCheck(status);
@@ -155,7 +158,7 @@ export default function DashboardScreen() {
       .catch(() => {
         setPartnerCheck(user.partnerStatus ?? "pending");
       });
-  }, [user?.email, user?.role]);
+  }, [user?.email, user?.role, user?.partnerStatus]);
 
   useFocusEffect(
     useCallback(() => {

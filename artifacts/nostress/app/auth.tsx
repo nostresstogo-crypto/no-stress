@@ -129,59 +129,51 @@ export default function AuthScreen() {
         return;
       }
 
-      await new Promise((r) => setTimeout(r, 900));
-
-      let role: "admin" | "structure" | "user" = mode === "register"
-        ? registerRole
-        : email.includes("admin") ? "admin" as const
-        : "user" as const;
-
-      let partnerStatus: "pending" | "approved" | "rejected" | undefined;
-      let partnerData: any = null;
-
       if (mode === "login") {
-        try {
-          const statusRes = await fetch(`${API_BASE}/partners/status?email=${encodeURIComponent(email)}`);
-          if (statusRes.ok) {
-            partnerData = await statusRes.json();
-            role = "structure";
-            partnerStatus = partnerData.status;
-          }
-        } catch {}
-      }
+        const loginRes = await fetch(`${API_BASE}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        if (!loginRes.ok) {
+          const errData = await loginRes.json().catch(() => ({}));
+          setError(errData.error || (lang === "fr" ? "Erreur de connexion." : "Login error."));
+          setLoading(false);
+          return;
+        }
+        const { token: apiToken, user: apiUser } = await loginRes.json();
+        await setUser(apiUser);
+        await setToken(apiToken);
 
-      if (role === "structure" && !partnerStatus) {
-        partnerStatus = "pending";
-      }
+        if (apiUser.role === "structure" && apiUser.partnerStatus === "approved") {
+          addNotification({
+            title: "Welcome back!",
+            titleFr: "Bon retour !",
+            body: "Your partner account is active. Manage your events and venues from the dashboard.",
+            bodyFr: "Votre compte partenaire est actif. Gérez vos événements et lieux depuis le tableau de bord.",
+          });
+        }
+      } else {
+        const regRes = await fetch(`${API_BASE}/auth/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, name: name || email.split("@")[0], phone }),
+        });
+        if (!regRes.ok) {
+          const errData = await regRes.json().catch(() => ({}));
+          setError(errData.error || (lang === "fr" ? "Erreur lors de l'inscription." : "Registration error."));
+          setLoading(false);
+          return;
+        }
+        const { token: apiToken, user: apiUser } = await regRes.json();
+        await setUser(apiUser);
+        await setToken(apiToken);
 
-      const mockUser = {
-        id: "u_" + Date.now(),
-        email,
-        name: name || partnerData?.businessName || email.split("@")[0],
-        phone,
-        role,
-        favorites: [],
-        city: role === "structure" ? city : undefined,
-        latitude: role === "structure" && latitude ? parseFloat(latitude) : undefined,
-        longitude: role === "structure" && longitude ? parseFloat(longitude) : undefined,
-        partnerStatus,
-      };
-      await setUser(mockUser);
-      await setToken("mock_token_" + Date.now());
-
-      if (mode === "register" && role === "user") {
         addNotification({
           title: "Welcome to NoStress! 🎉",
           titleFr: "Bienvenue sur NoStress ! 🎉",
           body: "Your account has been created. Discover the best events in Togo!",
           bodyFr: "Votre compte a été créé avec succès. Découvrez les meilleurs événements au Togo !",
-        });
-      } else if (mode === "login" && role === "structure" && partnerStatus === "approved") {
-        addNotification({
-          title: "Welcome back!",
-          titleFr: "Bon retour !",
-          body: "Your partner account is active. Manage your events and venues from the dashboard.",
-          bodyFr: "Votre compte partenaire est actif. Gérez vos événements et lieux depuis le tableau de bord.",
         });
       }
     } catch (e) {
