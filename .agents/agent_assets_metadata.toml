@@ -1,5 +1,4 @@
 uploads = []
-outputs = []
 
 [[generated]]
 id = "d2tYYjrnzWjWN9EEy3EDe"
@@ -24,3 +23,75 @@ id = "YVpqE9Ss7ZUpncWOn9IGr"
 uri = "file://artifacts/nostress/assets/images/concert-crowd.png"
 type = "image"
 title = "concert crowd night"
+
+[[outputs]]
+id = "ORx_I0KJ_RamuDVU5oFbE"
+uri = "file://screenshots/ios/01-home-1242x2688.jpg"
+type = "image"
+title = "Accueil – iPhone 6.5\" (1242×2688)"
+
+[[outputs]]
+id = "2tuQV8z3Ak6MGYRPWRyeg"
+uri = "file://screenshots/ios/02-map-1242x2688.jpg"
+type = "image"
+title = "Carte – iPhone 6.5\" (1242×2688)"
+
+[[outputs]]
+id = "XtdzdgVCF1hlAGeb7gluV"
+uri = "file://screenshots/ios/03-venues-1242x2688.jpg"
+type = "image"
+title = "Lieux – iPhone 6.5\" (1242×2688)"
+
+[[outputs]]
+id = "WiqJPOtUVKh2tv21BS9kb"
+uri = "file://screenshots/ios/04-account-1242x2688.jpg"
+type = "image"
+title = "Compte – iPhone 6.5\" (1242×2688)"
+
+[[outputs]]
+id = "x6IVChvmlZLF1WC53pv3Z"
+uri = "file://screenshots/ios/05-dashboard-1242x2688.jpg"
+type = "image"
+title = "Tableau de bord partenaire – iPhone 6.5\" (1242×2688)"
+
+[[outputs]]
+id = "PMKe28cQUlO3BHIRei58J"
+uri = "file://screenshots/ios/06-event-1242x2688.jpg"
+type = "image"
+title = "Détail événement – iPhone 6.5\" (1242×2688)"
+
+[[outputs]]
+id = "ayBPw-mcrfBvY3iMQexA6"
+uri = "file://screenshots/ios/01-home-1284x2778.jpg"
+type = "image"
+title = "Accueil – iPhone 6.7\" (1284×2778)"
+
+[[outputs]]
+id = "GLgJy3oE43QXkfKRauAaL"
+uri = "file://screenshots/ios/02-map-1284x2778.jpg"
+type = "image"
+title = "Carte – iPhone 6.7\" (1284×2778)"
+
+[[outputs]]
+id = "MRjMXrclY9WHU5SUmL3ae"
+uri = "file://screenshots/ios/03-venues-1284x2778.jpg"
+type = "image"
+title = "Lieux – iPhone 6.7\" (1284×2778)"
+
+[[outputs]]
+id = "dzfzOWUXv27zq3Qy4-iY7"
+uri = "file://screenshots/ios/04-account-1284x2778.jpg"
+type = "image"
+title = "Compte – iPhone 6.7\" (1284×2778)"
+
+[[outputs]]
+id = "d7zpN47-44bDRQ-2J1OPP"
+uri = "file://screenshots/ios/05-dashboard-1284x2778.jpg"
+type = "image"
+title = "Tableau de bord partenaire – iPhone 6.7\" (1284×2778)"
+
+[[outputs]]
+id = "JoYMa1_Cp6UwzNbN4nkkv"
+uri = "file://screenshots/ios/06-event-1284x2778.jpg"
+type = "image"
+title = "Détail événement – iPhone 6.7\" (1284×2778)"
