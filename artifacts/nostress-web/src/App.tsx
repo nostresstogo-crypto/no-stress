@@ -8,6 +8,7 @@ import Home from "pages/Home";
 import Privacy from "pages/Privacy";
 import AccountDeletion from "pages/AccountDeletion";
 import TermsOfUse from "pages/TermsOfUse";
+import Contact from "pages/Contact";
 
 const queryClient = new QueryClient();
 
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/conditions-utilisation" component={TermsOfUse} />
       <Route path="/politique-confidentialite" component={Privacy} />
       <Route path="/suppression-compte" component={AccountDeletion} />
+      <Route path="/contact" component={Contact} />
       <Route component={NotFound} />
     </Switch>
   );

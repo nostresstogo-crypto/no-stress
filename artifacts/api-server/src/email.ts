@@ -49,6 +49,18 @@ async function sendMail(options: { to: string; subject: string; html: string }) 
   }
 }
 
+export async function sendMailOrThrow(options: { to: string; subject: string; html: string }) {
+  const transporter = createTransporter();
+  if (!transporter) {
+    throw new Error("SMTP_NOT_CONFIGURED");
+  }
+  await transporter.sendMail({
+    from: `"NoStress Togo" <${FROM_EMAIL}>`,
+    ...options,
+  });
+  console.info("[EMAIL] Sent to:", options.to, "—", options.subject);
+}
+
 const baseStyle = `
   font-family: 'Helvetica Neue', Arial, sans-serif;
   background-color: #0d0f1a;
@@ -246,6 +258,59 @@ export async function sendAccountDeletedEmail(to: string, name: string, reason: 
         <p style="color: #b0b2cc; line-height: 1.7; margin: 16px 0 0;">
           Si vous pensez qu'il s'agit d'une erreur, contactez-nous à 
           <a href="mailto:nostresstogo@gmail.com" style="color: #7c6af7;">nostresstogo@gmail.com</a>.<br><br>
+          <strong style="color: #e8e8f0;">L'équipe NoStress</strong>
+        </p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}
+
+export async function sendContactMessageEmail(name: string, email: string, subject: string, message: string) {
+  const safeName = escapeHtml(name);
+  const safeEmail = escapeHtml(email);
+  const safeSubject = escapeHtml(subject);
+  const safeMessage = escapeHtml(message).replace(/\n/g, "<br>");
+  await sendMailOrThrow({
+    to: ADMIN_EMAIL,
+    subject: `📬 Nouveau message contact : ${subject}`,
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml("Nouveau message via le formulaire contact")}
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 0 0 20px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px; width: 30%;">Nom</td><td style="padding: 6px 0; color: #e8e8f0; font-weight: 600;">${safeName}</td></tr>
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Email</td><td style="padding: 6px 0;"><a href="mailto:${safeEmail}" style="color: #7c6af7;">${safeEmail}</a></td></tr>
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Sujet</td><td style="padding: 6px 0; color: #e8e8f0;">${safeSubject}</td></tr>
+          </table>
+        </div>
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; border-left: 4px solid #7c6af7;">
+          <p style="margin: 0 0 8px; font-size: 13px; color: #6b6d8a; text-transform: uppercase; letter-spacing: 0.5px;">Message</p>
+          <p style="margin: 0; font-size: 14px; color: #e8e8f0; line-height: 1.6;">${safeMessage}</p>
+        </div>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}
+
+export async function sendContactConfirmationEmail(to: string, name: string) {
+  await sendMail({
+    to,
+    subject: "✅ Message bien reçu – NoStress",
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml(`Merci ${name} !`)}
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 0 0 16px;">
+          Nous avons bien reçu votre message et notre équipe vous répondra dans les plus brefs délais (généralement sous 48 heures ouvrables).
+        </p>
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #7c6af7;">
+          <p style="margin: 0; font-size: 14px; color: #b0b2cc; line-height: 1.6;">
+            En attendant, n'hésitez pas à découvrir nos événements sur l'application NoStress 🎵
+          </p>
+        </div>
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 16px 0 0;">
+          À bientôt,<br>
           <strong style="color: #e8e8f0;">L'équipe NoStress</strong>
         </p>
         ${footerHtml}

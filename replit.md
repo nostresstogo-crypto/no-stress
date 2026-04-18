@@ -45,6 +45,7 @@ artifacts/
 | DELETE | `/api/admin/users/:id` | Bearer | Supprimer compte utilisateur + email |
 | GET | `/api/admin/registrations/stats?period=` | Bearer | Statistiques (day/week/month/year) |
 | POST | `/api/account/deletion-request` | — | Demande de suppression de compte |
+| POST | `/api/contact` | — | Formulaire de contact (envoie email à l'admin + accusé de réception) |
 | GET | `/api/partners/approved-map` | — | Partenaires approuvés avec coordonnées |
 | GET | `/api/partners/status?email=` | — | Vérifier statut partenaire |
 | POST | `/api/partners/register` | — | Inscription partenaire |

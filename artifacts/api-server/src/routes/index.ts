@@ -9,6 +9,7 @@ import subscriptionsRouter from "./subscriptions";
 import adminRouter from "./admin";
 import partnersRouter from "./partners";
 import deletionRequestsRouter from "./deletionRequests";
+import contactRouter from "./contact";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(subscriptionsRouter);
 router.use(adminRouter);
 router.use(partnersRouter);
 router.use(deletionRequestsRouter);
+router.use(contactRouter);
 
 export default router;
