@@ -1,8 +1,8 @@
 import React from "react";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { Navbar } from "components/layout/Navbar";
+import { Footer } from "components/layout/Footer";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
+import { Button } from "components/ui/button";
 import { MapPin, Ticket, Calendar, Smartphone, Star, Quote } from "lucide-react";
 
 export default function Home() {

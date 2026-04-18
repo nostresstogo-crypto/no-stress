@@ -19,7 +19,7 @@ run = "pnpm --filter @workspace/nostress-web run dev"
 
 [services.production]
 build = [ "pnpm", "--filter", "@workspace/nostress-web", "run", "build" ]
-publicDir = "artifacts/nostress-web/dist/public"
+publicDir = "artifacts/nostress-web/build"
 serve = "static"
 
 [[services.production.rewrites]]
@@ -28,4 +28,4 @@ to = "/index.html"
 
 [services.env]
 PORT = "25266"
-BASE_PATH = "/nostress-web/"
+PUBLIC_URL = "/nostress-web"

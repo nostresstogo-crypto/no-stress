@@ -1,14 +1,14 @@
 import React from "react";
 import { Link, useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
+import { Button } from "components/ui/button";
 import { Menu, Globe } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+} from "components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTrigger } from "components/ui/sheet";
 
 export function Navbar() {
   const [location] = useLocation();

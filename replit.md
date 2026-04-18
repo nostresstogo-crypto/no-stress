@@ -11,7 +11,7 @@ Monorepo pnpm TypeScript pour une plateforme de découverte d'événements et bi
 - **API** : Express 5 (in-memory mock, pas de DB)
 - **Mobile** : React Native + Expo (expo-router)
 - **Admin web** : React + Vite + Tailwind
-- **Site public** : React + Vite
+- **Site public** : React + react-scripts (CRA 5.0.1, Tailwind v3)
 - **Cartes** : Leaflet + React-Leaflet (tuiles CartoDB Voyager)
 - **Charts** : Recharts (statistiques admin)
 
@@ -99,3 +99,6 @@ Toutes les données sont en mémoire (pas de DB). Les tableaux `partners`, `part
 - Toutes les entrées dynamiques dans les emails sont échappées (escapeHtml) contre l'injection HTML
 - Tous les endpoints admin DELETE nécessitent `requireAdmin` middleware (Bearer token)
 - Workflows Replit gèrent chaque artifact séparément
+- nostress-web utilise CRA 5.0.1 avec :
+  - `pnpm.overrides`: `react-scripts>webpack-dev-server: 4.15.2` (compat Node 24)
+  - `tailwind-resolve-shim.cjs` préchargé via NODE_OPTIONS pour forcer la résolution de tailwindcss vers v3 (évite la collision avec tailwindcss v4 du catalog pnpm)
