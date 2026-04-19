@@ -21,7 +21,7 @@ import { EventCard } from "@/components/EventCard";
 import { ColorPalette } from "@/constants/colors";
 import { LANG_LABELS, type Lang } from "@/constants/i18n";
 
-const SUPPORT_WHATSAPP = "+22890000000";
+const SUPPORT_WHATSAPP = "+13197774884";
 const SUPPORT_WHATSAPP_URL = `https://wa.me/${SUPPORT_WHATSAPP.replace(/[^0-9]/g, "")}?text=${encodeURIComponent("Bonjour NoStress, j'ai besoin d'aide.")}`;
 
 type Tab = "favorites" | "notifications";
