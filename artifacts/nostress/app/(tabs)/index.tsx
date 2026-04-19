@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Dimensions,
   FlatList,
@@ -19,11 +19,31 @@ import { router } from "expo-router";
 
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { ColorPalette } from "@/constants/colors";
-import { CATEGORIES, MOCK_EVENTS, MOCK_VENUES } from "@/constants/data";
+import { CATEGORIES } from "@/constants/data";
 import { CategoryPill } from "@/components/CategoryPill";
 import { CitySelector } from "@/components/CitySelector";
 import { EventCard } from "@/components/EventCard";
 import { VenueCard } from "@/components/VenueCard";
+
+const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
+  : "/api";
+
+type ApiEvent = {
+  id: string | number;
+  title: string;
+  titleFr?: string;
+  description?: string | null;
+  descriptionFr?: string | null;
+  category?: string | null;
+  city?: string | null;
+  venue?: string | null;
+  date: string;
+  time?: string | null;
+  imageUrl?: string | null;
+  price?: number | null;
+  status?: string;
+};
 
 const { width } = Dimensions.get("window");
 
@@ -138,7 +158,19 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const [venueModal, setVenueModal] = useState<typeof MOCK_VENUES[0] | null>(null);
+  const [venueModal, setVenueModal] = useState<any | null>(null);
+  const [apiEvents, setApiEvents] = useState<ApiEvent[]>([]);
+
+  const loadEvents = useCallback(async () => {
+    try {
+      const r = await fetch(`${API_BASE}/events`);
+      if (!r.ok) return;
+      const data = await r.json();
+      setApiEvents(Array.isArray(data?.events) ? data.events : []);
+    } catch {}
+  }, []);
+
+  useEffect(() => { loadEvents(); }, [loadEvents]);
   const [filterOpen, setFilterOpen] = useState(false);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [draftFilters, setDraftFilters] = useState(DEFAULT_FILTERS);
@@ -167,8 +199,26 @@ export default function HomeScreen() {
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
   const allEvents = useMemo(() => {
+    const fromApi = apiEvents.map((e) => ({
+      id: String(e.id),
+      title: e.title || e.titleFr || "",
+      titleFr: e.titleFr || e.title || "",
+      category: e.category || "",
+      city: e.city || "",
+      venue: e.venue || "",
+      venueId: undefined as string | undefined,
+      date: e.date,
+      time: e.time || "",
+      description: e.description || e.descriptionFr || "",
+      descriptionFr: e.descriptionFr || e.description || "",
+      priceFCFA: typeof e.price === "number" ? e.price : 0,
+      isFree: !e.price || e.price === 0,
+      isSponsored: false,
+      imageUrl: e.imageUrl || undefined,
+      status: "approved" as const,
+    }));
     const partnerApproved = myEvents
-      .filter((e) => e.status === "approved")
+      .filter((e) => e.status === "approved" && !fromApi.find((a) => a.id === e.id))
       .map((e) => ({
         id: e.id,
         title: e.titleEn || e.titleFr,
@@ -187,8 +237,8 @@ export default function HomeScreen() {
         imageUrl: e.imageUrl || undefined,
         status: "approved" as const,
       }));
-    return [...MOCK_EVENTS, ...partnerApproved];
-  }, [myEvents]);
+    return [...fromApi, ...partnerApproved];
+  }, [apiEvents, myEvents]);
 
   const filteredEvents = useMemo(() => {
     const now = new Date();
@@ -198,8 +248,7 @@ export default function HomeScreen() {
     const endOfMonth = new Date(startOfToday.getTime() + 31 * 24 * 60 * 60 * 1000);
 
     const out = allEvents.filter((e) => {
-      const matchCity = !selectedCity || e.city.toLowerCase() === selectedCity.toLowerCase() ||
-        MOCK_VENUES.find((v) => v.id === e.venueId)?.city.toLowerCase().includes(selectedCity.toLowerCase());
+      const matchCity = !selectedCity || (e.city || "").toLowerCase() === selectedCity.toLowerCase();
       const matchCat = !selectedCategory || e.category === selectedCategory;
       const q = search.trim().toLowerCase();
       const matchSearch = !q ||
@@ -248,12 +297,12 @@ export default function HomeScreen() {
 
   const featuredEvents = filteredEvents.filter((e) => e.isSponsored);
   const regularEvents = filteredEvents.filter((e) => !e.isSponsored);
-  const popularVenues = MOCK_VENUES.filter((v) => v.isVerified).slice(0, 4);
+  const popularVenues: any[] = [];
 
-  const onRefresh = () => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1000);
-  };
+    loadEvents().finally(() => setRefreshing(false));
+  }, [loadEvents]);
 
   return (
     <View style={styles.root}>

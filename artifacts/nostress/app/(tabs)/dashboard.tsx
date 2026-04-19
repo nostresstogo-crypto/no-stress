@@ -48,7 +48,7 @@ const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
 
 export default function DashboardScreen() {
   const t = useT();
-  const { user, lang, myEvents, setUser, addNotification } = useApp();
+  const { user, lang, myEvents, setUser, addNotification, updateMyEvent, removeMyEvent } = useApp();
   const insets = useSafeAreaInsets();
   const C = useColors();
 
@@ -450,31 +450,105 @@ export default function DashboardScreen() {
                 </Text>
               </View>
             ) : (
-              filtered.map((event) => (
-                <View key={event.id} style={styles.eventRow}>
-                  <View style={styles.eventInfo}>
-                    <Text style={styles.eventTitle}>
-                      {lang === "fr" && event.titleFr ? event.titleFr : event.titleEn || event.titleFr}
-                    </Text>
-                    <Text style={styles.eventMeta}>
-                      {event.date} · {event.city}
-                    </Text>
-                    <Text style={styles.eventPrice}>
-                      {event.isFree
-                        ? t("free")
-                        : `${event.priceFCFA.toLocaleString()} FCFA`}
-                    </Text>
+              filtered.map((event) => {
+                const eventDate = new Date(event.date);
+                const isPast = !isNaN(eventDate.getTime()) && eventDate.getTime() < Date.now();
+                const isCancelled = event.status === "cancelled";
+                const cancelEvent = () => {
+                  Alert.alert(
+                    lang === "fr" ? "Annuler cet événement ?" : "Cancel this event?",
+                    lang === "fr"
+                      ? "Les utilisateurs verront un badge « Annulé » sur cet événement."
+                      : "Users will see a 'Cancelled' badge on this event.",
+                    [
+                      { text: lang === "fr" ? "Retour" : "Back", style: "cancel" },
+                      {
+                        text: lang === "fr" ? "Annuler l'événement" : "Cancel event",
+                        style: "destructive",
+                        onPress: () => {
+                          updateMyEvent(event.id, { status: "cancelled" });
+                          fetch(`${API_BASE}/events/${event.id}`, {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ status: "cancelled" }),
+                          }).catch(() => {});
+                        },
+                      },
+                    ]
+                  );
+                };
+                const deleteEvent = () => {
+                  Alert.alert(
+                    lang === "fr" ? "Supprimer cet événement ?" : "Delete this event?",
+                    lang === "fr" ? "Cette action est irréversible." : "This action cannot be undone.",
+                    [
+                      { text: lang === "fr" ? "Retour" : "Back", style: "cancel" },
+                      {
+                        text: lang === "fr" ? "Supprimer" : "Delete",
+                        style: "destructive",
+                        onPress: () => {
+                          removeMyEvent(event.id);
+                          fetch(`${API_BASE}/events/${event.id}`, { method: "DELETE" }).catch(() => {});
+                        },
+                      },
+                    ]
+                  );
+                };
+                return (
+                  <View key={event.id} style={styles.eventRow}>
+                    <View style={styles.eventInfo}>
+                      <Text style={styles.eventTitle} numberOfLines={2}>
+                        {lang === "fr" && event.titleFr ? event.titleFr : event.titleEn || event.titleFr}
+                      </Text>
+                      <Text style={styles.eventMeta}>
+                        {event.date} · {event.city}
+                      </Text>
+                      <Text style={styles.eventPrice}>
+                        {event.isFree
+                          ? t("free")
+                          : `${event.priceFCFA.toLocaleString()} FCFA`}
+                      </Text>
+                      <View style={{ flexDirection: "row", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
+                        <View style={[
+                          styles.statusBadge,
+                          { backgroundColor: getStatusColor(event.status) + "22", borderColor: getStatusColor(event.status) }
+                        ]}>
+                          <Text style={[styles.statusText, { color: getStatusColor(event.status) }]}>
+                            {isCancelled
+                              ? (lang === "fr" ? "Annulé" : "Cancelled")
+                              : t(event.status as "pending" | "approved" | "rejected")}
+                          </Text>
+                        </View>
+                        {isPast && !isCancelled && (
+                          <View style={[styles.statusBadge, { backgroundColor: C.textMuted + "22", borderColor: C.textMuted }]}>
+                            <Text style={[styles.statusText, { color: C.textMuted }]}>
+                              {lang === "fr" ? "Passé" : "Past"}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                    <View style={{ flexDirection: "column", gap: 10, alignItems: "center", marginLeft: 8 }}>
+                      {!isCancelled && !isPast && (
+                        <TouchableOpacity
+                          onPress={cancelEvent}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          accessibilityLabel={lang === "fr" ? "Annuler" : "Cancel"}
+                        >
+                          <Ionicons name="close-circle-outline" size={22} color="#F59E0B" />
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity
+                        onPress={deleteEvent}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        accessibilityLabel={lang === "fr" ? "Supprimer" : "Delete"}
+                      >
+                        <Ionicons name="trash-outline" size={20} color={C.error} />
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                  <View style={[
-                    styles.statusBadge,
-                    { backgroundColor: getStatusColor(event.status) + "22", borderColor: getStatusColor(event.status) }
-                  ]}>
-                    <Text style={[styles.statusText, { color: getStatusColor(event.status) }]}>
-                      {t(event.status)}
-                    </Text>
-                  </View>
-                </View>
-              ))
+                );
+              })
             );
             })()}
           </>

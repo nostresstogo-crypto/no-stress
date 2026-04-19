@@ -32,7 +32,7 @@ export interface MyEvent {
   isFree: boolean;
   isSponsored: boolean;
   imageUrl: string;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "cancelled";
   createdAt: string;
 }
 
@@ -83,6 +83,8 @@ interface AppContextValue {
   appReady: boolean;
   myEvents: MyEvent[];
   addMyEvent: (event: Omit<MyEvent, "id" | "status" | "createdAt">) => void;
+  updateMyEvent: (id: string, patch: Partial<MyEvent>) => void;
+  removeMyEvent: (id: string) => void;
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => void;
   isDark: boolean;
@@ -240,6 +242,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const updateMyEvent = useCallback((id: string, patch: Partial<MyEvent>) => {
+    setMyEvents((prev) => {
+      const next = prev.map((e) => (e.id === id ? { ...e, ...patch } : e));
+      AsyncStorage.setItem(KEYS.myEvents, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const removeMyEvent = useCallback((id: string) => {
+    setMyEvents((prev) => {
+      const next = prev.filter((e) => e.id !== id);
+      AsyncStorage.setItem(KEYS.myEvents, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   const removeNotification = useCallback((id: string) => {
     setNotifications((prev) => {
       const next = prev.filter((n) => n.id !== id);
@@ -314,7 +332,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       logout,
       hasOnboarded, setHasOnboarded,
       appReady,
-      myEvents, addMyEvent,
+      myEvents, addMyEvent, updateMyEvent, removeMyEvent,
       themeMode, setThemeMode,
       isDark, colors,
       locationNotificationsEnabled, setLocationNotificationsEnabled,
@@ -331,7 +349,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       logout,
       hasOnboarded, setHasOnboarded,
       appReady,
-      myEvents, addMyEvent,
+      myEvents, addMyEvent, updateMyEvent, removeMyEvent,
       themeMode, setThemeMode,
       isDark, colors,
       locationNotificationsEnabled, setLocationNotificationsEnabled,

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback } from "react";
+import React, { useRef, useState, useCallback, useEffect } from "react";
 import {
   Dimensions,
   FlatList,
@@ -21,6 +21,10 @@ import { C as DARK_C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_EVENTS } from "@/constants/data";
 
+const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
+  : "/api";
+
 const { width: SW, height: SH } = Dimensions.get("window");
 const HERO_H = SH * 0.38;
 const THUMB_SIZE = 64;
@@ -29,18 +33,79 @@ export default function EventDetailScreen() {
   const t = useT();
   const C = useColors();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { lang, isFavorite, toggleFavorite } = useApp();
+  const { lang, isFavorite, toggleFavorite, myEvents } = useApp();
   const insets = useSafeAreaInsets();
 
   const [activeIdx, setActiveIdx] = useState(0);
   const [lightboxIdx, setLightboxIdx] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [apiEvent, setApiEvent] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const carouselRef = useRef<FlatList>(null);
   const lightboxRef = useRef<FlatList>(null);
 
-  const event = MOCK_EVENTS.find((e) => e.id === id);
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetch(`${API_BASE}/events/${id}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (!cancelled) setApiEvent(data || null); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [id]);
+
+  const mockEvent = MOCK_EVENTS.find((e) => e.id === id);
+  const partnerEvent = myEvents.find((e) => e.id === id);
+  const event: any = apiEvent
+    ? {
+        id: String(apiEvent.id),
+        title: apiEvent.title,
+        titleFr: apiEvent.titleFr || apiEvent.title,
+        description: apiEvent.description || "",
+        descriptionFr: apiEvent.descriptionFr || apiEvent.description || "",
+        category: apiEvent.category || "",
+        city: apiEvent.city || "",
+        venue: apiEvent.venue || "",
+        date: apiEvent.date,
+        time: apiEvent.time || "",
+        imageUrl: apiEvent.imageUrl || undefined,
+        gallery: apiEvent.gallery || (apiEvent.imageUrl ? [apiEvent.imageUrl] : []),
+        price: apiEvent.price ?? 0,
+        currency: "FCFA",
+        isSponsored: false,
+        status: apiEvent.status || "approved",
+      }
+    : partnerEvent
+    ? {
+        id: partnerEvent.id,
+        title: partnerEvent.titleEn || partnerEvent.titleFr,
+        titleFr: partnerEvent.titleFr,
+        description: partnerEvent.descriptionEn || partnerEvent.descriptionFr,
+        descriptionFr: partnerEvent.descriptionFr,
+        category: partnerEvent.category,
+        city: partnerEvent.city,
+        venue: partnerEvent.venue,
+        date: partnerEvent.date,
+        time: partnerEvent.time,
+        imageUrl: partnerEvent.imageUrl || undefined,
+        gallery: partnerEvent.imageUrl ? [partnerEvent.imageUrl] : [],
+        price: partnerEvent.priceFCFA,
+        currency: "FCFA",
+        isSponsored: partnerEvent.isSponsored,
+        status: partnerEvent.status,
+      }
+    : mockEvent;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
+
+  if (loading && !event) {
+    return (
+      <View style={[s.notFound, { backgroundColor: C.bg }]}>
+        <Text style={[s.notFoundText, { color: C.textMuted }]}>...</Text>
+      </View>
+    );
+  }
 
   if (!event) {
     return (

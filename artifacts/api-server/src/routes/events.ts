@@ -65,6 +65,14 @@ router.patch("/events/:id", async (req, res) => {
   res.json(serialize(event));
 });
 
+router.delete("/events/:id", async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(404).json({ error: "Event not found" });
+  const [event] = await db.delete(eventsTable).where(eq(eventsTable.id, id)).returning();
+  if (!event) return res.status(404).json({ error: "Event not found" });
+  res.json({ success: true });
+});
+
 router.post("/admin/events/:id/approve", requireAdmin, async (req: any, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Event not found" });
