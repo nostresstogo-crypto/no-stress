@@ -2,36 +2,7 @@ import { Router, type IRouter } from "express";
 
 const router: IRouter = Router();
 
-const venues = [
-  {
-    id: "v1",
-    name: "Club Éléphant Blanc",
-    type: "Nightclub",
-    city: "Abidjan",
-    address: "Zone 4, Abidjan",
-    imageUrl: "https://images.unsplash.com/photo-1566737236500-c8ac43014a67?w=800&auto=format&fit=crop",
-    description: "The premier nightclub in Abidjan",
-    isVerified: true,
-    latitude: 5.3599517,
-    longitude: -4.0082563,
-    ownerId: "u1",
-    createdAt: "2025-01-01",
-  },
-  {
-    id: "v2",
-    name: "Palais de la Culture",
-    type: "Concert Hall",
-    city: "Abidjan",
-    address: "Treichville, Abidjan",
-    imageUrl: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800&auto=format&fit=crop",
-    description: "Cultural venue for concerts and events",
-    isVerified: true,
-    latitude: 5.3470,
-    longitude: -4.0148,
-    ownerId: "u2",
-    createdAt: "2025-01-02",
-  },
-];
+const venues: any[] = [];
 
 router.get("/venues", (req, res) => {
   const { city, type } = req.query;

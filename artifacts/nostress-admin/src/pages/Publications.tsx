@@ -102,7 +102,7 @@ export default function Publications() {
 
   return (
     <AdminLayout>
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         {toast && (
           <div
             className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-sm font-medium ${
@@ -142,7 +142,7 @@ export default function Publications() {
               <p className="text-muted-foreground">Aucune publication trouvée.</p>
             </div>
           ) : (
-            <table className="w-full">
+            <div className="overflow-x-auto"><table className="w-full min-w-[600px]">
               <thead>
                 <tr className="border-b border-border">
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Publication</th>
@@ -200,7 +200,7 @@ export default function Publications() {
                     </tr>
                   ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
       </div>

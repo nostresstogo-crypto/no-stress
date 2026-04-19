@@ -71,7 +71,7 @@ export default function Dashboard() {
 
   return (
     <AdminLayout>
-      <div className="p-8">
+      <div className="p-4 md:p-8">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-foreground">Tableau de bord</h1>
           <p className="text-muted-foreground mt-1">Vue d'ensemble de la plateforme NoStress</p>

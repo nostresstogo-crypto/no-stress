@@ -3,37 +3,9 @@ import { requireAdmin } from "./admin";
 
 const router: IRouter = Router();
 
-const deletionRequests: any[] = [
-  {
-    id: "dr1",
-    email: "user1@example.com",
-    name: "Koffi Agba",
-    accountType: "user",
-    reason: "privacy",
-    status: "pending",
-    createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "dr2",
-    email: "partner@festnight.tg",
-    name: "FestNight Events",
-    accountType: "partner",
-    reason: "not_useful",
-    status: "pending",
-    createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-  {
-    id: "dr3",
-    email: "user2@example.com",
-    name: "Adjoa Mensah",
-    accountType: "user",
-    reason: "other",
-    status: "processed",
-    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-  },
-];
+const deletionRequests: any[] = [];
 
-let nextId = deletionRequests.length + 1;
+let nextId = 1;
 
 router.post("/account/deletion-request", (req, res) => {
   const { email, name, accountType, reason } = req.body;
