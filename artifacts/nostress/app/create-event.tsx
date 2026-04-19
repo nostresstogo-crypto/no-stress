@@ -28,14 +28,22 @@ const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
   : "/api";
 
 async function uploadImageToBackend(uri: string): Promise<string> {
+  const lowerUri = uri.toLowerCase();
+  const contentType = lowerUri.endsWith(".png")
+    ? "image/png"
+    : lowerUri.endsWith(".webp")
+    ? "image/webp"
+    : "image/jpeg";
+  const name = uri.split("/").pop() || "upload.jpg";
+
   const fileResp = await fetch(uri);
   const blob = await fileResp.blob();
-  const contentType = blob.type || "image/jpeg";
-  const name = uri.split("/").pop() || "upload.jpg";
+  const size = (blob as any).size || 0;
+
   const presignResp = await fetch(`${API_BASE}/storage/uploads/request-url`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, size: blob.size, contentType }),
+    body: JSON.stringify({ name, size, contentType }),
   });
   if (!presignResp.ok) {
     const err = await presignResp.json().catch(() => ({}));
@@ -48,7 +56,7 @@ async function uploadImageToBackend(uri: string): Promise<string> {
     body: blob,
   });
   if (!putResp.ok) {
-    throw new Error("Échec de l'envoi du fichier");
+    throw new Error("Échec de l'envoi du fichier (HTTP " + putResp.status + ")");
   }
   return `${API_BASE}/storage${objectPath}`;
 }
@@ -124,7 +132,12 @@ export default function CreateEventScreen() {
     try {
       let finalImageUrl = form.imageUrl.trim();
       if (finalImageUrl && (finalImageUrl.startsWith("file:") || finalImageUrl.startsWith("content:") || finalImageUrl.startsWith("ph:") || finalImageUrl.startsWith("/"))) {
-        finalImageUrl = await uploadImageToBackend(finalImageUrl);
+        try {
+          finalImageUrl = await uploadImageToBackend(finalImageUrl);
+        } catch (uploadErr: any) {
+          console.warn("Image upload failed, continuing without image:", uploadErr?.message);
+          finalImageUrl = "";
+        }
       }
       const priceFCFA = form.isFree ? 0 : parseInt(form.priceFCFA, 10) || 0;
       const payload = {
