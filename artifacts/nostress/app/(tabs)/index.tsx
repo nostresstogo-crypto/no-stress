@@ -248,6 +248,9 @@ export default function HomeScreen() {
     const endOfMonth = new Date(startOfToday.getTime() + 31 * 24 * 60 * 60 * 1000);
 
     const out = allEvents.filter((e) => {
+      const ed = new Date(e.date);
+      if (!isNaN(ed.getTime()) && ed < startOfToday) return false;
+      if ((e as any).status === "cancelled") return false;
       const matchCity = !selectedCity || (e.city || "").toLowerCase() === selectedCity.toLowerCase();
       const matchCat = !selectedCategory || e.category === selectedCategory;
       const q = search.trim().toLowerCase();
