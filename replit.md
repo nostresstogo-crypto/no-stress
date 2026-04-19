@@ -56,6 +56,9 @@ Flow client (mobile) : pick image → POST `/api/storage/uploads/request-url` `{
 | DELETE | `/api/admin/partners/:id` | Bearer | Supprimer compte partenaire + email |
 | DELETE | `/api/admin/users/:id` | Bearer | Supprimer compte utilisateur + email |
 | GET | `/api/admin/registrations/stats?period=` | Bearer | Statistiques (day/week/month/year) |
+| POST | `/api/admin/events/:id/approve` | Bearer | Modération : approuver une publication |
+| POST | `/api/admin/events/:id/reject` | Bearer | Modération : rejeter une publication |
+| GET | `/api/partners/:id/public` | — | Profil partenaire public + ses événements approuvés |
 | POST | `/api/account/deletion-request` | — | Demande de suppression de compte |
 | POST | `/api/contact` | — | Formulaire de contact (envoie email à l'admin + accusé de réception) |
 | GET | `/api/partners/approved-map` | — | Partenaires approuvés avec coordonnées |
@@ -115,3 +118,20 @@ Toutes les données sont en mémoire (pas de DB). Les tableaux `partners`, `part
 - nostress-web utilise CRA 5.0.1 avec :
   - `pnpm.overrides`: `react-scripts>webpack-dev-server: 4.15.2` (compat Node 24)
   - `tailwind-resolve-shim.cjs` préchargé via NODE_OPTIONS pour forcer la résolution de tailwindcss vers v3 (évite la collision avec tailwindcss v4 du catalog pnpm)
+
+## Phase 1 — Fonctionnalités utilisateur (avril 2026)
+
+- **Favoris** : déjà câblés via `AppContext.toggleFavorite/isFavorite`, cœur sur `EventCard`, onglet "Favoris" dans `(tabs)/account.tsx`.
+- **Filtres avancés home** : modal sheet sur `(tabs)/index.tsx` (date, prix, sponsorisé, tri).
+- **Brouillons partenaire** : chips de filtre statut (Tous / Brouillons (=pending) / Approuvés / Rejetés) dans l'onglet Mes événements du dashboard.
+- **Support WhatsApp** : ligne dédiée dans les paramètres du compte (`Linking.openURL("https://wa.me/22890000000")`). Numéro à mettre à jour dans `account.tsx` (constante `SUPPORT_WHATSAPP`).
+- **Page partenaire publique** : `/partner/[id]` (Expo router) — affiche infos + événements approuvés, boutons appel/site/WhatsApp.
+- **Modération admin** : page `Publications.tsx` avec filtres par statut + boutons Approuver / Rejeter / Supprimer.
+- **Multilingue** : 4 langues exposées (FR, EN, Eʋegbe, Taqbaylit). Ewé/Kabye contiennent quelques traductions de base ; le reste retombe automatiquement sur le français via `translations[lang][key] || translations.fr[key]`. À enrichir progressivement dans `constants/i18n.ts` (objets `ewe`, `kab`).
+
+### À faire (Phase 2)
+- Avis & notes événements (table `reviews` + UI)
+- Galerie photos/vidéos par événement (champ JSON dans `events` + composant carrousel)
+- Notifications push (Expo push tokens + service)
+- Statistiques détaillées partenaire (vues, conversions, panier moyen)
+- Anti-fraude (rate-limiting paiements, détection doublons, captcha)

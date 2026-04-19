@@ -103,6 +103,38 @@ router.get("/partners/:id", async (req, res) => {
   res.json(serializePartner(partner));
 });
 
+router.get("/partners/:id/public", async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(404).json({ error: "Partenaire introuvable." });
+  const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.id, id));
+  if (!partner || partner.status !== "approved") {
+    return res.status(404).json({ error: "Partenaire introuvable." });
+  }
+  const events = await db
+    .select()
+    .from(eventsTable)
+    .where(and(eq(eventsTable.partnerId, id), eq(eventsTable.status, "approved")));
+  res.json({
+    partner: {
+      id: String(partner.id),
+      businessName: partner.businessName,
+      businessType: partner.businessType,
+      city: partner.city,
+      description: partner.description,
+      websiteUrl: partner.websiteUrl,
+      phone: partner.phone,
+      latitude: partner.latitude,
+      longitude: partner.longitude,
+      createdAt: partner.createdAt,
+    },
+    events: events.map((e) => ({
+      ...e,
+      id: String(e.id),
+      partnerId: e.partnerId != null ? String(e.partnerId) : null,
+    })),
+  });
+});
+
 router.post("/admin/partners/:id/approve", async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Partenaire introuvable." });
@@ -131,9 +163,41 @@ router.post("/admin/partners/:id/reject", async (req, res) => {
   sendPartnerRejectionEmail(partner.email, partner.contactName, partner.businessName, rejectionReason).catch(() => {});
 });
 
-router.get("/admin/events", async (_req, res) => {
-  const rows = await db.select().from(eventsTable);
-  res.json(rows.map((e) => ({ ...e, id: String(e.id), partnerId: e.partnerId != null ? String(e.partnerId) : null })));
+router.get("/admin/events", requireAdmin, async (_req: any, res) => {
+  const rows = await db
+    .select({
+      id: eventsTable.id,
+      partnerId: eventsTable.partnerId,
+      partnerName: partnersTable.businessName,
+      title: eventsTable.title,
+      description: eventsTable.description,
+      date: eventsTable.date,
+      time: eventsTable.time,
+      city: eventsTable.city,
+      category: eventsTable.category,
+      price: eventsTable.price,
+      status: eventsTable.status,
+      createdAt: eventsTable.createdAt,
+    })
+    .from(eventsTable)
+    .leftJoin(partnersTable, eq(eventsTable.partnerId, partnersTable.id));
+  res.json(
+    rows.map((e) => ({
+      id: String(e.id),
+      partnerId: e.partnerId != null ? String(e.partnerId) : "",
+      partnerName: e.partnerName ?? "—",
+      title: e.title,
+      description: e.description ?? "",
+      date: e.date,
+      time: e.time ?? "",
+      city: e.city ?? "",
+      category: e.category ?? "",
+      priceFCFA: e.price ?? 0,
+      isFree: e.price == null || e.price === 0,
+      status: e.status,
+      createdAt: e.createdAt,
+    })),
+  );
 });
 
 router.delete("/admin/events/:id", requireAdmin, async (req: any, res) => {

@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
   Alert,
+  Linking,
   Modal,
   Platform,
   ScrollView,
@@ -18,6 +19,10 @@ import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_EVENTS } from "@/constants/data";
 import { EventCard } from "@/components/EventCard";
 import { ColorPalette } from "@/constants/colors";
+import { LANG_LABELS, type Lang } from "@/constants/i18n";
+
+const SUPPORT_WHATSAPP = "+22890000000";
+const SUPPORT_WHATSAPP_URL = `https://wa.me/${SUPPORT_WHATSAPP.replace(/[^0-9]/g, "")}?text=${encodeURIComponent("Bonjour NoStress, j'ai besoin d'aide.")}`;
 
 type Tab = "favorites" | "notifications";
 
@@ -283,24 +288,40 @@ export default function AccountScreen() {
       {/* Settings card */}
       <View style={styles.card}>
         {/* Language */}
-        <View style={styles.settingRow}>
-          <Ionicons name="language" size={20} color={C.lavender} />
-          <Text style={styles.settingLabel}>{t("language")}</Text>
-          <View style={styles.langToggle}>
-            <TouchableOpacity
-              style={[styles.langBtn, lang === "fr" && styles.langBtnActive]}
-              onPress={() => setLang("fr")}
-            >
-              <Text style={[styles.langBtnText, lang === "fr" && styles.langBtnTextActive]}>FR</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.langBtn, lang === "en" && styles.langBtnActive]}
-              onPress={() => setLang("en")}
-            >
-              <Text style={[styles.langBtnText, lang === "en" && styles.langBtnTextActive]}>EN</Text>
-            </TouchableOpacity>
+        <View style={[styles.settingRow, { flexDirection: "column", alignItems: "flex-start", gap: 10 }]}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, alignSelf: "stretch" }}>
+            <Ionicons name="language" size={20} color={C.lavender} />
+            <Text style={styles.settingLabel}>{t("language")}</Text>
+          </View>
+          <View style={[styles.langToggle, { flexWrap: "wrap" }]}>
+            {(Object.keys(LANG_LABELS) as Lang[]).map((code) => (
+              <TouchableOpacity
+                key={code}
+                style={[styles.langBtn, lang === code && styles.langBtnActive]}
+                onPress={() => setLang(code)}
+              >
+                <Text style={[styles.langBtnText, lang === code && styles.langBtnTextActive]}>
+                  {LANG_LABELS[code]}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
+
+        <View style={styles.settingDivider} />
+
+        {/* WhatsApp Support */}
+        <TouchableOpacity
+          style={styles.settingRow}
+          onPress={() => Linking.openURL(SUPPORT_WHATSAPP_URL).catch(() => Alert.alert(t("error"), lang === "fr" ? "Impossible d'ouvrir WhatsApp." : "Could not open WhatsApp."))}
+        >
+          <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
+          <Text style={styles.settingLabel}>
+            {lang === "fr" ? "Support WhatsApp" : "WhatsApp support"}
+          </Text>
+          <Text style={styles.settingValue}>{SUPPORT_WHATSAPP}</Text>
+          <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
+        </TouchableOpacity>
 
         <View style={styles.settingDivider} />
 

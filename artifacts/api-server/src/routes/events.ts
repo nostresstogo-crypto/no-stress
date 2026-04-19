@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and, ilike } from "drizzle-orm";
 import { db, eventsTable } from "@workspace/db";
+import { requireAdmin } from "./admin.js";
 
 const router: IRouter = Router();
 
@@ -64,7 +65,7 @@ router.patch("/events/:id", async (req, res) => {
   res.json(serialize(event));
 });
 
-router.post("/admin/events/:id/approve", async (req, res) => {
+router.post("/admin/events/:id/approve", requireAdmin, async (req: any, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Event not found" });
   const [event] = await db.update(eventsTable).set({ status: "approved" }).where(eq(eventsTable.id, id)).returning();
@@ -72,7 +73,7 @@ router.post("/admin/events/:id/approve", async (req, res) => {
   res.json(serialize(event));
 });
 
-router.post("/admin/events/:id/reject", async (req, res) => {
+router.post("/admin/events/:id/reject", requireAdmin, async (req: any, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Event not found" });
   const [event] = await db.update(eventsTable).set({ status: "rejected" }).where(eq(eventsTable.id, id)).returning();

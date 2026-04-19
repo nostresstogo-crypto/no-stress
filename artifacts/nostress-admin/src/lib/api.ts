@@ -57,6 +57,10 @@ export const api = {
   },
   publications: {
     list: () => request<PartnerEvent[]>("/admin/events"),
+    approve: (id: string) =>
+      request<PartnerEvent>(`/admin/events/${id}/approve`, { method: "POST" }),
+    reject: (id: string) =>
+      request<PartnerEvent>(`/admin/events/${id}/reject`, { method: "POST" }),
     delete: (id: string, reason?: string) =>
       request<{ message: string; notification: string; deleted: PartnerEvent }>(`/admin/events/${id}`, {
         method: "DELETE",

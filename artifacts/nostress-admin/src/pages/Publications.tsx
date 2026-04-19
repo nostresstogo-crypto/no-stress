@@ -22,7 +22,17 @@ import {
   Euro,
   MessageSquare,
   Copy,
+  Clock,
+  XCircle,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
+
+const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
+  pending: { label: "En attente", color: "text-yellow-400", bg: "bg-yellow-400/10", icon: <Clock className="w-3 h-3" /> },
+  approved: { label: "Approuvé", color: "text-green-400", bg: "bg-green-400/10", icon: <CheckCircle className="w-3 h-3" /> },
+  rejected: { label: "Rejeté", color: "text-destructive", bg: "bg-destructive/10", icon: <XCircle className="w-3 h-3" /> },
+};
 
 const CATEGORY_LABELS: Record<string, string> = {
   concerts: "Concert",
@@ -46,6 +56,8 @@ export default function Publications() {
   const [events, setEvents] = useState<PartnerEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [selected, setSelected] = useState<PartnerEvent | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -67,12 +79,48 @@ export default function Publications() {
 
   useEffect(() => { load(); }, [load]);
 
-  const filtered = events.filter((e) =>
-    !search ||
-    e.title.toLowerCase().includes(search.toLowerCase()) ||
-    e.partnerName.toLowerCase().includes(search.toLowerCase()) ||
-    e.city.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = events.filter((e) => {
+    const q = search.toLowerCase();
+    const searchOk = !search ||
+      (e.title ?? "").toLowerCase().includes(q) ||
+      (e.partnerName ?? "").toLowerCase().includes(q) ||
+      (e.city ?? "").toLowerCase().includes(q);
+    const statusOk = statusFilter === "all" || e.status === statusFilter;
+    return searchOk && statusOk;
+  });
+
+  const counts = {
+    all: events.length,
+    pending: events.filter((e) => e.status === "pending").length,
+    approved: events.filter((e) => e.status === "approved").length,
+    rejected: events.filter((e) => e.status === "rejected").length,
+  };
+
+  const handleApprove = async (ev: PartnerEvent) => {
+    setActionLoading(ev.id);
+    try {
+      await api.publications.approve(ev.id);
+      showToast(`"${ev.title}" approuvé.`);
+      load();
+    } catch (e: any) {
+      showToast(e.message, "error");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReject = async (ev: PartnerEvent) => {
+    setActionLoading(ev.id);
+    try {
+      await api.publications.reject(ev.id);
+      showToast(`"${ev.title}" rejeté.`);
+      load();
+    } catch (e: any) {
+      showToast(e.message, "error");
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   const handleDelete = async () => {
     if (!selected) return;
@@ -121,8 +169,8 @@ export default function Publications() {
           <p className="text-muted-foreground mt-1">Surveiller et supprimer les publications non conformes à nos conditions</p>
         </div>
 
-        <div className="mb-4">
-          <div className="relative max-w-md">
+        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="relative max-w-md flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Rechercher par titre, partenaire, ville..."
@@ -130,6 +178,25 @@ export default function Publications() {
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 bg-background"
             />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {(["all", "pending", "approved", "rejected"] as const).map((f) => {
+              const labels = { all: "Tous", pending: "En attente", approved: "Approuvés", rejected: "Rejetés" };
+              const active = statusFilter === f;
+              return (
+                <button
+                  key={f}
+                  onClick={() => setStatusFilter(f)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                    active
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-card text-muted-foreground border-border hover:bg-muted/30"
+                  }`}
+                >
+                  {labels[f]} <span className="opacity-70">({counts[f]})</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -181,21 +248,52 @@ export default function Publications() {
                         <span className="text-sm text-muted-foreground">{CATEGORY_LABELS[ev.category] || ev.category}</span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-400/10 text-green-400">
-                          <CheckCircle className="w-3 h-3" />
-                          Actif
-                        </span>
+                        {(() => {
+                          const s = STATUS_LABELS[ev.status] || STATUS_LABELS.pending;
+                          return (
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${s.bg} ${s.color}`}>
+                              {s.icon}
+                              {s.label}
+                            </span>
+                          );
+                        })()}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-destructive border-destructive/30 hover:bg-destructive/10 h-7 text-xs gap-1"
-                          onClick={() => { setSelected(ev); setDeleteOpen(true); }}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          Supprimer
-                        </Button>
+                        <div className="flex justify-end gap-1.5 flex-wrap">
+                          {ev.status !== "approved" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={actionLoading === ev.id}
+                              className="text-green-400 border-green-400/30 hover:bg-green-400/10 h-7 text-xs gap-1"
+                              onClick={() => handleApprove(ev)}
+                            >
+                              <ThumbsUp className="w-3 h-3" />
+                              Approuver
+                            </Button>
+                          )}
+                          {ev.status !== "rejected" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={actionLoading === ev.id}
+                              className="text-yellow-400 border-yellow-400/30 hover:bg-yellow-400/10 h-7 text-xs gap-1"
+                              onClick={() => handleReject(ev)}
+                            >
+                              <ThumbsDown className="w-3 h-3" />
+                              Rejeter
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive border-destructive/30 hover:bg-destructive/10 h-7 text-xs gap-1"
+                            onClick={() => { setSelected(ev); setDeleteOpen(true); }}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            Supprimer
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}

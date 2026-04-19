@@ -40,6 +40,7 @@ const NS_MY_VENUES_KEY = "ns_my_venues";
 
 type DashTab = "events" | "venues" | "plan";
 type PartnerCheckStatus = "loading" | "pending" | "approved" | "rejected" | null;
+type EventStatusFilter = "all" | "pending" | "approved" | "rejected";
 
 const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
@@ -52,6 +53,7 @@ export default function DashboardScreen() {
   const C = useColors();
 
   const [tab, setTab] = useState<DashTab>("events");
+  const [eventStatusFilter, setEventStatusFilter] = useState<EventStatusFilter>("all");
   const [partnerCheck, setPartnerCheck] = useState<PartnerCheckStatus>(null);
   const [partnerRejectReason, setPartnerRejectReason] = useState<string | null>(null);
   const topInset = Platform.OS === "web" ? 67 : insets.top;
@@ -379,7 +381,65 @@ export default function DashboardScreen() {
               <Text style={styles.createBtnText}>{t("createEvent")}</Text>
             </TouchableOpacity>
 
-            {myEvents.length === 0 ? (
+            {myEvents.length > 0 && (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={{ marginBottom: 12 }}
+                contentContainerStyle={{ gap: 8, paddingRight: 16 }}
+              >
+                {(["all", "pending", "approved", "rejected"] as EventStatusFilter[]).map((f) => {
+                  const labels: Record<EventStatusFilter, { fr: string; en: string }> = {
+                    all: { fr: "Tous", en: "All" },
+                    pending: { fr: "Brouillons", en: "Drafts" },
+                    approved: { fr: "Approuvés", en: "Approved" },
+                    rejected: { fr: "Rejetés", en: "Rejected" },
+                  };
+                  const count = f === "all" ? myEvents.length : myEvents.filter((e) => e.status === f).length;
+                  const active = eventStatusFilter === f;
+                  return (
+                    <TouchableOpacity
+                      key={f}
+                      onPress={() => setEventStatusFilter(f)}
+                      style={{
+                        paddingHorizontal: 14,
+                        paddingVertical: 8,
+                        borderRadius: 18,
+                        backgroundColor: active ? C.lavender : C.card2,
+                        borderWidth: 1,
+                        borderColor: active ? C.lavender : C.border,
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <Text style={{
+                        fontSize: 12,
+                        fontFamily: "Inter_600SemiBold",
+                        color: active ? C.bg : C.text,
+                      }}>
+                        {lang === "fr" ? labels[f].fr : labels[f].en}
+                      </Text>
+                      <View style={{
+                        backgroundColor: active ? C.bg + "33" : C.border,
+                        borderRadius: 10,
+                        paddingHorizontal: 6,
+                        paddingVertical: 1,
+                      }}>
+                        <Text style={{ fontSize: 10, fontFamily: "Inter_700Bold", color: active ? C.bg : C.textMuted }}>
+                          {count}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+            {(() => {
+              const filtered = eventStatusFilter === "all"
+                ? myEvents
+                : myEvents.filter((e) => e.status === eventStatusFilter);
+              return filtered.length === 0 ? (
               <View style={styles.empty}>
                 <Ionicons name="calendar-outline" size={44} color={C.border} />
                 <Text style={styles.emptyTitle}>{t("noEvents")}</Text>
@@ -390,7 +450,7 @@ export default function DashboardScreen() {
                 </Text>
               </View>
             ) : (
-              myEvents.map((event) => (
+              filtered.map((event) => (
                 <View key={event.id} style={styles.eventRow}>
                   <View style={styles.eventInfo}>
                     <Text style={styles.eventTitle}>
@@ -415,7 +475,8 @@ export default function DashboardScreen() {
                   </View>
                 </View>
               ))
-            )}
+            );
+            })()}
           </>
         )}
 

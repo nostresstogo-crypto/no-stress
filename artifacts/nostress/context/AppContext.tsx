@@ -229,7 +229,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const newEvent: MyEvent = {
           ...eventData,
           id: "ev_" + Date.now(),
-          status: "approved",
+          status: "pending",
           createdAt: new Date().toISOString(),
         };
         const next = [newEvent, ...prev];
