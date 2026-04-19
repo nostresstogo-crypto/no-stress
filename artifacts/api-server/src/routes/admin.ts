@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
-import { partners, partnerEvents } from "./partners";
+import { eq, sql } from "drizzle-orm";
+import { db, partnersTable, eventsTable, deletionRequestsTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -56,19 +57,34 @@ router.get("/admin/me", requireAdmin, (req: any, res) => {
   res.json({ admin: req.admin });
 });
 
-router.get("/admin/stats", requireAdmin, (_req, res) => {
-  const pendingPartners = partners.filter((p: any) => p.status === "pending").length;
-  const approvedPartners = partners.filter((p: any) => p.status === "approved").length;
-  const rejectedPartners = partners.filter((p: any) => p.status === "rejected").length;
-  const pendingPublications = partnerEvents.filter((e: any) => e.status === "pending").length;
+router.get("/admin/stats", requireAdmin, async (_req, res) => {
+  const [partnerStats] = await db
+    .select({
+      pending: sql<number>`count(*) filter (where status = 'pending')::int`,
+      approved: sql<number>`count(*) filter (where status = 'approved')::int`,
+      rejected: sql<number>`count(*) filter (where status = 'rejected')::int`,
+    })
+    .from(partnersTable);
+  const [eventStats] = await db
+    .select({
+      pending: sql<number>`count(*) filter (where status = 'pending')::int`,
+      total: sql<number>`count(*)::int`,
+    })
+    .from(eventsTable);
+  const [delStats] = await db
+    .select({
+      pending: sql<number>`count(*) filter (where status = 'pending')::int`,
+      total: sql<number>`count(*)::int`,
+    })
+    .from(deletionRequestsTable);
   res.json({
-    pendingPartners,
-    approvedPartners,
-    rejectedPartners,
-    totalDeletionRequests: 3,
-    pendingDeletionRequests: 2,
-    pendingPublications,
-    totalPublications: partnerEvents.length,
+    pendingPartners: partnerStats?.pending ?? 0,
+    approvedPartners: partnerStats?.approved ?? 0,
+    rejectedPartners: partnerStats?.rejected ?? 0,
+    totalDeletionRequests: delStats?.total ?? 0,
+    pendingDeletionRequests: delStats?.pending ?? 0,
+    pendingPublications: eventStats?.pending ?? 0,
+    totalPublications: eventStats?.total ?? 0,
   });
 });
 

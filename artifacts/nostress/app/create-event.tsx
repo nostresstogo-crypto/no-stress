@@ -23,6 +23,36 @@ import { useT, useApp } from "@/context/AppContext";
 import { CATEGORIES, MOCK_CITIES, MOCK_VENUES, CategoryKey } from "@/constants/data";
 import type { MyEvent } from "@/context/AppContext";
 
+const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
+  : "/api";
+
+async function uploadImageToBackend(uri: string): Promise<string> {
+  const fileResp = await fetch(uri);
+  const blob = await fileResp.blob();
+  const contentType = blob.type || "image/jpeg";
+  const name = uri.split("/").pop() || "upload.jpg";
+  const presignResp = await fetch(`${API_BASE}/storage/uploads/request-url`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, size: blob.size, contentType }),
+  });
+  if (!presignResp.ok) {
+    const err = await presignResp.json().catch(() => ({}));
+    throw new Error(err.error || "Échec de la préparation de l'upload");
+  }
+  const { uploadURL, objectPath } = await presignResp.json();
+  const putResp = await fetch(uploadURL, {
+    method: "PUT",
+    headers: { "Content-Type": contentType },
+    body: blob,
+  });
+  if (!putResp.ok) {
+    throw new Error("Échec de l'envoi du fichier");
+  }
+  return `${API_BASE}/storage${objectPath}`;
+}
+
 type FormData = {
   titleFr: string;
   titleEn: string;
@@ -59,7 +89,7 @@ const INITIAL_FORM: FormData = {
 
 export default function CreateEventScreen() {
   const t = useT();
-  const { lang, addMyEvent } = useApp();
+  const { lang, addMyEvent, user } = useApp();
   const insets = useSafeAreaInsets();
   const [form, setForm] = useState<FormData>(INITIAL_FORM);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -91,24 +121,63 @@ export default function CreateEventScreen() {
       return;
     }
     setSubmitting(true);
-    await new Promise((r) => setTimeout(r, 800));
-    addMyEvent({
-      titleFr: form.titleFr.trim(),
-      titleEn: form.titleEn.trim(),
-      category: form.category,
-      city: form.city,
-      venue: form.venue,
-      date: form.date.trim(),
-      time: form.time.trim(),
-      descriptionFr: form.descriptionFr.trim(),
-      descriptionEn: form.descriptionEn.trim(),
-      priceFCFA: form.isFree ? 0 : parseInt(form.priceFCFA, 10) || 0,
-      isFree: form.isFree,
-      isSponsored: form.isSponsored,
-      imageUrl: form.imageUrl.trim(),
-    });
-    setSubmitting(false);
-    setSubmitted(true);
+    try {
+      let finalImageUrl = form.imageUrl.trim();
+      if (finalImageUrl && (finalImageUrl.startsWith("file:") || finalImageUrl.startsWith("content:") || finalImageUrl.startsWith("ph:") || finalImageUrl.startsWith("/"))) {
+        finalImageUrl = await uploadImageToBackend(finalImageUrl);
+      }
+      const priceFCFA = form.isFree ? 0 : parseInt(form.priceFCFA, 10) || 0;
+      const payload = {
+        title: form.titleFr.trim(),
+        titleFr: form.titleFr.trim(),
+        titleEn: form.titleEn.trim(),
+        description: form.descriptionFr.trim(),
+        descriptionFr: form.descriptionFr.trim(),
+        descriptionEn: form.descriptionEn.trim(),
+        category: form.category,
+        city: form.city,
+        venue: form.venue,
+        date: form.date.trim(),
+        time: form.time.trim(),
+        price: priceFCFA,
+        currency: "FCFA",
+        imageUrl: finalImageUrl || null,
+        partnerId: user?.id || null,
+      };
+      const res = await fetch(`${API_BASE}/events`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Échec de la création de l'événement");
+      }
+      const created = await res.json();
+      addMyEvent({
+        titleFr: form.titleFr.trim(),
+        titleEn: form.titleEn.trim(),
+        category: form.category,
+        city: form.city,
+        venue: form.venue,
+        date: form.date.trim(),
+        time: form.time.trim(),
+        descriptionFr: form.descriptionFr.trim(),
+        descriptionEn: form.descriptionEn.trim(),
+        priceFCFA,
+        isFree: form.isFree,
+        isSponsored: form.isSponsored,
+        imageUrl: finalImageUrl,
+      });
+      setSubmitted(true);
+    } catch (e: any) {
+      Alert.alert(
+        lang === "fr" ? "Erreur" : "Error",
+        e?.message || (lang === "fr" ? "Une erreur est survenue. Veuillez réessayer." : "Something went wrong. Please try again."),
+      );
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (submitted) {

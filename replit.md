@@ -8,7 +8,8 @@ Monorepo pnpm TypeScript pour une plateforme de découverte d'événements et bi
 
 - **Monorepo** : pnpm workspaces
 - **Node.js** : v24, TypeScript 5.9
-- **API** : Express 5 (in-memory mock, pas de DB)
+- **API** : Express 5 + Drizzle ORM + PostgreSQL (Replit)
+- **Storage** : Replit Object Storage (Google Cloud Storage) via presigned URLs
 - **Mobile** : React Native + Expo (expo-router)
 - **Admin web** : React + Vite + Tailwind
 - **Site public** : React + react-scripts (CRA 5.0.1, Tailwind v3)
@@ -25,6 +26,17 @@ artifacts/
   nostress-web/    — Site public React (@workspace/nostress-web)
   mockup-sandbox/  — Sandbox composants Vite
 ```
+
+## Persistance
+
+- PostgreSQL via `DATABASE_URL` (table schémas dans `lib/db/src/schema/index.ts`).
+- Tables : `partners`, `events`, `registration_log`, `contact_messages`, `deletion_requests`, `publications`, `admins`.
+- Migrations : `pnpm --filter @workspace/db drizzle-kit push`.
+- IDs sérialisés en string dans toutes les réponses API (compat client mobile).
+
+## Upload d'images
+
+Flow client (mobile) : pick image → POST `/api/storage/uploads/request-url` `{name,size,contentType}` → reçoit `{uploadURL, objectPath}` → PUT le blob sur `uploadURL` → URL finale = `${API_BASE}/storage${objectPath}`.
 
 ## Credentials admin (hardcodés)
 

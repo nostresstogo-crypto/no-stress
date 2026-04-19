@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
+import { eq } from "drizzle-orm";
+import { db, partnersTable } from "@workspace/db";
 import { sendWelcomeEmail, sendAccountDeletedEmail } from "../email.js";
 import { requireAdmin } from "./admin.js";
-import { partners } from "./partners.js";
 
 const router: IRouter = Router();
 
@@ -9,19 +10,19 @@ const users: any[] = [];
 
 export { users };
 
-router.post("/auth/login", (req, res) => {
+router.post("/auth/login", async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password are required" });
   }
 
-  const partner = partners.find((p: any) => p.email === email);
+  const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.email, email));
   if (partner) {
     const token = `mock_token_${Date.now()}`;
     return res.json({
       token,
       user: {
-        id: partner.id,
+        id: String(partner.id),
         email: partner.email,
         name: partner.contactName || partner.businessName,
         phone: partner.phone,

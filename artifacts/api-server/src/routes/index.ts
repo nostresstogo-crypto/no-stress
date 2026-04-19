@@ -10,6 +10,7 @@ import adminRouter from "./admin";
 import partnersRouter from "./partners";
 import deletionRequestsRouter from "./deletionRequests";
 import contactRouter from "./contact";
+import storageRouter from "./storage.js";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(adminRouter);
 router.use(partnersRouter);
 router.use(deletionRequestsRouter);
 router.use(contactRouter);
+router.use(storageRouter);
 
 export default router;

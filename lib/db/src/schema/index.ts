@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, doublePrecision, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -27,6 +27,8 @@ export const partnersTable = pgTable("partners", {
   city: text("city").notNull(),
   description: text("description"),
   websiteUrl: text("website_url"),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
   status: text("status").notNull().default("pending"),
   rejectionReason: text("rejection_reason"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -67,5 +69,47 @@ export const adminsTable = pgTable("admins", {
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   name: text("name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const eventsTable = pgTable("events", {
+  id: serial("id").primaryKey(),
+  partnerId: integer("partner_id").references(() => partnersTable.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  titleFr: text("title_fr"),
+  description: text("description"),
+  descriptionFr: text("description_fr"),
+  date: text("date").notNull(),
+  time: text("time"),
+  venue: text("venue"),
+  city: text("city"),
+  category: text("category"),
+  imageUrl: text("image_url"),
+  price: integer("price"),
+  currency: text("currency").default("FCFA"),
+  isSponsored: text("is_sponsored").default("false"),
+  status: text("status").notNull().default("pending"),
+  ticketTypes: jsonb("ticket_types"),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Event = typeof eventsTable.$inferSelect;
+export type InsertEvent = typeof eventsTable.$inferInsert;
+
+export const registrationLogTable = pgTable("registration_log", {
+  id: serial("id").primaryKey(),
+  type: text("type").notNull(),
+  date: timestamp("date").defaultNow().notNull(),
+});
+
+export const contactMessagesTable = pgTable("contact_messages", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  subject: text("subject"),
+  message: text("message").notNull(),
+  ipAddress: text("ip_address"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
