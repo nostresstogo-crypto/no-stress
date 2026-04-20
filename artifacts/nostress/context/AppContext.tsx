@@ -12,7 +12,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useColorScheme } from "react-native";
 import { Lang } from "@/constants/i18n";
 import { getThemeColors, ColorPalette } from "@/constants/colors";
-import { MOCK_CITIES } from "@/constants/data";
+import { MOCK_CITIES, MOCK_EVENTS } from "@/constants/data";
+import { registerPushPreferences } from "@/lib/pushNotifications";
 
 const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
   ? `${process.env.EXPO_PUBLIC_DOMAIN}/api`
@@ -555,6 +556,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
     () => notifications.filter((n) => !n.read).length,
     [notifications]
   );
+
+  const favoriteCategories = useMemo(() => {
+    const cats = new Set<string>();
+    for (const id of favorites) {
+      const fromMock = MOCK_EVENTS.find((e: any) => e.id === id);
+      if (fromMock?.category) cats.add(fromMock.category);
+      const fromApi = apiEvents.find((e: any) => e.id === id);
+      if (fromApi?.category) cats.add(fromApi.category);
+    }
+    return Array.from(cats);
+  }, [favorites, apiEvents]);
+
+  const lastPushRegRef = useRef<string>("");
+  useEffect(() => {
+    if (!appReady) return;
+    const sig = JSON.stringify({
+      city: selectedCity || "",
+      cats: [...favoriteCategories].sort(),
+      lang,
+    });
+    if (sig === lastPushRegRef.current) return;
+    lastPushRegRef.current = sig;
+    const t = setTimeout(() => {
+      registerPushPreferences({
+        city: selectedCity || null,
+        favoriteCategories,
+        language: lang === "fr" ? "fr" : "en",
+      });
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [appReady, selectedCity, favoriteCategories, lang]);
 
   const value = useMemo<AppContextValue>(
     () => ({

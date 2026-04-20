@@ -1,0 +1,81 @@
+import * as Notifications from "expo-notifications";
+import * as Device from "expo-device";
+import { Platform } from "react-native";
+import Constants from "expo-constants";
+
+const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
+  : "/api";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
+let cachedToken: string | null = null;
+
+export async function getExpoPushToken(): Promise<string | null> {
+  try {
+    if (cachedToken) return cachedToken;
+    if (!Device.isDevice) return null;
+
+    if (Platform.OS === "android") {
+      await Notifications.setNotificationChannelAsync("default", {
+        name: "default",
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: "#FFD700",
+      });
+    }
+
+    const { status: existing } = await Notifications.getPermissionsAsync();
+    let finalStatus = existing;
+    if (existing !== "granted") {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== "granted") return null;
+
+    const projectId =
+      (Constants.expoConfig?.extra as any)?.eas?.projectId ||
+      (Constants as any).easConfig?.projectId;
+
+    const tokenResp = await Notifications.getExpoPushTokenAsync(
+      projectId ? { projectId } : undefined
+    );
+    cachedToken = tokenResp.data;
+    return cachedToken;
+  } catch (err) {
+    console.warn("[push] getExpoPushToken failed:", err);
+    return null;
+  }
+}
+
+export async function registerPushPreferences(prefs: {
+  city?: string | null;
+  favoriteCategories?: string[];
+  language?: "fr" | "en";
+}): Promise<void> {
+  try {
+    const token = await getExpoPushToken();
+    if (!token) return;
+    await fetch(`${API_BASE}/push/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        token,
+        platform: Platform.OS,
+        city: prefs.city || null,
+        favoriteCategories: prefs.favoriteCategories || [],
+        language: prefs.language || "fr",
+      }),
+    });
+  } catch (err) {
+    console.warn("[push] registerPushPreferences failed:", err);
+  }
+}

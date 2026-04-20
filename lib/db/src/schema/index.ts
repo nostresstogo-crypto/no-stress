@@ -140,6 +140,20 @@ export const venuesTable = pgTable("venues", {
 export type Venue = typeof venuesTable.$inferSelect;
 export type InsertVenue = typeof venuesTable.$inferInsert;
 
+export const pushTokensTable = pgTable("push_tokens", {
+  id: serial("id").primaryKey(),
+  token: text("token").notNull().unique(),
+  platform: text("platform"),
+  city: text("city"),
+  favoriteCategories: jsonb("favorite_categories"),
+  language: text("language").default("fr"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export type PushToken = typeof pushTokensTable.$inferSelect;
+export type InsertPushToken = typeof pushTokensTable.$inferInsert;
+
 export const contactMessagesTable = pgTable("contact_messages", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
