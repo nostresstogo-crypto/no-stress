@@ -210,8 +210,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (userObj) setUserState(userObj);
         if (t) { setTokenState(t); tokenRef.current = t; }
         if (rt) { setRefreshTokenState(rt); refreshRef.current = rt; }
-        const fav = safeParse<typeof favorites>(f);
-        if (fav) setFavorites(fav);
+        const fav = safeParse<string[]>(f);
+        if (fav && Array.isArray(fav)) setFavorites(fav);
         const notifs = safeParse<Notification[]>(n);
         if (notifs) setNotifications(notifs);
         if (o === "true") setHasOnboardedState(true);
