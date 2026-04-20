@@ -298,6 +298,24 @@ export default function AccountScreen() {
         </View>
       </View>
 
+      {user.role === "user" && user.emailVerified === false ? (
+        <TouchableOpacity
+          onPress={() => router.push("/verify-email")}
+          style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, backgroundColor: "#3a2a18", borderRadius: 12, marginBottom: 16, borderLeftWidth: 4, borderLeftColor: "#f0a830" }}
+        >
+          <Ionicons name="mail-unread" size={22} color="#f0a830" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: "#f0a830", fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+              {lang === "fr" ? "Vérifiez votre email" : "Verify your email"}
+            </Text>
+            <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>
+              {lang === "fr" ? "Saisissez le code reçu par email" : "Enter the code we sent you"}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={C.textMuted} />
+        </TouchableOpacity>
+      ) : null}
+
       {/* Settings card */}
       <View style={styles.card}>
         {/* Language */}

@@ -189,11 +189,14 @@ export default function AuthScreen() {
         await setToken(apiToken);
 
         addNotification({
-          title: "Welcome to NoStress! 🎉",
-          titleFr: "Bienvenue sur NoStress ! 🎉",
-          body: "Your account has been created. Discover the best events in Togo!",
-          bodyFr: "Votre compte a été créé avec succès. Découvrez les meilleurs événements au Togo !",
+          title: "Verify your email",
+          titleFr: "Vérifiez votre email",
+          body: "We sent a 6-digit code to your inbox. Enter it to activate your account.",
+          bodyFr: "Nous avons envoyé un code à 6 chiffres dans votre boîte mail. Saisissez-le pour activer votre compte.",
         });
+        setLoading(false);
+        router.replace("/verify-email");
+        return;
       }
     } catch (e) {
       setError(lang === "fr" ? "Erreur réseau. Vérifiez votre connexion." : "Network error. Check your connection.");

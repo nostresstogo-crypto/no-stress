@@ -97,6 +97,30 @@ const footerHtml = `
   </div>
 `;
 
+export async function sendVerificationCodeEmail(to: string, name: string, code: string) {
+  await sendMail({
+    to,
+    subject: `Votre code de vérification NoStress : ${code}`,
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml(`Vérifiez votre email`)}
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 0 0 16px;">
+          Bonjour ${name}, voici votre code de vérification NoStress. Il expire dans 15 minutes.
+        </p>
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 28px; margin: 24px 0; border-left: 4px solid #7c6af7; text-align: center;">
+          <div style="font-size: 32px; font-weight: 700; color: #e8e8f0; letter-spacing: 8px; font-family: monospace;">
+            ${code}
+          </div>
+        </div>
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 16px 0 0; font-size: 13px;">
+          Si vous n'avez pas créé de compte NoStress, ignorez cet email.
+        </p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}
+
 export async function sendWelcomeEmail(to: string, name: string) {
   await sendMail({
     to,

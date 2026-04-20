@@ -66,6 +66,7 @@ interface User {
   favorites: string[];
   partnerStatus?: "pending" | "approved" | "rejected";
   partnerRejectionReason?: string;
+  emailVerified?: boolean;
 }
 
 interface Notification {

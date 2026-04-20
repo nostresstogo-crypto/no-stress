@@ -20,6 +20,14 @@ export async function hashPassword(plain: string): Promise<string> {
   return bcrypt.hash(plain, 12);
 }
 
+export function generateVerificationCode(): string {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+export function verificationCodeExpiry(): Date {
+  return new Date(Date.now() + 15 * 60 * 1000);
+}
+
 export async function verifyPassword(plain: string, hash: string | null | undefined): Promise<boolean> {
   if (!hash) return false;
   return bcrypt.compare(plain, hash);

@@ -1,9 +1,17 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, partnersTable, usersTable } from "@workspace/db";
-import { sendWelcomeEmail, sendAccountDeletedEmail } from "../email.js";
+import { sendWelcomeEmail, sendAccountDeletedEmail, sendVerificationCodeEmail } from "../email.js";
 import { requireAdmin } from "./admin.js";
-import { hashPassword, verifyPassword, signToken, rateLimit } from "../lib/auth-utils.js";
+import {
+  hashPassword,
+  verifyPassword,
+  signToken,
+  rateLimit,
+  requireAuth,
+  generateVerificationCode,
+  verificationCodeExpiry,
+} from "../lib/auth-utils.js";
 
 const router: IRouter = Router();
 
@@ -22,6 +30,7 @@ function publicUser(u: typeof usersTable.$inferSelect) {
     phone: u.phone,
     country: u.country,
     role: u.role,
+    emailVerified: !!u.emailVerified,
     favorites: [],
   };
 }
@@ -106,6 +115,7 @@ router.post("/auth/register", registerLimiter, async (req, res) => {
     }
   }
   const passwordHash = await hashPassword(password);
+  const code = generateVerificationCode();
   const [user] = await db
     .insert(usersTable)
     .values({
@@ -115,11 +125,69 @@ router.post("/auth/register", registerLimiter, async (req, res) => {
       phone: phone || null,
       country: country || null,
       role: email.includes("admin") ? "admin" : "user",
+      verificationCode: code,
+      verificationCodeExpires: verificationCodeExpiry(),
     })
     .returning();
   const token = signToken({ sub: `u_${user.id}`, email: user.email, role: user.role as any });
   res.status(201).json({ token, user: publicUser(user) });
-  sendWelcomeEmail(email, name).catch(() => {});
+  sendVerificationCodeEmail(email, name, code).catch(() => {});
+});
+
+const verifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: "verify" });
+const resendLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, key: "resend" });
+
+router.post("/auth/verify-email", verifyLimiter, requireAuth, async (req: any, res) => {
+  const { code } = req.body || {};
+  if (!code || typeof code !== "string") {
+    return res.status(400).json({ error: "Code requis." });
+  }
+  const sub: string = req.auth.sub;
+  if (!sub.startsWith("u_")) {
+    return res.status(400).json({ error: "Vérification email réservée aux comptes utilisateurs." });
+  }
+  const id = parseInt(sub.slice(2), 10);
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  if (!user) return res.status(404).json({ error: "Compte introuvable." });
+  if (user.emailVerified) {
+    return res.json({ message: "Email déjà vérifié.", user: publicUser(user) });
+  }
+  if (!user.verificationCode || !user.verificationCodeExpires) {
+    return res.status(400).json({ error: "Aucun code en attente. Demandez un nouveau code." });
+  }
+  if (user.verificationCodeExpires < new Date()) {
+    return res.status(400).json({ error: "Code expiré. Demandez un nouveau code." });
+  }
+  if (user.verificationCode !== code.trim()) {
+    return res.status(400).json({ error: "Code incorrect." });
+  }
+  const [updated] = await db
+    .update(usersTable)
+    .set({ emailVerified: new Date(), verificationCode: null, verificationCodeExpires: null })
+    .where(eq(usersTable.id, id))
+    .returning();
+  res.json({ message: "Email vérifié.", user: publicUser(updated) });
+  sendWelcomeEmail(updated.email, updated.name).catch(() => {});
+});
+
+router.post("/auth/resend-verification", resendLimiter, requireAuth, async (req: any, res) => {
+  const sub: string = req.auth.sub;
+  if (!sub.startsWith("u_")) {
+    return res.status(400).json({ error: "Réservé aux comptes utilisateurs." });
+  }
+  const id = parseInt(sub.slice(2), 10);
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  if (!user) return res.status(404).json({ error: "Compte introuvable." });
+  if (user.emailVerified) {
+    return res.json({ message: "Email déjà vérifié." });
+  }
+  const code = generateVerificationCode();
+  await db
+    .update(usersTable)
+    .set({ verificationCode: code, verificationCodeExpires: verificationCodeExpiry() })
+    .where(eq(usersTable.id, id));
+  res.json({ message: "Code envoyé." });
+  sendVerificationCodeEmail(user.email, user.name, code).catch(() => {});
 });
 
 router.delete("/admin/users/:id", requireAdmin, async (req: any, res) => {

@@ -11,6 +11,9 @@ export const usersTable = pgTable("users", {
   country: text("country"),
   role: text("role").notNull().default("user"),
   status: text("status").notNull().default("active"),
+  emailVerified: timestamp("email_verified"),
+  verificationCode: text("verification_code"),
+  verificationCodeExpires: timestamp("verification_code_expires"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

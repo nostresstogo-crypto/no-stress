@@ -1,55 +1,83 @@
 import { Router, type IRouter } from "express";
 import { eq, sql } from "drizzle-orm";
-import { db, partnersTable, eventsTable, deletionRequestsTable } from "@workspace/db";
+import { db, adminsTable, partnersTable, eventsTable, deletionRequestsTable } from "@workspace/db";
+import {
+  hashPassword,
+  verifyPassword,
+  signToken,
+  rateLimit,
+  verifyToken,
+} from "../lib/auth-utils.js";
 
 const router: IRouter = Router();
 
-const ADMIN_CREDENTIALS = [
-  { id: "a1", email: "admin@nostress.tg", password: "NoStress@Admin2024!", name: "Administrateur NoStress" },
-];
+const DEFAULT_ADMIN_EMAIL = process.env.INITIAL_ADMIN_EMAIL || "admin@nostress.tg";
+const DEFAULT_ADMIN_PASSWORD = process.env.INITIAL_ADMIN_PASSWORD || "NoStress@Admin2024!";
+const DEFAULT_ADMIN_NAME = "Administrateur NoStress";
 
-const sessions: Record<string, { adminId: string; name: string; email: string; expiresAt: number }> = {};
-
-function generateToken(): string {
-  return `admin_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`;
+// Seed initial admin on startup if none exists
+let seedPromise: Promise<void> | null = null;
+async function ensureSeedAdmin(): Promise<void> {
+  if (seedPromise) return seedPromise;
+  seedPromise = (async () => {
+    const [existing] = await db
+      .select({ id: adminsTable.id })
+      .from(adminsTable)
+      .where(eq(adminsTable.email, DEFAULT_ADMIN_EMAIL));
+    if (!existing) {
+      const passwordHash = await hashPassword(DEFAULT_ADMIN_PASSWORD);
+      await db.insert(adminsTable).values({
+        email: DEFAULT_ADMIN_EMAIL,
+        passwordHash,
+        name: DEFAULT_ADMIN_NAME,
+      });
+      console.log(`[admin] Seeded initial admin account: ${DEFAULT_ADMIN_EMAIL}`);
+    }
+  })().catch((e) => {
+    seedPromise = null;
+    console.error("[admin] Failed to seed admin:", e);
+  });
+  return seedPromise;
 }
+// Fire-and-forget on module load
+ensureSeedAdmin();
 
 function requireAdmin(req: any, res: any, next: any) {
   const auth = req.headers["authorization"];
-  if (!auth || !auth.startsWith("Bearer ")) {
+  if (!auth?.startsWith("Bearer ")) {
     return res.status(401).json({ error: "Authentification requise." });
   }
-  const token = auth.replace("Bearer ", "");
-  const session = sessions[token];
-  if (!session || session.expiresAt < Date.now()) {
+  const payload = verifyToken(auth.slice(7));
+  if (!payload || payload.role !== "admin" || !payload.sub.startsWith("a_")) {
     return res.status(401).json({ error: "Session expirée ou invalide." });
   }
-  req.admin = session;
+  req.admin = { adminId: payload.sub.slice(2), email: payload.email };
   next();
 }
 
-router.post("/admin/login", (req, res) => {
-  const { email, password } = req.body;
+const adminLoginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: "admin-login" });
+
+router.post("/admin/login", adminLoginLimiter, async (req, res) => {
+  const { email, password } = req.body || {};
   if (!email || !password) {
     return res.status(400).json({ error: "Email et mot de passe requis." });
   }
-  const admin = ADMIN_CREDENTIALS.find((a) => a.email === email && a.password === password);
+  await ensureSeedAdmin();
+  const cleanEmail = String(email).trim().toLowerCase();
+  const [admin] = await db.select().from(adminsTable).where(eq(adminsTable.email, cleanEmail));
   if (!admin) {
     return res.status(401).json({ error: "Identifiants incorrects." });
   }
-  const token = generateToken();
-  sessions[token] = {
-    adminId: admin.id,
-    name: admin.name,
-    email: admin.email,
-    expiresAt: Date.now() + 8 * 60 * 60 * 1000,
-  };
-  res.json({ token, admin: { id: admin.id, name: admin.name, email: admin.email } });
+  const ok = await verifyPassword(password, admin.passwordHash);
+  if (!ok) {
+    return res.status(401).json({ error: "Identifiants incorrects." });
+  }
+  const token = signToken({ sub: `a_${admin.id}`, email: admin.email, role: "admin" });
+  res.json({ token, admin: { id: String(admin.id), name: admin.name, email: admin.email } });
 });
 
-router.post("/admin/logout", requireAdmin, (req: any, res) => {
-  const token = req.headers["authorization"]?.replace("Bearer ", "");
-  if (token) delete sessions[token];
+router.post("/admin/logout", requireAdmin, (_req, res) => {
+  // JWT is stateless — client should drop the token. Endpoint kept for API compatibility.
   res.json({ message: "Déconnexion réussie." });
 });
 
