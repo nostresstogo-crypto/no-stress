@@ -27,4 +27,10 @@ router.get("/readyz", async (_req, res) => {
   res.status(ok ? 200 : 503).json({ status: ok ? "ok" : "degraded", checks });
 });
 
+// Sentry test — throws so we can confirm errors flow into Sentry.
+// Safe in prod (just throws once per call, captured by setupExpressErrorHandler).
+router.get("/_sentry-test", (_req, _res) => {
+  throw new Error("sentry-test-" + Date.now());
+});
+
 export default router;
