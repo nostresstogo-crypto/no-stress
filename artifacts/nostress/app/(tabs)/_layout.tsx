@@ -13,6 +13,78 @@ import { SymbolView } from "expo-symbols";
 import { C } from "@/constants/colors";
 import { useApp, useT, useColors } from "@/context/AppContext";
 
+/* ── Tab icon with active glow indicator ──────────────────────────────── */
+function TabIcon({
+  focused,
+  color,
+  ionName,
+  sfName,
+  isIOS,
+  glowColor,
+}: {
+  focused: boolean;
+  color: string;
+  ionName: keyof typeof Ionicons.glyphMap;
+  sfName: string;
+  isIOS: boolean;
+  glowColor: string;
+}) {
+  return (
+    <View style={tabIcon.wrap}>
+      {focused && (
+        <>
+          <View
+            style={[
+              tabIcon.halo,
+              {
+                backgroundColor: glowColor + "26",
+                shadowColor: glowColor,
+              },
+            ]}
+            pointerEvents="none"
+          />
+          <View
+            style={[tabIcon.dot, { backgroundColor: glowColor }]}
+            pointerEvents="none"
+          />
+        </>
+      )}
+      {isIOS ? (
+        <SymbolView name={sfName as any} tintColor={color} size={22} />
+      ) : (
+        <Ionicons name={ionName} size={22} color={color} />
+      )}
+    </View>
+  );
+}
+
+const tabIcon = StyleSheet.create({
+  wrap: {
+    width: 44,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  halo: {
+    position: "absolute",
+    top: 2,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    shadowOpacity: 0.65,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 6,
+  },
+  dot: {
+    position: "absolute",
+    bottom: -2,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+});
+
 /* ── Custom centre "Carte" button ──────────────────────────────────────── */
 function MapTabButton({
   onPress,
@@ -133,12 +205,16 @@ function ClassicTabLayout() {
         name="index"
         options={{
           title: t("home"),
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="house.fill" tintColor={color} size={22} />
-            ) : (
-              <Ionicons name="home" size={22} color={color} />
-            ),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon
+              focused={focused}
+              color={color}
+              ionName="home"
+              sfName="house.fill"
+              isIOS={isIOS}
+              glowColor={C.lavender}
+            />
+          ),
         }}
       />
 
@@ -147,12 +223,16 @@ function ClassicTabLayout() {
         name="venues"
         options={{
           title: t("venues"),
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="building.2.fill" tintColor={color} size={22} />
-            ) : (
-              <Ionicons name="business" size={22} color={color} />
-            ),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon
+              focused={focused}
+              color={color}
+              ionName="business"
+              sfName="building.2.fill"
+              isIOS={isIOS}
+              glowColor={C.lavender}
+            />
+          ),
         }}
       />
 
@@ -170,12 +250,16 @@ function ClassicTabLayout() {
         name="dashboard"
         options={{
           title: t("dashboard"),
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="chart.bar.fill" tintColor={color} size={22} />
-            ) : (
-              <Ionicons name="bar-chart" size={22} color={color} />
-            ),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon
+              focused={focused}
+              color={color}
+              ionName="bar-chart"
+              sfName="chart.bar.fill"
+              isIOS={isIOS}
+              glowColor={C.lavender}
+            />
+          ),
         }}
       />
 
@@ -184,12 +268,16 @@ function ClassicTabLayout() {
         name="account"
         options={{
           title: t("account"),
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="person.fill" tintColor={color} size={22} />
-            ) : (
-              <Ionicons name="person" size={22} color={color} />
-            ),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon
+              focused={focused}
+              color={color}
+              ionName="person"
+              sfName="person.fill"
+              isIOS={isIOS}
+              glowColor={C.lavender}
+            />
+          ),
         }}
       />
 
@@ -199,12 +287,16 @@ function ClassicTabLayout() {
         options={{
           title: t("admin"),
           tabBarItemStyle: isAdmin ? undefined : { display: "none" },
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="shield.fill" tintColor={color} size={22} />
-            ) : (
-              <Ionicons name="shield" size={22} color={color} />
-            ),
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon
+              focused={focused}
+              color={color}
+              ionName="shield"
+              sfName="shield.fill"
+              isIOS={isIOS}
+              glowColor={C.gold}
+            />
+          ),
         }}
       />
     </Tabs>
