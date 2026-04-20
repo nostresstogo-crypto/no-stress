@@ -3,20 +3,20 @@ export const TOGO_GREEN  = "#006A4E";
 export const TOGO_YELLOW = "#FFCD00";
 export const TOGO_RED    = "#D21034";
 
-/* ── Dark theme (default) ────────────────────────────────── */
+/* ── Dark theme (default) — obsidian + champagne luxe ────── */
 const DARK = {
-  bg:          "#1A1F38",
-  card:        "#232944",
-  card2:       "#2C3252",
-  border:      "#3A406A",
-  lavender:    "#9B8FE8",
-  lavenderDim: "#7B6FD4",
-  gold:        "#D4AF37",
-  goldDim:     "#B8961E",
-  text:        "#F0EDF8",
-  textMuted:   "#A6A4C2",
-  success:     "#4CAF82",
-  error:       "#E05C5C",
+  bg:          "#07091A",
+  card:        "#11142A",
+  card2:       "#191D38",
+  border:      "#262B4A",
+  lavender:    "#B5A8F0",
+  lavenderDim: "#8C7FD8",
+  gold:        "#E5C46B",
+  goldDim:     "#B89A4D",
+  text:        "#F2EFFA",
+  textMuted:   "#8B89A8",
+  success:     "#3FBE7A",
+  error:       "#E26B6B",
   white:       "#FFFFFF",
   isDark:      true,
 };
