@@ -35,7 +35,7 @@ const BUSINESS_TYPES = [
 
 export default function AuthScreen() {
   const t = useT();
-  const { setUser, setToken, lang, addNotification } = useApp();
+  const { setUser, setSession, lang, addNotification } = useApp();
   const insets = useSafeAreaInsets();
   const C = useColors();
 
@@ -134,7 +134,7 @@ export default function AuthScreen() {
         };
         await setUser(mockUser);
         if (data.token) {
-          await setToken(data.token);
+          await setSession(data.token, data.refreshToken || null);
         }
         addNotification({
           title: "Partner request submitted!",
@@ -160,9 +160,9 @@ export default function AuthScreen() {
           setLoading(false);
           return;
         }
-        const { token: apiToken, user: apiUser } = await loginRes.json();
+        const { token: apiToken, refreshToken: apiRefresh, user: apiUser } = await loginRes.json();
         await setUser(apiUser);
-        await setToken(apiToken);
+        await setSession(apiToken, apiRefresh || null);
 
         if (apiUser.role === "structure" && apiUser.partnerStatus === "approved") {
           addNotification({
@@ -184,9 +184,9 @@ export default function AuthScreen() {
           setLoading(false);
           return;
         }
-        const { token: apiToken, user: apiUser } = await regRes.json();
+        const { token: apiToken, refreshToken: apiRefresh, user: apiUser } = await regRes.json();
         await setUser(apiUser);
-        await setToken(apiToken);
+        await setSession(apiToken, apiRefresh || null);
 
         addNotification({
           title: "Verify your email",

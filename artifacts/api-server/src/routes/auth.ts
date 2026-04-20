@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, partnersTable, usersTable } from "@workspace/db";
+import { db, partnersTable, usersTable, adminsTable } from "@workspace/db";
 import { sendWelcomeEmail, sendAccountDeletedEmail, sendVerificationCodeEmail } from "../email.js";
 import { requireAdmin } from "./admin.js";
 import {
@@ -11,6 +11,9 @@ import {
   requireAuth,
   generateVerificationCode,
   verificationCodeExpiry,
+  issueRefreshToken,
+  rotateRefreshToken,
+  revokeRefreshToken,
 } from "../lib/auth-utils.js";
 
 const router: IRouter = Router();
@@ -52,9 +55,12 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
     if (!ok) {
       return res.status(401).json({ error: "Email ou mot de passe incorrect." });
     }
-    const token = signToken({ sub: `p_${partner.id}`, email: partner.email, role: "structure" });
+    const sub = `p_${partner.id}`;
+    const token = signToken({ sub, email: partner.email, role: "structure" });
+    const refreshToken = await issueRefreshToken(sub, req.headers["user-agent"] as string | undefined);
     return res.json({
       token,
+      refreshToken,
       user: {
         id: String(partner.id),
         email: partner.email,
@@ -80,8 +86,10 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
   if (!ok) {
     return res.status(401).json({ error: "Email ou mot de passe incorrect." });
   }
-  const token = signToken({ sub: `u_${user.id}`, email: user.email, role: user.role as any });
-  res.json({ token, user: publicUser(user) });
+  const sub = `u_${user.id}`;
+  const token = signToken({ sub, email: user.email, role: user.role as any });
+  const refreshToken = await issueRefreshToken(sub, req.headers["user-agent"] as string | undefined);
+  res.json({ token, refreshToken, user: publicUser(user) });
 });
 
 router.post("/auth/register", registerLimiter, async (req, res) => {
@@ -129,9 +137,59 @@ router.post("/auth/register", registerLimiter, async (req, res) => {
       verificationCodeExpires: verificationCodeExpiry(),
     })
     .returning();
-  const token = signToken({ sub: `u_${user.id}`, email: user.email, role: user.role as any });
-  res.status(201).json({ token, user: publicUser(user) });
+  const sub = `u_${user.id}`;
+  const token = signToken({ sub, email: user.email, role: user.role as any });
+  const refreshToken = await issueRefreshToken(sub, req.headers["user-agent"] as string | undefined);
+  res.status(201).json({ token, refreshToken, user: publicUser(user) });
   sendVerificationCodeEmail(email, name, code).catch(() => {});
+});
+
+const refreshLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, key: "refresh" });
+
+router.post("/auth/refresh", refreshLimiter, async (req, res) => {
+  const { refreshToken } = req.body || {};
+  if (!refreshToken || typeof refreshToken !== "string") {
+    return res.status(400).json({ error: "Refresh token requis." });
+  }
+  const rotated = await rotateRefreshToken(refreshToken, req.headers["user-agent"] as string | undefined);
+  if (!rotated) {
+    return res.status(401).json({ error: "Refresh token invalide ou expiré." });
+  }
+  // Look up subject to issue a fresh access token with current email/role
+  const sub = rotated.subject;
+  let email = "";
+  let role: "user" | "structure" | "admin" = "user";
+  if (sub.startsWith("u_")) {
+    const id = parseInt(sub.slice(2), 10);
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+    if (!user) return res.status(401).json({ error: "Compte introuvable." });
+    email = user.email;
+    role = user.role as any;
+  } else if (sub.startsWith("p_")) {
+    const id = parseInt(sub.slice(2), 10);
+    const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.id, id));
+    if (!partner) return res.status(401).json({ error: "Compte introuvable." });
+    email = partner.email;
+    role = "structure";
+  } else if (sub.startsWith("a_")) {
+    const id = parseInt(sub.slice(2), 10);
+    const [admin] = await db.select().from(adminsTable).where(eq(adminsTable.id, id));
+    if (!admin) return res.status(401).json({ error: "Compte introuvable." });
+    email = admin.email;
+    role = "admin";
+  } else {
+    return res.status(400).json({ error: "Sujet inconnu." });
+  }
+  const token = signToken({ sub, email, role });
+  res.json({ token, refreshToken: rotated.refreshToken });
+});
+
+router.post("/auth/logout", async (req, res) => {
+  const { refreshToken } = req.body || {};
+  if (refreshToken && typeof refreshToken === "string") {
+    await revokeRefreshToken(refreshToken);
+  }
+  res.json({ message: "Déconnexion réussie." });
 });
 
 const verifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: "verify" });

@@ -70,6 +70,17 @@ export const insertDeletionRequestSchema = createInsertSchema(deletionRequestsTa
 export type InsertDeletionRequest = z.infer<typeof insertDeletionRequestSchema>;
 export type DeletionRequest = typeof deletionRequestsTable.$inferSelect;
 
+export const refreshTokensTable = pgTable("refresh_tokens", {
+  id: serial("id").primaryKey(),
+  subject: text("subject").notNull(),
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  revokedAt: timestamp("revoked_at"),
+  replacedById: integer("replaced_by_id"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const adminsTable = pgTable("admins", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),

@@ -86,6 +86,10 @@ interface AppContextValue {
   setUser: (user: User | null) => void;
   token: string | null;
   setToken: (token: string | null) => void;
+  refreshToken: string | null;
+  setRefreshToken: (token: string | null) => void;
+  setSession: (token: string | null, refreshToken: string | null) => void;
+  authFetch: (url: string, init?: RequestInit) => Promise<Response>;
   favorites: string[];
   toggleFavorite: (eventId: string) => void;
   isFavorite: (eventId: string) => boolean;
@@ -123,6 +127,7 @@ const KEYS = {
   lang: "ns_lang",
   user: "ns_user",
   token: "ns_token",
+  refreshToken: "ns_refresh_token",
   favorites: "ns_favorites",
   notifications: "ns_notifications",
   onboarded: "ns_onboarded",
@@ -137,6 +142,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>("fr");
   const [user, setUserState] = useState<User | null>(null);
   const [token, setTokenState] = useState<string | null>(null);
+  const [refreshToken, setRefreshTokenState] = useState<string | null>(null);
+  const tokenRef = useRef<string | null>(null);
+  const refreshRef = useRef<string | null>(null);
+  const refreshInflight = useRef<Promise<string | null> | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [selectedCity, setSelectedCity] = useState<string>("");
@@ -189,7 +198,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       }
       if (u) setUserState(JSON.parse(u));
-      if (t) setTokenState(t);
+      if (t) { setTokenState(t); tokenRef.current = t; }
+      const rt = await AsyncStorage.getItem(KEYS.refreshToken);
+      if (rt) { setRefreshTokenState(rt); refreshRef.current = rt; }
       if (f) setFavorites(JSON.parse(f));
       if (n) setNotifications(JSON.parse(n));
       if (o === "true") setHasOnboardedState(true);
@@ -214,9 +225,71 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const setToken = useCallback(async (t: string | null) => {
     setTokenState(t);
+    tokenRef.current = t;
     if (t) await AsyncStorage.setItem(KEYS.token, t);
     else await AsyncStorage.removeItem(KEYS.token);
   }, []);
+
+  const setRefreshToken = useCallback(async (rt: string | null) => {
+    setRefreshTokenState(rt);
+    refreshRef.current = rt;
+    if (rt) await AsyncStorage.setItem(KEYS.refreshToken, rt);
+    else await AsyncStorage.removeItem(KEYS.refreshToken);
+  }, []);
+
+  const setSession = useCallback(async (t: string | null, rt: string | null) => {
+    setTokenState(t);
+    setRefreshTokenState(rt);
+    tokenRef.current = t;
+    refreshRef.current = rt;
+    const ops: Promise<any>[] = [];
+    ops.push(t ? AsyncStorage.setItem(KEYS.token, t) : AsyncStorage.removeItem(KEYS.token));
+    ops.push(rt ? AsyncStorage.setItem(KEYS.refreshToken, rt) : AsyncStorage.removeItem(KEYS.refreshToken));
+    await Promise.all(ops);
+  }, []);
+
+  const refreshAccessToken = useCallback(async (): Promise<string | null> => {
+    if (refreshInflight.current) return refreshInflight.current;
+    const rt = refreshRef.current;
+    if (!rt) return null;
+    refreshInflight.current = (async () => {
+      try {
+        const r = await fetch(`${API_BASE}/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken: rt }),
+        });
+        if (!r.ok) {
+          await setSession(null, null);
+          setUserState(null);
+          await AsyncStorage.removeItem(KEYS.user);
+          return null;
+        }
+        const data = await r.json();
+        await setSession(data.token, data.refreshToken);
+        return data.token as string;
+      } catch {
+        return null;
+      } finally {
+        refreshInflight.current = null;
+      }
+    })();
+    return refreshInflight.current;
+  }, [setSession]);
+
+  const authFetch = useCallback(async (url: string, init: RequestInit = {}): Promise<Response> => {
+    const buildHeaders = (t: string | null): HeadersInit => {
+      const h: Record<string, string> = { ...(init.headers as any) };
+      if (t) h["Authorization"] = `Bearer ${t}`;
+      return h;
+    };
+    let res = await fetch(url, { ...init, headers: buildHeaders(tokenRef.current) });
+    if (res.status !== 401 || !refreshRef.current) return res;
+    const newToken = await refreshAccessToken();
+    if (!newToken) return res;
+    res = await fetch(url, { ...init, headers: buildHeaders(newToken) });
+    return res;
+  }, [refreshAccessToken]);
 
   const toggleFavorite = useCallback(async (eventId: string) => {
     setFavorites((prev) => {
@@ -256,9 +329,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
+    const rt = refreshRef.current;
+    if (rt) {
+      fetch(`${API_BASE}/auth/logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken: rt }),
+      }).catch(() => {});
+    }
     setUserState(null);
     setTokenState(null);
-    await AsyncStorage.multiRemove([KEYS.user, KEYS.token]);
+    setRefreshTokenState(null);
+    tokenRef.current = null;
+    refreshRef.current = null;
+    await AsyncStorage.multiRemove([KEYS.user, KEYS.token, KEYS.refreshToken]);
   }, []);
 
   const setHasOnboarded = useCallback(async () => {
@@ -367,6 +451,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       lang, setLang,
       user, setUser,
       token, setToken,
+      refreshToken, setRefreshToken, setSession, authFetch,
       favorites, toggleFavorite, isFavorite,
       notifications, addNotification, markAllRead, removeNotification, unreadCount,
       selectedCity, setSelectedCity,
@@ -385,6 +470,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       lang, setLang,
       user, setUser,
       token, setToken,
+      refreshToken, setRefreshToken, setSession, authFetch,
       favorites, toggleFavorite, isFavorite,
       notifications, addNotification, markAllRead, removeNotification, unreadCount,
       selectedCity, setSelectedCity,

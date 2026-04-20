@@ -7,7 +7,7 @@ import { router } from "expo-router";
 import { useApp, useColors } from "@/context/AppContext";
 
 export default function VerifyEmailScreen() {
-  const { user, setUser, token, lang } = useApp();
+  const { user, setUser, token, lang, authFetch } = useApp();
   const C = useColors();
   const insets = useSafeAreaInsets();
 
@@ -37,9 +37,9 @@ export default function VerifyEmailScreen() {
     }
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/auth/verify-email`, {
+      const res = await authFetch(`${API_BASE}/auth/verify-email`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: code.trim() }),
       });
       const data = await res.json().catch(() => ({}));
@@ -65,9 +65,9 @@ export default function VerifyEmailScreen() {
     }
     setResending(true);
     try {
-      const res = await fetch(`${API_BASE}/auth/resend-verification`, {
+      const res = await authFetch(`${API_BASE}/auth/resend-verification`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json" },
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {

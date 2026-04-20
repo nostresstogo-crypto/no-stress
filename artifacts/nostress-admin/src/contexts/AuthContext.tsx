@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { api } from "@/lib/api";
+import { api, getAdminToken, setAdminSession } from "@/lib/api";
 
 interface Admin {
   id: string;
@@ -21,7 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem("admin_token");
+    const token = getAdminToken();
     if (!token) {
       setIsLoading(false);
       return;
@@ -35,20 +35,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
       })
       .catch(() => {
-        localStorage.removeItem("admin_token");
+        setAdminSession(null, null);
       })
       .finally(() => setIsLoading(false));
   }, []);
 
   const login = async (email: string, password: string) => {
     const res = await api.admin.login(email, password);
-    localStorage.setItem("admin_token", res.token);
+    setAdminSession(res.token, res.refreshToken);
     setAdmin(res.admin);
   };
 
   const logout = async () => {
     await api.admin.logout().catch(() => {});
-    localStorage.removeItem("admin_token");
+    setAdminSession(null, null);
     setAdmin(null);
   };
 

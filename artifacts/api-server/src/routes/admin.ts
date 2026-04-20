@@ -7,6 +7,8 @@ import {
   signToken,
   rateLimit,
   verifyToken,
+  issueRefreshToken,
+  revokeRefreshToken,
 } from "../lib/auth-utils.js";
 
 const router: IRouter = Router();
@@ -72,12 +74,17 @@ router.post("/admin/login", adminLoginLimiter, async (req, res) => {
   if (!ok) {
     return res.status(401).json({ error: "Identifiants incorrects." });
   }
-  const token = signToken({ sub: `a_${admin.id}`, email: admin.email, role: "admin" });
-  res.json({ token, admin: { id: String(admin.id), name: admin.name, email: admin.email } });
+  const sub = `a_${admin.id}`;
+  const token = signToken({ sub, email: admin.email, role: "admin" });
+  const refreshToken = await issueRefreshToken(sub, req.headers["user-agent"] as string | undefined);
+  res.json({ token, refreshToken, admin: { id: String(admin.id), name: admin.name, email: admin.email } });
 });
 
-router.post("/admin/logout", requireAdmin, (_req, res) => {
-  // JWT is stateless — client should drop the token. Endpoint kept for API compatibility.
+router.post("/admin/logout", async (req, res) => {
+  const { refreshToken } = req.body || {};
+  if (refreshToken && typeof refreshToken === "string") {
+    await revokeRefreshToken(refreshToken);
+  }
   res.json({ message: "Déconnexion réussie." });
 });
 

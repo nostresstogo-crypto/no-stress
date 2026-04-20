@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and, sql } from "drizzle-orm";
 import { db, partnersTable, usersTable, eventsTable, registrationLogTable } from "@workspace/db";
-import { hashPassword, signToken, rateLimit } from "../lib/auth-utils.js";
+import { hashPassword, signToken, rateLimit, issueRefreshToken } from "../lib/auth-utils.js";
 
 const partnerRegisterLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, key: "partner-register" });
 import {
@@ -133,10 +133,13 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
     })
     .returning();
   await db.insert(registrationLogTable).values({ type: "partner" });
-  const token = signToken({ sub: `p_${partner.id}`, email: partner.email, role: "structure" });
+  const sub = `p_${partner.id}`;
+  const token = signToken({ sub, email: partner.email, role: "structure" });
+  const refreshToken = await issueRefreshToken(sub, req.headers["user-agent"] as string | undefined);
   res.status(201).json({
     message: "Demande d'inscription soumise avec succès. Elle sera examinée sous 48h.",
     token,
+    refreshToken,
     partner: serializePartner(partner),
   });
   sendPartnerRegistrationEmailToPartner(email, contactName, businessName).catch(() => {});

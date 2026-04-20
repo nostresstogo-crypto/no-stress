@@ -1,14 +1,67 @@
 const API_BASE = `${import.meta.env.BASE_URL.replace(/\/$/, "").replace("/nostress-admin", "")}/api`;
 
+const TOKEN_KEY = "admin_token";
+const REFRESH_KEY = "admin_refresh_token";
+
+export function setAdminSession(token: string | null, refreshToken: string | null) {
+  if (token) localStorage.setItem(TOKEN_KEY, token);
+  else localStorage.removeItem(TOKEN_KEY);
+  if (refreshToken) localStorage.setItem(REFRESH_KEY, refreshToken);
+  else localStorage.removeItem(REFRESH_KEY);
+}
+
+export function getAdminToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function getAdminRefreshToken(): string | null {
+  return localStorage.getItem(REFRESH_KEY);
+}
+
+let refreshInflight: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (refreshInflight) return refreshInflight;
+  const rt = getAdminRefreshToken();
+  if (!rt) return null;
+  refreshInflight = (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken: rt }),
+      });
+      if (!res.ok) {
+        setAdminSession(null, null);
+        return null;
+      }
+      const data = await res.json();
+      setAdminSession(data.token, data.refreshToken);
+      return data.token as string;
+    } catch {
+      return null;
+    } finally {
+      refreshInflight = null;
+    }
+  })();
+  return refreshInflight;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = localStorage.getItem("admin_token");
-  const headers: HeadersInit = {
+  const buildHeaders = (token: string | null): HeadersInit => ({
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...options?.headers,
-  };
+  });
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  let res = await fetch(`${API_BASE}${path}`, { ...options, headers: buildHeaders(getAdminToken()) });
+
+  if (res.status === 401 && getAdminRefreshToken()) {
+    const newToken = await refreshAccessToken();
+    if (newToken) {
+      res = await fetch(`${API_BASE}${path}`, { ...options, headers: buildHeaders(newToken) });
+    }
+  }
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ error: "Erreur réseau" }));
@@ -21,11 +74,17 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const api = {
   admin: {
     login: (email: string, password: string) =>
-      request<{ token: string; admin: { id: string; name: string; email: string } }>("/admin/login", {
+      request<{ token: string; refreshToken: string; admin: { id: string; name: string; email: string } }>("/admin/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       }),
-    logout: () => request("/admin/logout", { method: "POST" }),
+    logout: () => {
+      const refreshToken = getAdminRefreshToken();
+      return request("/admin/logout", {
+        method: "POST",
+        body: JSON.stringify({ refreshToken }),
+      });
+    },
     me: () => request<{ admin: { adminId: string; name: string; email: string } }>("/admin/me"),
     stats: () =>
       request<{

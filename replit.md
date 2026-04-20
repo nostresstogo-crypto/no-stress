@@ -30,9 +30,20 @@ artifacts/
 ## Persistance
 
 - PostgreSQL via `DATABASE_URL` (table schémas dans `lib/db/src/schema/index.ts`).
-- Tables : `partners`, `events`, `registration_log`, `contact_messages`, `deletion_requests`, `publications`, `admins`.
+- Tables : `users`, `partners`, `events`, `registration_log`, `contact_messages`, `deletion_requests`, `publications`, `admins`, `refresh_tokens`.
 - Migrations : `pnpm --filter @workspace/db drizzle-kit push`.
 - IDs sérialisés en string dans toutes les réponses API (compat client mobile).
+
+## Authentification
+
+- **Hash mots de passe** : bcryptjs (cost 12) sur `users`, `partners`, `admins`.
+- **JWT** signés HS256 avec `JWT_SECRET`. Sujet : `u_<id>` (user), `p_<id>` (partner), `a_<id>` (admin).
+- **Access token** : 1h. **Refresh token** : 30j, stocké haché en DB (`refresh_tokens`), format `<id>.<secret>`.
+- **Rotation** : `/auth/refresh` révoque l'ancien et émet un nouveau pair (réutilisation = 401).
+- **Logout** : `/auth/logout` (et `/admin/logout`) révoque le refresh token côté serveur.
+- **Rate limiting** par IP : login 10/15min, register 5/h, refresh 30/15min, verify-email 10/15min, resend 5/h.
+- **Email verification** : code 6 chiffres, expiration 24h, welcome email envoyé après vérification.
+- **Clients** : `authFetch` (mobile, dans AppContext) et le helper `request` (admin web `lib/api.ts`) interceptent les 401 et rejouent automatiquement après refresh.
 
 ## Upload d'images
 
