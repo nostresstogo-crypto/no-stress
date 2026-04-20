@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Alert,
   Image,
@@ -103,7 +103,23 @@ export default function CreateEventScreen() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [apiVenues, setApiVenues] = useState<Array<{ id: string; name: string; city?: string | null }>>([]);
   const scrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`${API_BASE}/venues`);
+        if (!r.ok) return;
+        const data = await r.json();
+        if (cancelled) return;
+        const list = Array.isArray(data?.venues) ? data.venues : [];
+        setApiVenues(list.map((v: any) => ({ id: String(v.id), name: v.name || "", city: v.city || null })));
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   function setField<K extends keyof FormData>(key: K, value: FormData[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -302,7 +318,14 @@ export default function CreateEventScreen() {
 
         <Field label={t("selectVenue")}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
-            {MOCK_VENUES.map((v) => {
+            {[
+              ...apiVenues
+                .filter((v) => !form.city || (v.city || "").toLowerCase() === form.city.toLowerCase())
+                .map((v) => ({ id: `api_${v.id}`, name: v.name })),
+              ...MOCK_VENUES
+                .filter((v) => !apiVenues.find((av) => (av.name || "").toLowerCase() === v.name.toLowerCase()))
+                .map((v) => ({ id: v.id, name: v.name })),
+            ].map((v) => {
               const active = form.venue === v.name;
               return (
                 <TouchableOpacity
@@ -316,6 +339,13 @@ export default function CreateEventScreen() {
               );
             })}
           </ScrollView>
+          <TextInput
+            style={[styles.input, { marginTop: 8 }]}
+            placeholder={lang === "fr" ? "Ou saisissez un nom de lieu" : "Or type a venue name"}
+            placeholderTextColor={C.textMuted}
+            value={form.venue}
+            onChangeText={(v) => setField("venue", v)}
+          />
         </Field>
 
         {/* Date & time row */}

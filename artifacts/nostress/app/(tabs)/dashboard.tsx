@@ -32,6 +32,7 @@ interface MyVenue {
   description: string;
   imageUrl?: string;
   createdAt: string;
+  isVerified?: boolean;
 }
 
 const VENUE_TYPES_FR = ["Boîte de nuit", "Bar", "Restaurant", "Salle de concert", "Plage", "Stade", "Salle culturelle", "Autre"];
@@ -67,18 +68,42 @@ export default function DashboardScreen() {
   const [venueDesc, setVenueDesc] = useState("");
   const [venueImageUrl, setVenueImageUrl] = useState("");
 
-  useEffect(() => {
-    AsyncStorage.getItem(NS_MY_VENUES_KEY).then((v) => {
-      if (v) setMyVenues(JSON.parse(v));
-    });
+  const loadMyVenues = useCallback(async () => {
+    // Local cache for instant display
+    try {
+      const cached = await AsyncStorage.getItem(NS_MY_VENUES_KEY);
+      if (cached) setMyVenues(JSON.parse(cached));
+    } catch {}
+    // Then fetch fresh from API (filter to this partner's email later if needed)
+    try {
+      const r = await fetch(`${API_BASE}/venues`);
+      if (!r.ok) return;
+      const data = await r.json();
+      const list = Array.isArray(data?.venues) ? data.venues : [];
+      const mapped: MyVenue[] = list.map((v: any) => ({
+        id: String(v.id),
+        name: v.name || "",
+        type: v.type || "",
+        city: v.city || "",
+        address: v.address || "",
+        description: v.description || "",
+        imageUrl: v.imageUrl || undefined,
+        createdAt: v.createdAt || new Date().toISOString(),
+        isVerified: !!v.isVerified,
+      }));
+      setMyVenues(mapped);
+      AsyncStorage.setItem(NS_MY_VENUES_KEY, JSON.stringify(mapped)).catch(() => {});
+    } catch {}
   }, []);
+
+  useEffect(() => { loadMyVenues(); }, [loadMyVenues]);
 
   const openVenueModal = () => {
     setVenueName(""); setVenueType(""); setVenueCity(""); setVenueAddress(""); setVenueDesc(""); setVenueImageUrl("");
     setShowVenueModal(true);
   };
 
-  const saveVenue = () => {
+  const saveVenue = async () => {
     if (!venueName.trim()) {
       Alert.alert(lang === "fr" ? "Nom requis" : "Name required", lang === "fr" ? "Veuillez entrer un nom pour le lieu." : "Please enter a name for the venue.");
       return;
@@ -87,22 +112,44 @@ export default function DashboardScreen() {
       Alert.alert(lang === "fr" ? "Ville requise" : "City required", lang === "fr" ? "Veuillez sélectionner une ville." : "Please select a city.");
       return;
     }
-    const newVenue: MyVenue = {
-      id: "ven_" + Date.now(),
-      name: venueName.trim(),
-      type: venueType || (lang === "fr" ? "Autre" : "Other"),
-      city: venueCity.trim(),
-      address: venueAddress.trim(),
-      description: venueDesc.trim(),
-      imageUrl: venueImageUrl || undefined,
-      createdAt: new Date().toISOString(),
-    };
-    setMyVenues((prev) => {
-      const next = [newVenue, ...prev];
-      AsyncStorage.setItem(NS_MY_VENUES_KEY, JSON.stringify(next));
-      return next;
-    });
-    setShowVenueModal(false);
+    try {
+      const r = await fetch(`${API_BASE}/venues`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: venueName.trim(),
+          type: venueType || (lang === "fr" ? "Autre" : "Other"),
+          city: venueCity.trim(),
+          address: venueAddress.trim(),
+          description: venueDesc.trim(),
+          imageUrl: venueImageUrl || null,
+        }),
+      });
+      if (!r.ok) throw new Error("save failed");
+      const created = await r.json();
+      const newVenue: MyVenue = {
+        id: String(created.id),
+        name: created.name,
+        type: created.type || "",
+        city: created.city,
+        address: created.address || "",
+        description: created.description || "",
+        imageUrl: created.imageUrl || undefined,
+        createdAt: created.createdAt || new Date().toISOString(),
+        isVerified: !!created.isVerified,
+      };
+      setMyVenues((prev) => {
+        const next = [newVenue, ...prev];
+        AsyncStorage.setItem(NS_MY_VENUES_KEY, JSON.stringify(next));
+        return next;
+      });
+      setShowVenueModal(false);
+    } catch {
+      Alert.alert(
+        lang === "fr" ? "Erreur" : "Error",
+        lang === "fr" ? "Impossible d'enregistrer le lieu. Vérifiez votre connexion." : "Unable to save venue. Check your connection.",
+      );
+    }
   };
 
   const deleteVenue = (id: string) => {

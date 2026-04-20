@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   FlatList,
   Platform,
@@ -18,25 +18,57 @@ import { MOCK_VENUES, VENUE_TYPES, MOCK_CITIES } from "@/constants/data";
 import { VenueCard } from "@/components/VenueCard";
 import { CitySelector } from "@/components/CitySelector";
 
+const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
+  : "/api";
+
 export default function VenuesScreen() {
   const t = useT();
   const { selectedCity, setSelectedCity } = useApp();
   const C = useColors();
   const insets = useSafeAreaInsets();
   const [selectedType, setSelectedType] = useState("");
+  const [apiVenues, setApiVenues] = useState<any[]>([]);
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
+  const loadVenues = useCallback(async () => {
+    try {
+      const r = await fetch(`${API_BASE}/venues`);
+      if (!r.ok) return;
+      const data = await r.json();
+      setApiVenues(Array.isArray(data?.venues) ? data.venues : []);
+    } catch {}
+  }, []);
+
+  useEffect(() => { loadVenues(); }, [loadVenues]);
+
+  const allVenues = useMemo(() => {
+    const fromApi = apiVenues.map((v: any) => ({
+      id: `api_${v.id}`,
+      name: v.name || "",
+      type: v.type || "",
+      city: v.city || "",
+      address: v.address || "",
+      description: v.description || "",
+      imageUrl: v.imageUrl || undefined,
+    }));
+    const mocks = MOCK_VENUES.filter(
+      (m) => !fromApi.find((a) => a.name.toLowerCase() === m.name.toLowerCase()),
+    );
+    return [...fromApi, ...mocks];
+  }, [apiVenues]);
+
   const filteredVenues = useMemo(() => {
-    return MOCK_VENUES.filter((v) => {
+    return allVenues.filter((v) => {
       const cityObj = MOCK_CITIES.find((c) => c.id === selectedCity);
       const matchCity =
         !selectedCity ||
-        v.city.toLowerCase() === selectedCity.toLowerCase() ||
+        (v.city || "").toLowerCase() === selectedCity.toLowerCase() ||
         (cityObj?.name && v.city === cityObj.name);
       const matchType = !selectedType || v.type === selectedType;
       return matchCity && matchType;
     });
-  }, [selectedCity, selectedType]);
+  }, [allVenues, selectedCity, selectedType]);
 
   return (
     <View style={styles.root}>

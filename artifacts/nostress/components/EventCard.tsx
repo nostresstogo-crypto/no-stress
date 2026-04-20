@@ -25,16 +25,17 @@ interface TicketType {
 
 interface Event {
   id: string;
-  title: string;
-  titleFr?: string;
-  date: string;
-  time?: string;
-  venue: string;
-  city: string;
-  category: string;
-  imageUrl?: string;
-  price: number;
-  currency?: string;
+  title?: string | null;
+  titleFr?: string | null;
+  date?: string | null;
+  time?: string | null;
+  venue?: string | null;
+  city?: string | null;
+  category?: string | null;
+  imageUrl?: string | null;
+  price?: number | null;
+  priceFCFA?: number | null;
+  currency?: string | null;
   isSponsored?: boolean;
   status?: string;
   ticketTypes?: TicketType[];
@@ -104,12 +105,19 @@ export function EventCard({ event, onPress, horizontal = false }: EventCardProps
   const { lang, isFavorite, toggleFavorite } = useApp();
   const styles = useMemo(() => makeStyles(C), [C]);
 
-  const title = lang === "fr" && event.titleFr ? event.titleFr : event.title;
-  const price = event.price === 0
+  const safeTitle =
+    (lang === "fr" ? event.titleFr || event.title : event.title || event.titleFr) || "";
+  const rawPrice = (event.price ?? event.priceFCFA ?? 0) as number;
+  const price = !rawPrice
     ? t("free")
-    : `${event.price.toLocaleString()} ${event.currency || "FCFA"}`;
+    : `${Number(rawPrice).toLocaleString()} ${event.currency || "FCFA"}`;
+  const safeCategory = (event.category || "").toUpperCase();
+  const safeVenue = event.venue || "";
+  const safeCity = event.city || "";
+  const safeLocation = [safeVenue, safeCity].filter(Boolean).join(", ");
 
   const formattedDate = (() => {
+    if (!event.date) return "";
     const d = new Date(event.date);
     if (isNaN(d.getTime())) return event.date;
     return d.toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", {
@@ -155,25 +163,29 @@ export function EventCard({ event, onPress, horizontal = false }: EventCardProps
       </View>
 
       <View style={styles.info}>
-        <Text style={styles.category} numberOfLines={1}>
-          {event.category.toUpperCase()}
-        </Text>
-        <Text style={styles.title} numberOfLines={2}>{title}</Text>
+        {safeCategory ? (
+          <Text style={styles.category} numberOfLines={1}>
+            {safeCategory}
+          </Text>
+        ) : null}
+        <Text style={styles.title} numberOfLines={2}>{safeTitle}</Text>
         <View style={styles.row}>
           <Ionicons name="calendar-outline" size={12} color={C.textMuted} />
           <Text style={styles.meta}>{formattedDate}</Text>
-          {event.time && (
+          {event.time ? (
             <>
               <Text style={styles.dot}>·</Text>
               <Ionicons name="time-outline" size={12} color={C.textMuted} />
               <Text style={styles.meta}>{event.time}</Text>
             </>
-          )}
+          ) : null}
         </View>
-        <View style={styles.row}>
-          <Ionicons name="location-outline" size={12} color={C.textMuted} />
-          <Text style={styles.meta} numberOfLines={1}>{event.venue}, {event.city}</Text>
-        </View>
+        {safeLocation ? (
+          <View style={styles.row}>
+            <Ionicons name="location-outline" size={12} color={C.textMuted} />
+            <Text style={styles.meta} numberOfLines={1}>{safeLocation}</Text>
+          </View>
+        ) : null}
         <View style={styles.footer}>
           <Text style={styles.price}>{price}</Text>
         </View>

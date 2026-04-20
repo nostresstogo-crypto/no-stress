@@ -121,6 +121,25 @@ export const registrationLogTable = pgTable("registration_log", {
   date: timestamp("date").defaultNow().notNull(),
 });
 
+export const venuesTable = pgTable("venues", {
+  id: serial("id").primaryKey(),
+  partnerId: integer("partner_id").references(() => partnersTable.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  type: text("type"),
+  city: text("city").notNull(),
+  country: text("country"),
+  address: text("address"),
+  description: text("description"),
+  imageUrl: text("image_url"),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
+  isVerified: text("is_verified").notNull().default("false"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Venue = typeof venuesTable.$inferSelect;
+export type InsertVenue = typeof venuesTable.$inferInsert;
+
 export const contactMessagesTable = pgTable("contact_messages", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
