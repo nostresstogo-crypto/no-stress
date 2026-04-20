@@ -36,6 +36,7 @@ artifacts/
 
 ## Sécurité & santé (API)
 
+- **Logs pino** : redaction automatique des champs sensibles (`password`, `token`, `refreshToken`, `verificationCode`, `otp`, `secret`, `apiKey`, en-têtes `Authorization`/`Cookie`/`Set-Cookie`/`x-refresh-token`). Le serializer pino-http n'expose que `method`, `url`, `statusCode` (pas le body).
 - **helmet** activé sur toutes les routes : X-Frame-Options, X-Content-Type-Options, Referrer-Policy, COOP, CORP, etc. HSTS activé en production uniquement.
 - `app.set("trust proxy", 1)` pour récupérer la vraie IP client derrière le proxy Replit (rate limiting + logs).
 - **`/api/healthz`** : liveness (process up). Retourne 200 immédiatement.
