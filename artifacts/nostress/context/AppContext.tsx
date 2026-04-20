@@ -177,39 +177,56 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const colors = useMemo(() => getThemeColors(isDark), [isDark]);
 
   useEffect(() => {
+    let cancelled = false;
+    const safeGet = (k: string) => AsyncStorage.getItem(k).catch(() => null);
+    const safeParse = <T,>(s: string | null): T | null => {
+      if (!s) return null;
+      try { return JSON.parse(s) as T; } catch { return null; }
+    };
     (async () => {
-      const [l, u, t, f, n, o, me, tm, ln, lnc] = await Promise.all([
-        AsyncStorage.getItem(KEYS.lang),
-        AsyncStorage.getItem(KEYS.user),
-        AsyncStorage.getItem(KEYS.token),
-        AsyncStorage.getItem(KEYS.favorites),
-        AsyncStorage.getItem(KEYS.notifications),
-        AsyncStorage.getItem(KEYS.onboarded),
-        AsyncStorage.getItem(KEYS.myEvents),
-        AsyncStorage.getItem(KEYS.themeMode),
-        AsyncStorage.getItem(KEYS.locationNotif),
-        AsyncStorage.getItem(KEYS.lastNotifCity),
-      ]);
-      if (l) {
-        const validLang = (l === "fr" || l === "en") ? (l as Lang) : "fr";
-        setLangState(validLang);
-        if (validLang !== l) {
-          AsyncStorage.setItem(KEYS.lang, validLang).catch(() => {});
+      try {
+        const [l, u, t, f, n, o, me, tm, ln, lnc, rt] = await Promise.all([
+          safeGet(KEYS.lang),
+          safeGet(KEYS.user),
+          safeGet(KEYS.token),
+          safeGet(KEYS.favorites),
+          safeGet(KEYS.notifications),
+          safeGet(KEYS.onboarded),
+          safeGet(KEYS.myEvents),
+          safeGet(KEYS.themeMode),
+          safeGet(KEYS.locationNotif),
+          safeGet(KEYS.lastNotifCity),
+          safeGet(KEYS.refreshToken),
+        ]);
+        if (cancelled) return;
+        if (l) {
+          const validLang = (l === "fr" || l === "en") ? (l as Lang) : "fr";
+          setLangState(validLang);
+          if (validLang !== l) {
+            AsyncStorage.setItem(KEYS.lang, validLang).catch(() => {});
+          }
         }
+        const userObj = safeParse<User>(u);
+        if (userObj) setUserState(userObj);
+        if (t) { setTokenState(t); tokenRef.current = t; }
+        if (rt) { setRefreshTokenState(rt); refreshRef.current = rt; }
+        const fav = safeParse<typeof favorites>(f);
+        if (fav) setFavorites(fav);
+        const notifs = safeParse<Notification[]>(n);
+        if (notifs) setNotifications(notifs);
+        if (o === "true") setHasOnboardedState(true);
+        const meArr = safeParse<MyEvent[]>(me);
+        if (meArr) setMyEvents(meArr);
+        if (tm === "system" || tm === "dark" || tm === "light") setThemeModeState(tm as ThemeMode);
+        if (ln !== null) setLocationNotificationsEnabledState(ln === "true");
+        if (lnc) notifiedCityRef.current = lnc;
+      } catch (err) {
+        console.error("[AppContext] hydrate failed:", err);
+      } finally {
+        if (!cancelled) setAppReady(true);
       }
-      if (u) setUserState(JSON.parse(u));
-      if (t) { setTokenState(t); tokenRef.current = t; }
-      const rt = await AsyncStorage.getItem(KEYS.refreshToken);
-      if (rt) { setRefreshTokenState(rt); refreshRef.current = rt; }
-      if (f) setFavorites(JSON.parse(f));
-      if (n) setNotifications(JSON.parse(n));
-      if (o === "true") setHasOnboardedState(true);
-      if (me) setMyEvents(JSON.parse(me));
-      if (tm) setThemeModeState(tm as ThemeMode);
-      if (ln !== null) setLocationNotificationsEnabledState(ln === "true");
-      if (lnc) notifiedCityRef.current = lnc;
-      setAppReady(true);
     })();
+    return () => { cancelled = true; };
   }, []);
 
   const setLang = useCallback(async (l: Lang) => {
