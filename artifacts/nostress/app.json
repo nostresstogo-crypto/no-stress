@@ -8,6 +8,9 @@
     "scheme": "nostress",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "primaryColor": "#FFD700",
+    "description": "NoStress — Découvrez et réservez les meilleurs événements au Togo et au Bénin : concerts, soirées, festivals, ateliers. Billetterie mobile, favoris, et notifications près de chez vous.",
+    "privacy": "public",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
@@ -15,10 +18,41 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.nostress.app"
+      "bundleIdentifier": "com.nostress.app",
+      "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "NoStress utilise votre localisation pour vous proposer les événements près de chez vous au Togo et au Bénin.",
+        "NSCameraUsageDescription": "NoStress a besoin d'accéder à votre appareil photo pour ajouter des images à vos événements.",
+        "NSPhotoLibraryUsageDescription": "NoStress a besoin d'accéder à vos photos pour ajouter des images de profil ou d'événements.",
+        "NSPhotoLibraryAddUsageDescription": "NoStress a besoin d'enregistrer vos billets dans votre bibliothèque photo.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
-      "backgroundColor": "#070617"
+      "package": "com.nostress.app",
+      "versionCode": 1,
+      "backgroundColor": "#070617",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#070617"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "POST_NOTIFICATIONS"
+      ],
+      "blockedPermissions": [
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_PHONE_STATE"
+      ]
     },
     "web": {
       "favicon": "./assets/images/icon.png"
@@ -31,11 +65,54 @@
         }
       ],
       "expo-font",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#FFD700",
+          "defaultChannel": "default"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "NoStress utilise votre localisation pour vous proposer les événements près de chez vous."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "NoStress a besoin d'accéder à vos photos pour ajouter des images à vos événements.",
+          "cameraPermission": "NoStress a besoin d'accéder à votre appareil photo pour prendre des photos d'événements."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "minSdkVersion": 24
+          },
+          "ios": {
+            "deploymentTarget": "15.1"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "REPLACE_WITH_EAS_PROJECT_ID"
+      },
+      "router": {
+        "origin": "https://replit.com/"
+      }
+    },
+    "owner": "nostress"
   }
 }

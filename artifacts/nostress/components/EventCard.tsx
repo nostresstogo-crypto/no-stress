@@ -10,6 +10,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { ColorPalette } from "@/constants/colors";
+import { formatDateLocalized } from "@/lib/formatDate";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.72;
