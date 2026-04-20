@@ -11,11 +11,20 @@ function serialize(e: any) {
 }
 
 router.get("/events", async (req, res) => {
-  const { city, category, page = 1, limit = 20 } = req.query;
-  const conds = [eq(eventsTable.status, "approved")];
+  const { city, category, partnerId, status, page = 1, limit = 20 } = req.query;
+  const conds: any[] = [];
+  if (partnerId) {
+    const pid = parseInt(String(partnerId), 10);
+    if (Number.isFinite(pid)) conds.push(eq(eventsTable.partnerId, pid));
+    if (status) conds.push(eq(eventsTable.status, String(status)));
+  } else {
+    conds.push(eq(eventsTable.status, status ? String(status) : "approved"));
+  }
   if (city) conds.push(ilike(eventsTable.city, `%${String(city)}%`));
   if (category) conds.push(eq(eventsTable.category, String(category)));
-  const rows = await db.select().from(eventsTable).where(and(...conds));
+  const rows = conds.length
+    ? await db.select().from(eventsTable).where(and(...conds))
+    : await db.select().from(eventsTable);
   res.json({ events: rows.map(serialize), total: rows.length, page: Number(page), limit: Number(limit) });
 });
 

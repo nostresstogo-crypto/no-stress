@@ -49,7 +49,7 @@ const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
 
 export default function DashboardScreen() {
   const t = useT();
-  const { user, lang, myEvents, setUser, addNotification, updateMyEvent, removeMyEvent, syncMyEventsStatus } = useApp();
+  const { user, lang, myEvents, setUser, addNotification, updateMyEvent, removeMyEvent, syncMyEventsStatus, syncMyEventsFromBackend } = useApp();
   const insets = useSafeAreaInsets();
   const C = useColors();
 
@@ -234,7 +234,8 @@ export default function DashboardScreen() {
     useCallback(() => {
       checkPartnerStatus();
       syncMyEventsStatus();
-    }, [checkPartnerStatus, syncMyEventsStatus])
+      syncMyEventsFromBackend();
+    }, [checkPartnerStatus, syncMyEventsStatus, syncMyEventsFromBackend])
   );
 
   /* ── Not logged in ── */

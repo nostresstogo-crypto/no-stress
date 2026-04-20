@@ -112,6 +112,7 @@ interface AppContextValue {
   updateMyEvent: (id: string, patch: Partial<MyEvent>) => void;
   removeMyEvent: (id: string) => void;
   syncMyEventsStatus: () => Promise<void>;
+  syncMyEventsFromBackend: () => Promise<void>;
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => void;
   isDark: boolean;
@@ -441,6 +442,57 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const syncMyEventsFromBackend = useCallback(async () => {
+    const partnerId = user?.id;
+    if (!partnerId) return;
+    try {
+      const r = await fetch(`${API_BASE}/events?partnerId=${encodeURIComponent(partnerId)}`);
+      if (!r.ok) return;
+      const data = await r.json();
+      const remote: any[] = Array.isArray(data?.events) ? data.events : [];
+      if (remote.length === 0) return;
+      setMyEvents((prev) => {
+        const knownApiIds = new Set(prev.filter((e) => e.apiId).map((e) => String(e.apiId)));
+        const imports: MyEvent[] = [];
+        for (const ev of remote) {
+          const apiId = String(ev.id);
+          if (knownApiIds.has(apiId)) continue;
+          imports.push({
+            id: "ev_api_" + apiId,
+            apiId,
+            titleFr: ev.titleFr || ev.title || "",
+            titleEn: ev.titleEn || ev.title || "",
+            category: ev.category || "",
+            city: ev.city || "",
+            venue: ev.venue || "",
+            date: ev.date || "",
+            time: ev.time || "",
+            descriptionFr: ev.descriptionFr || ev.description || "",
+            descriptionEn: ev.descriptionEn || ev.description || "",
+            priceFCFA: Number(ev.price ?? 0) || 0,
+            isFree: !ev.price || Number(ev.price) === 0,
+            isSponsored: false,
+            imageUrl: ev.imageUrl || "",
+            status: (ev.status as MyEvent["status"]) || "pending",
+            createdAt: ev.createdAt || new Date().toISOString(),
+          });
+        }
+        const updated = prev.map((e) => {
+          if (!e.apiId) return e;
+          const remoteMatch = remote.find((r) => String(r.id) === String(e.apiId));
+          if (remoteMatch && remoteMatch.status && remoteMatch.status !== e.status) {
+            return { ...e, status: remoteMatch.status as MyEvent["status"] };
+          }
+          return e;
+        });
+        if (imports.length === 0 && updated.every((e, i) => e === prev[i])) return prev;
+        const next = [...imports, ...updated];
+        AsyncStorage.setItem(KEYS.myEvents, JSON.stringify(next));
+        return next;
+      });
+    } catch {}
+  }, [user?.id]);
+
   const removeNotification = useCallback((id: string) => {
     setNotifications((prev) => {
       const next = prev.filter((n) => n.id !== id);
@@ -517,7 +569,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       logout,
       hasOnboarded, setHasOnboarded,
       appReady,
-      myEvents, addMyEvent, updateMyEvent, removeMyEvent, syncMyEventsStatus,
+      myEvents, addMyEvent, updateMyEvent, removeMyEvent, syncMyEventsStatus, syncMyEventsFromBackend,
       themeMode, setThemeMode,
       isDark, colors,
       locationNotificationsEnabled, setLocationNotificationsEnabled,
@@ -536,7 +588,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       logout,
       hasOnboarded, setHasOnboarded,
       appReady,
-      myEvents, addMyEvent, updateMyEvent, removeMyEvent, syncMyEventsStatus,
+      myEvents, addMyEvent, updateMyEvent, removeMyEvent, syncMyEventsStatus, syncMyEventsFromBackend,
       themeMode, setThemeMode,
       isDark, colors,
       locationNotificationsEnabled, setLocationNotificationsEnabled,
