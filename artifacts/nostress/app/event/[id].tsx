@@ -3,6 +3,7 @@ import {
   Dimensions,
   FlatList,
   Image,
+  Linking,
   Modal,
   Platform,
   Pressable,
@@ -41,6 +42,7 @@ export default function EventDetailScreen() {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [apiEvent, setApiEvent] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [venueDetails, setVenueDetails] = useState<any | null>(null);
 
   const carouselRef = useRef<FlatList>(null);
   const lightboxRef = useRef<FlatList>(null);
@@ -55,6 +57,28 @@ export default function EventDetailScreen() {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [id]);
+
+  const lookupVenueName: string | undefined = apiEvent?.venue || undefined;
+  const lookupVenueCity: string | undefined = apiEvent?.city || undefined;
+  useEffect(() => {
+    let cancelled = false;
+    setVenueDetails(null);
+    if (!lookupVenueName) return;
+    (async () => {
+      try {
+        const r = await fetch(
+          `${API_BASE}/venues${lookupVenueCity ? `?city=${encodeURIComponent(lookupVenueCity)}` : ""}`,
+        );
+        if (!r.ok) return;
+        const data = await r.json();
+        const list: any[] = Array.isArray(data?.venues) ? data.venues : [];
+        const target = lookupVenueName.toLowerCase().trim();
+        const match = list.find((v) => (v.name || "").toLowerCase().trim() === target);
+        if (!cancelled && match) setVenueDetails(match);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [lookupVenueName, lookupVenueCity]);
 
   const mockEvent = MOCK_EVENTS.find((e) => e.id === id);
   const partnerEvent = myEvents.find((e) => e.id === id);
@@ -352,18 +376,99 @@ export default function EventDetailScreen() {
           </View>
         )}
 
-        {/* Location stub */}
+        {/* Location */}
         <View style={s.section}>
           <Text style={[s.sectionTitle, { color: C.text }]}>{t("location")}</Text>
-          <View style={[s.mapStub, { backgroundColor: C.card, borderColor: C.border }]}>
-            <Ionicons name="map" size={32} color={C.lavender} />
-            <Text style={[s.mapText, { color: C.text }]}>{event.venue}</Text>
-            <Text style={[s.mapAddr, { color: C.textMuted }]}>{event.city}</Text>
-            {event.latitude && event.longitude && (
-              <Text style={[s.mapCoords, { color: C.textMuted }]}>
-                {event.latitude.toFixed(4)}, {event.longitude.toFixed(4)}
+          <View style={[s.mapStub, { backgroundColor: C.card, borderColor: C.border, alignItems: "stretch" }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <View style={{
+                width: 44, height: 44, borderRadius: 12,
+                backgroundColor: C.lavender + "22",
+                alignItems: "center", justifyContent: "center",
+              }}>
+                <Ionicons name="business" size={22} color={C.lavender} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[s.mapText, { color: C.text, textAlign: "left" }]}>{event.venue || (lang === "fr" ? "Lieu non précisé" : "Venue not set")}</Text>
+                {(venueDetails?.type || event.city) && (
+                  <Text style={[s.mapAddr, { color: C.textMuted, textAlign: "left" }]}>
+                    {[venueDetails?.type, event.city].filter(Boolean).join(" · ")}
+                  </Text>
+                )}
+              </View>
+              {venueDetails?.isVerified && (
+                <Ionicons name="checkmark-circle" size={18} color={C.gold} />
+              )}
+            </View>
+
+            {venueDetails?.address ? (
+              <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8, marginTop: 12 }}>
+                <Ionicons name="location" size={16} color={C.gold} style={{ marginTop: 2 }} />
+                <Text style={{ flex: 1, color: C.text, fontSize: 14, lineHeight: 20, fontFamily: "Inter_500Medium" }}>
+                  {venueDetails.address}
+                </Text>
+              </View>
+            ) : null}
+
+            {venueDetails?.description ? (
+              <Text style={{ color: C.textMuted, fontSize: 13, lineHeight: 19, marginTop: 10 }}>
+                {venueDetails.description}
               </Text>
-            )}
+            ) : null}
+
+            {(venueDetails?.latitude != null && venueDetails?.longitude != null) || event.latitude || event.longitude ? (
+              <Text style={[s.mapCoords, { color: C.textMuted, marginTop: 8, textAlign: "left" }]}>
+                {Number(venueDetails?.latitude ?? event.latitude).toFixed(4)},{" "}
+                {Number(venueDetails?.longitude ?? event.longitude).toFixed(4)}
+              </Text>
+            ) : null}
+
+            <TouchableOpacity
+              style={{
+                marginTop: 14,
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+                backgroundColor: C.gold,
+                borderRadius: 12,
+                paddingVertical: 12,
+              }}
+              onPress={() => {
+                const lat = venueDetails?.latitude ?? event.latitude;
+                const lng = venueDetails?.longitude ?? event.longitude;
+                const queryText = [
+                  venueDetails?.name || event.venue,
+                  venueDetails?.address,
+                  event.city,
+                  venueDetails?.country || "Togo",
+                ].filter(Boolean).join(", ");
+                const query = encodeURIComponent(queryText);
+                const hasCoords = lat != null && lng != null && Number.isFinite(Number(lat)) && Number.isFinite(Number(lng));
+                let url: string;
+                if (hasCoords) {
+                  url = Platform.select({
+                    ios: `maps:0,0?q=${query}&ll=${lat},${lng}`,
+                    android: `geo:${lat},${lng}?q=${lat},${lng}(${encodeURIComponent(venueDetails?.name || event.venue || "")})`,
+                    default: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+                  }) as string;
+                } else {
+                  url = Platform.select({
+                    ios: `maps:0,0?q=${query}`,
+                    android: `geo:0,0?q=${query}`,
+                    default: `https://www.google.com/maps/search/?api=1&query=${query}`,
+                  }) as string;
+                }
+                Linking.openURL(url).catch(() => {
+                  Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
+                });
+              }}
+            >
+              <Ionicons name="navigate" size={18} color={C.bg} />
+              <Text style={{ color: C.bg, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+                {lang === "fr" ? "Itinéraire / Maps" : "Directions / Maps"}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
