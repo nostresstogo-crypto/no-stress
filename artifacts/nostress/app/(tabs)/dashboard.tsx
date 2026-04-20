@@ -61,6 +61,7 @@ export default function DashboardScreen() {
 
   const [myVenues, setMyVenues] = useState<MyVenue[]>([]);
   const [showVenueModal, setShowVenueModal] = useState(false);
+  const [editingVenueId, setEditingVenueId] = useState<string | null>(null);
   const [venueName, setVenueName] = useState("");
   const [venueType, setVenueType] = useState("");
   const [venueCity, setVenueCity] = useState("");
@@ -99,7 +100,19 @@ export default function DashboardScreen() {
   useEffect(() => { loadMyVenues(); }, [loadMyVenues]);
 
   const openVenueModal = () => {
+    setEditingVenueId(null);
     setVenueName(""); setVenueType(""); setVenueCity(""); setVenueAddress(""); setVenueDesc(""); setVenueImageUrl("");
+    setShowVenueModal(true);
+  };
+
+  const openEditVenueModal = (v: MyVenue) => {
+    setEditingVenueId(v.id);
+    setVenueName(v.name || "");
+    setVenueType(v.type || "");
+    setVenueCity(v.city || "");
+    setVenueAddress(v.address || "");
+    setVenueDesc(v.description || "");
+    setVenueImageUrl(v.imageUrl || "");
     setShowVenueModal(true);
   };
 
@@ -113,8 +126,10 @@ export default function DashboardScreen() {
       return;
     }
     try {
-      const r = await fetch(`${API_BASE}/venues`, {
-        method: "POST",
+      const isEdit = !!editingVenueId;
+      const url = isEdit ? `${API_BASE}/venues/${editingVenueId}` : `${API_BASE}/venues`;
+      const r = await fetch(url, {
+        method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: venueName.trim(),
@@ -126,24 +141,27 @@ export default function DashboardScreen() {
         }),
       });
       if (!r.ok) throw new Error("save failed");
-      const created = await r.json();
-      const newVenue: MyVenue = {
-        id: String(created.id),
-        name: created.name,
-        type: created.type || "",
-        city: created.city,
-        address: created.address || "",
-        description: created.description || "",
-        imageUrl: created.imageUrl || undefined,
-        createdAt: created.createdAt || new Date().toISOString(),
-        isVerified: !!created.isVerified,
+      const saved = await r.json();
+      const savedVenue: MyVenue = {
+        id: String(saved.id),
+        name: saved.name,
+        type: saved.type || "",
+        city: saved.city,
+        address: saved.address || "",
+        description: saved.description || "",
+        imageUrl: saved.imageUrl || undefined,
+        createdAt: saved.createdAt || new Date().toISOString(),
+        isVerified: !!saved.isVerified,
       };
       setMyVenues((prev) => {
-        const next = [newVenue, ...prev];
+        const next = isEdit
+          ? prev.map((v) => (v.id === savedVenue.id ? savedVenue : v))
+          : [savedVenue, ...prev];
         AsyncStorage.setItem(NS_MY_VENUES_KEY, JSON.stringify(next));
         return next;
       });
       setShowVenueModal(false);
+      setEditingVenueId(null);
     } catch {
       Alert.alert(
         lang === "fr" ? "Erreur" : "Error",
@@ -161,7 +179,10 @@ export default function DashboardScreen() {
         {
           text: lang === "fr" ? "Supprimer" : "Delete",
           style: "destructive",
-          onPress: () => {
+          onPress: async () => {
+            try {
+              await fetch(`${API_BASE}/venues/${id}`, { method: "DELETE" });
+            } catch {}
             setMyVenues((prev) => {
               const next = prev.filter((v) => v.id !== id);
               AsyncStorage.setItem(NS_MY_VENUES_KEY, JSON.stringify(next));
@@ -631,9 +652,17 @@ export default function DashboardScreen() {
                       <Text style={styles.eventMeta}>{venue.address}</Text>
                     ) : null}
                   </View>
-                  <TouchableOpacity onPress={() => deleteVenue(venue.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <Ionicons name="trash-outline" size={18} color={C.error} />
-                  </TouchableOpacity>
+                  <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
+                    <TouchableOpacity onPress={() => router.push(`/venue/api_${venue.id}` as any)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Ionicons name="eye-outline" size={18} color={C.lavender} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => openEditVenueModal(venue)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Ionicons name="create-outline" size={18} color={C.gold} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => deleteVenue(venue.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Ionicons name="trash-outline" size={18} color={C.error} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))
             )}

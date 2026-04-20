@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Image,
   Linking,
   Platform,
@@ -18,6 +19,24 @@ import { C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_VENUES, MOCK_EVENTS } from "@/constants/data";
 
+const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
+  : "/api";
+
+type Venue = {
+  id: string;
+  name: string;
+  type?: string;
+  city?: string;
+  country?: string | null;
+  address?: string;
+  description?: string;
+  imageUrl?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  isVerified?: boolean;
+};
+
 export default function VenueDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const t = useT();
@@ -25,8 +44,65 @@ export default function VenueDetailScreen() {
   const { lang } = useApp();
   const insets = useSafeAreaInsets();
 
-  const venue = MOCK_VENUES.find((v) => v.id === id);
-  const venueEvents = MOCK_EVENTS.filter((e) => e.venueId === id);
+  const [apiVenue, setApiVenue] = useState<Venue | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const isApi = typeof id === "string" && id.startsWith("api_");
+  const apiNumId = isApi ? id.slice(4) : null;
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!isApi) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const r = await fetch(`${API_BASE}/venues/${apiNumId}`);
+        if (!cancelled && r.ok) {
+          const data = await r.json();
+          setApiVenue({
+            id: `api_${data.id}`,
+            name: data.name || "",
+            type: data.type || "",
+            city: data.city || "",
+            country: data.country || null,
+            address: data.address || "",
+            description: data.description || "",
+            imageUrl: data.imageUrl || undefined,
+            latitude: data.latitude ?? null,
+            longitude: data.longitude ?? null,
+            isVerified: !!data.isVerified,
+          });
+        }
+      } catch {}
+      if (!cancelled) setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [isApi, apiNumId]);
+
+  const venue: Venue | undefined = useMemo(() => {
+    if (isApi) return apiVenue ?? undefined;
+    return MOCK_VENUES.find((v) => v.id === id) as Venue | undefined;
+  }, [isApi, apiVenue, id]);
+
+  const venueEvents = useMemo(() => {
+    if (!venue) return [];
+    return MOCK_EVENTS.filter(
+      (e) =>
+        e.venueId === venue.id ||
+        (e.venueName && venue.name &&
+          e.venueName.toLowerCase() === venue.name.toLowerCase()),
+    );
+  }, [venue]);
+
+  if (loading) {
+    return (
+      <View style={[styles.root, styles.center]}>
+        <ActivityIndicator color={C.lavender} />
+      </View>
+    );
+  }
 
   if (!venue) {
     return (
@@ -45,18 +121,38 @@ export default function VenueDetailScreen() {
   }
 
   const openMaps = () => {
-    const query = encodeURIComponent(`${venue.name}, ${venue.address}`);
-    const url = Platform.select({
-      ios: `maps:0,0?q=${query}`,
-      android: `geo:0,0?q=${query}`,
-      default: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-        `${venue.latitude},${venue.longitude}`
-      )}`,
+    const hasCoords =
+      venue.latitude != null &&
+      venue.longitude != null &&
+      Number.isFinite(venue.latitude) &&
+      Number.isFinite(venue.longitude);
+    const queryText = [venue.name, venue.address, venue.city, venue.country || "Togo"]
+      .filter(Boolean)
+      .join(", ");
+    const query = encodeURIComponent(queryText);
+
+    let url: string;
+    if (hasCoords) {
+      const lat = venue.latitude;
+      const lng = venue.longitude;
+      url = Platform.select({
+        ios: `maps:0,0?q=${query}&ll=${lat},${lng}`,
+        android: `geo:${lat},${lng}?q=${lat},${lng}(${encodeURIComponent(venue.name)})`,
+        default: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+      }) as string;
+    } else {
+      url = Platform.select({
+        ios: `maps:0,0?q=${query}`,
+        android: `geo:0,0?q=${query}`,
+        default: `https://www.google.com/maps/search/?api=1&query=${query}`,
+      }) as string;
+    }
+    Linking.openURL(url).catch(() => {
+      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
     });
-    Linking.openURL(url);
   };
 
-  const typeIcon = getTypeIcon(venue.type);
+  const typeIcon = getTypeIcon(venue.type || "");
 
   return (
     <View style={styles.root}>
@@ -78,14 +174,12 @@ export default function VenueDetailScreen() {
             </View>
           )}
 
-          {/* Dark gradient overlay bottom */}
           <LinearGradient
             colors={["transparent", C.bg]}
             locations={[0.5, 1.0]}
             style={styles.heroOverlay}
           />
 
-          {/* Back button */}
           <TouchableOpacity
             style={[styles.navBtn, { top: (insets.top || 20) + 8 }]}
             onPress={() => router.back()}
@@ -93,7 +187,6 @@ export default function VenueDetailScreen() {
             <Ionicons name="arrow-back" size={20} color={C.text} />
           </TouchableOpacity>
 
-          {/* Verified badge on hero */}
           {venue.isVerified && (
             <View style={styles.verifiedHero}>
               <Ionicons name="checkmark-circle" size={14} color={C.gold} />
@@ -105,62 +198,62 @@ export default function VenueDetailScreen() {
         </View>
 
         <View style={styles.body}>
-          {/* Name + type */}
           <View style={styles.titleRow}>
             <View style={styles.typeIconWrap}>
               <Ionicons name={typeIcon as any} size={20} color={C.lavender} />
             </View>
             <View style={styles.titleInfo}>
-              <Text style={styles.typePill}>{venue.type}</Text>
+              {venue.type ? <Text style={styles.typePill}>{venue.type}</Text> : null}
               <Text style={styles.venueName}>{venue.name}</Text>
             </View>
           </View>
 
-          {/* Address row */}
-          <View style={styles.infoRow}>
-            <View style={styles.infoIconWrap}>
-              <Ionicons name="location" size={16} color={C.gold} />
+          {venue.address ? (
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconWrap}>
+                <Ionicons name="location" size={16} color={C.gold} />
+              </View>
+              <View style={styles.infoText}>
+                <Text style={styles.infoLabel}>
+                  {lang === "fr" ? "Adresse" : "Address"}
+                </Text>
+                <Text style={styles.infoValue}>{venue.address}</Text>
+              </View>
             </View>
-            <View style={styles.infoText}>
-              <Text style={styles.infoLabel}>
-                {lang === "fr" ? "Adresse" : "Address"}
-              </Text>
-              <Text style={styles.infoValue}>{venue.address}</Text>
-            </View>
-          </View>
+          ) : null}
 
-          {/* City row */}
-          <View style={styles.infoRow}>
-            <View style={styles.infoIconWrap}>
-              <Ionicons name="map" size={16} color={C.lavender} />
+          {venue.city ? (
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconWrap}>
+                <Ionicons name="map" size={16} color={C.lavender} />
+              </View>
+              <View style={styles.infoText}>
+                <Text style={styles.infoLabel}>
+                  {lang === "fr" ? "Ville" : "City"}
+                </Text>
+                <Text style={styles.infoValue}>
+                  {venue.city}{venue.country ? ` · ${venue.country}` : " · Togo"}
+                </Text>
+              </View>
             </View>
-            <View style={styles.infoText}>
-              <Text style={styles.infoLabel}>
-                {lang === "fr" ? "Ville" : "City"}
-              </Text>
-              <Text style={styles.infoValue}>{venue.city} · Togo</Text>
-            </View>
-          </View>
+          ) : null}
 
-          {/* Description */}
-          {venue.description && (
+          {venue.description ? (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>
                 {lang === "fr" ? "À propos" : "About"}
               </Text>
               <Text style={styles.description}>{venue.description}</Text>
             </View>
-          )}
+          ) : null}
 
-          {/* Open in maps button */}
           <TouchableOpacity style={styles.mapsBtn} onPress={openMaps}>
             <Ionicons name="navigate" size={18} color={C.bg} />
             <Text style={styles.mapsBtnText}>
-              {lang === "fr" ? "Ouvrir dans Maps" : "Open in Maps"}
+              {lang === "fr" ? "Itinéraire / Maps" : "Directions / Maps"}
             </Text>
           </TouchableOpacity>
 
-          {/* Events at this venue */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
               {lang === "fr"
@@ -190,10 +283,10 @@ export default function VenueDetailScreen() {
                   >
                     <View style={styles.eventDateBox}>
                       <Text style={styles.eventDay}>
-                        {event.date.split("-")[2]}
+                        {(event.date || "").split("-")[2] || "—"}
                       </Text>
                       <Text style={styles.eventMonth}>
-                        {getMonthShort(event.date, lang)}
+                        {getMonthShort(event.date || "", lang)}
                       </Text>
                     </View>
                     <View style={styles.eventInfo}>
@@ -214,7 +307,7 @@ export default function VenueDetailScreen() {
                         </View>
                       ) : (
                         <Text style={styles.eventPrice}>
-                          {event.price.toLocaleString()}
+                          {(event.price ?? 0).toLocaleString()}
                           {"\n"}
                           <Text style={styles.eventPriceSub}>FCFA</Text>
                         </Text>
@@ -238,21 +331,22 @@ export default function VenueDetailScreen() {
 
 function getTypeIcon(type: string): string {
   switch (type) {
-    case "Nightclub": return "wine";
+    case "Nightclub": case "Boîte de nuit": return "wine";
     case "Bar": return "beer";
     case "Restaurant": return "restaurant";
-    case "Concert Hall": return "musical-notes";
-    case "Beach Club": return "sunny";
+    case "Concert Hall": case "Salle de concert": return "musical-notes";
+    case "Beach Club": case "Beach": case "Plage": return "sunny";
     case "Cinema": return "film";
     case "Hotel": return "bed";
-    case "Stadium": return "football";
-    case "Cultural Center": return "library";
+    case "Stadium": case "Stade": return "football";
+    case "Cultural Center": case "Salle culturelle": return "library";
     case "Comedy Club": return "happy";
     default: return "business";
   }
 }
 
 function getMonthShort(dateStr: string, lang: string): string {
+  if (!dateStr) return "";
   const months = lang === "fr"
     ? ["Jan", "Fév", "Mar", "Avr", "Mai", "Jun", "Jul", "Aoû", "Sep", "Oct", "Nov", "Déc"]
     : ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -264,7 +358,6 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },
 
-  /* Hero */
   hero: { position: "relative", height: 260 },
   heroImage: { width: "100%", height: "100%" },
   heroPlaceholder: {
@@ -307,7 +400,6 @@ const styles = StyleSheet.create({
     color: C.gold,
   },
 
-  /* Body */
   body: { padding: 20, gap: 16 },
 
   titleRow: {
@@ -341,7 +433,6 @@ const styles = StyleSheet.create({
     lineHeight: 28,
   },
 
-  /* Info rows */
   infoRow: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -373,7 +464,6 @@ const styles = StyleSheet.create({
     color: C.text,
   },
 
-  /* Description */
   section: { gap: 12 },
   sectionTitle: {
     fontSize: 17,
@@ -392,7 +482,6 @@ const styles = StyleSheet.create({
     borderColor: C.border,
   },
 
-  /* Maps button */
   mapsBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -413,7 +502,6 @@ const styles = StyleSheet.create({
     color: C.bg,
   },
 
-  /* Events */
   emptyEvents: {
     alignItems: "center",
     paddingVertical: 28,
@@ -503,7 +591,6 @@ const styles = StyleSheet.create({
     color: C.success,
   },
 
-  /* Back / empty state */
   emptyText: {
     fontSize: 16,
     fontFamily: "Inter_500Medium",
