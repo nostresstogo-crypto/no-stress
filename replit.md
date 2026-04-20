@@ -34,6 +34,14 @@ artifacts/
 - Migrations : `pnpm --filter @workspace/db drizzle-kit push`.
 - IDs sérialisés en string dans toutes les réponses API (compat client mobile).
 
+## Pages légales (App Store / Google Play)
+
+- **Politique de confidentialité** : `/nostress-web/politique-confidentialite`
+- **CGU** : `/nostress-web/conditions-utilisation`
+- **Suppression de compte** : `/nostress-web/suppression-compte`
+- Liens accessibles depuis l'onglet Compte de l'app mobile (ouvrent le navigateur).
+- Contact officiel : nostresstogo@gmail.com / WhatsApp +1 319 777 4884.
+
 ## Authentification
 
 - **Hash mots de passe** : bcryptjs (cost 12) sur `users`, `partners`, `admins`.

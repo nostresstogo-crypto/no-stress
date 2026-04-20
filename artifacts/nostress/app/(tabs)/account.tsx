@@ -22,6 +22,11 @@ import { LANG_LABELS, type Lang } from "@/constants/i18n";
 
 const SUPPORT_WHATSAPP = "+13197774884";
 const SUPPORT_WHATSAPP_URL = `https://wa.me/${SUPPORT_WHATSAPP.replace(/[^0-9]/g, "")}?text=${encodeURIComponent("Bonjour NoStress, j'ai besoin d'aide.")}`;
+const WEB_BASE = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/nostress-web`
+  : "https://nostress.tg";
+const PRIVACY_URL = `${WEB_BASE}/politique-confidentialite`;
+const TERMS_URL = `${WEB_BASE}/conditions-utilisation`;
 
 type Tab = "favorites" | "notifications";
 
@@ -351,6 +356,34 @@ export default function AccountScreen() {
             {lang === "fr" ? "Support WhatsApp" : "WhatsApp support"}
           </Text>
           <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
+        </TouchableOpacity>
+
+        <View style={styles.settingDivider} />
+
+        {/* Privacy policy */}
+        <TouchableOpacity
+          style={styles.settingRow}
+          onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})}
+        >
+          <Ionicons name="shield-checkmark-outline" size={20} color={C.lavender} />
+          <Text style={styles.settingLabel}>
+            {lang === "fr" ? "Politique de confidentialité" : "Privacy policy"}
+          </Text>
+          <Ionicons name="open-outline" size={18} color={C.textMuted} />
+        </TouchableOpacity>
+
+        <View style={styles.settingDivider} />
+
+        {/* Terms of use */}
+        <TouchableOpacity
+          style={styles.settingRow}
+          onPress={() => Linking.openURL(TERMS_URL).catch(() => {})}
+        >
+          <Ionicons name="document-text-outline" size={20} color={C.lavender} />
+          <Text style={styles.settingLabel}>
+            {lang === "fr" ? "Conditions d'utilisation" : "Terms of use"}
+          </Text>
+          <Ionicons name="open-outline" size={18} color={C.textMuted} />
         </TouchableOpacity>
 
         <View style={styles.settingDivider} />
