@@ -120,11 +120,7 @@ export function EventCard({ event, onPress, horizontal = false }: EventCardProps
     if (!event.date) return "";
     const d = new Date(event.date);
     if (isNaN(d.getTime())) return event.date;
-    return d.toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
+    return formatDateLocalized(d, lang, { short: true });
   })();
 
   const fav = isFavorite(event.id);

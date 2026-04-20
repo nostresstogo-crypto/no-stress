@@ -21,6 +21,7 @@ import { useLocalSearchParams, router } from "expo-router";
 import { C as DARK_C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_EVENTS } from "@/constants/data";
+import { formatDateLocalized } from "@/lib/formatDate";
 
 const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
@@ -157,12 +158,7 @@ export default function EventDetailScreen() {
 
   const formattedDate = (() => {
     const d = new Date(event.date);
-    return d.toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
+    return formatDateLocalized(d, lang, { withWeekday: true });
   })();
 
   const handleShare = async () => {
