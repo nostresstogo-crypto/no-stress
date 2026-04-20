@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
+import { Redis } from "ioredis";
 import { and, eq, isNull } from "drizzle-orm";
 import type { Request, Response, NextFunction } from "express";
 import { db, refreshTokensTable } from "@workspace/db";
@@ -134,35 +135,91 @@ export function requireAuth(req: any, res: Response, next: NextFunction) {
   next();
 }
 
-// Simple in-memory rate limiter (per-IP, per-route key).
-// For multi-instance prod deploys, swap for Redis-backed implementation.
+// Rate limiter — Redis-backed if REDIS_URL is set (multi-instance safe),
+// otherwise falls back to an in-memory map (single-instance only).
 type Bucket = { count: number; resetAt: number };
 const buckets = new Map<string, Bucket>();
 
+let redis: Redis | null = null;
+const REDIS_URL = process.env.REDIS_URL;
+if (REDIS_URL) {
+  try {
+    redis = new Redis(REDIS_URL, {
+      maxRetriesPerRequest: 2,
+      enableOfflineQueue: false,
+      lazyConnect: false,
+    });
+    redis.on("error", (err) => {
+      // Don't crash on transient redis errors — limiter falls back per-call.
+      console.error("[rate-limit] redis error:", err.message);
+    });
+    redis.on("connect", () => {
+      console.log("[rate-limit] connected to Redis");
+    });
+  } catch (err) {
+    console.error("[rate-limit] failed to init Redis, falling back to in-memory:", err);
+    redis = null;
+  }
+}
+
+function clientIp(req: Request): string {
+  return (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
+    || req.socket.remoteAddress
+    || "unknown";
+}
+
+async function checkRedis(k: string, max: number, windowSec: number): Promise<{ allowed: boolean; retryAfter: number }> {
+  if (!redis) return { allowed: true, retryAfter: 0 };
+  // Atomic INCR + EXPIRE-on-first-hit, then PTTL for accurate retry-after.
+  const pipeline = redis.pipeline();
+  pipeline.incr(k);
+  pipeline.expire(k, windowSec, "NX");
+  pipeline.pttl(k);
+  const results = await pipeline.exec();
+  if (!results) throw new Error("redis pipeline failed");
+  const count = results[0]?.[1] as number;
+  const ttlMs = results[2]?.[1] as number;
+  const retryAfter = Math.max(1, Math.ceil((ttlMs > 0 ? ttlMs : windowSec * 1000) / 1000));
+  return { allowed: count <= max, retryAfter };
+}
+
+function checkMemory(k: string, max: number, windowMs: number): { allowed: boolean; retryAfter: number } {
+  const now = Date.now();
+  let b = buckets.get(k);
+  if (!b || b.resetAt < now) {
+    b = { count: 0, resetAt: now + windowMs };
+    buckets.set(k, b);
+  }
+  b.count++;
+  const retryAfter = Math.ceil((b.resetAt - now) / 1000);
+  return { allowed: b.count <= max, retryAfter };
+}
+
 export function rateLimit(opts: { windowMs: number; max: number; key?: string }) {
   const { windowMs, max, key = "default" } = opts;
-  return (req: Request, res: Response, next: NextFunction) => {
-    const ip = (req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim()
-      || req.socket.remoteAddress
-      || "unknown";
-    const k = `${key}:${ip}`;
-    const now = Date.now();
-    let b = buckets.get(k);
-    if (!b || b.resetAt < now) {
-      b = { count: 0, resetAt: now + windowMs };
-      buckets.set(k, b);
+  const windowSec = Math.ceil(windowMs / 1000);
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const k = `rl:${key}:${clientIp(req)}`;
+    let result: { allowed: boolean; retryAfter: number };
+    try {
+      if (redis && redis.status === "ready") {
+        result = await checkRedis(k, max, windowSec);
+      } else {
+        result = checkMemory(k, max, windowMs);
+      }
+    } catch (err) {
+      // Redis hiccup — fail open to in-memory so legitimate traffic isn't dropped.
+      result = checkMemory(k, max, windowMs);
     }
-    b.count++;
-    if (b.count > max) {
-      const retryAfter = Math.ceil((b.resetAt - now) / 1000);
-      res.setHeader("Retry-After", String(retryAfter));
-      return res.status(429).json({ error: `Trop de tentatives. Réessayez dans ${retryAfter}s.` });
+    if (!result.allowed) {
+      res.setHeader("Retry-After", String(result.retryAfter));
+      return res.status(429).json({ error: `Trop de tentatives. Réessayez dans ${result.retryAfter}s.` });
     }
     next();
   };
 }
 
-// Periodic cleanup so buckets don't grow unbounded
+// Periodic cleanup of in-memory buckets so they don't grow unbounded.
 setInterval(() => {
   const now = Date.now();
   for (const [k, b] of buckets) {

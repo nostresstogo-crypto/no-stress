@@ -50,6 +50,8 @@ artifacts/
 - **Rotation** : `/auth/refresh` révoque l'ancien et émet un nouveau pair (réutilisation = 401).
 - **Logout** : `/auth/logout` (et `/admin/logout`) révoque le refresh token côté serveur.
 - **Rate limiting** par IP : login 10/15min, register 5/h, refresh 30/15min, verify-email 10/15min, resend 5/h.
+  - Backend Redis si `REDIS_URL` est défini (multi-instance safe), sinon repli mémoire.
+  - INCR + EXPIRE NX atomique côté Redis ; fallback mémoire si Redis tombe (fail-open).
 - **Email verification** : code 6 chiffres, expiration 24h, welcome email envoyé après vérification.
 - **Clients** : `authFetch` (mobile, dans AppContext) et le helper `request` (admin web `lib/api.ts`) interceptent les 401 et rejouent automatiquement après refresh.
 
