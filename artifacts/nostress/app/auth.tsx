@@ -16,7 +16,7 @@ import { router } from "expo-router";
 
 import { C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
-import { MOCK_CITIES } from "@/constants/data";
+import { MOCK_CITIES, COUNTRIES } from "@/constants/data";
 
 type Mode = "login" | "register";
 type RegisterRole = "user" | "structure";
@@ -49,6 +49,8 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const [country, setCountry] = useState("Togo");
+  const [countryModalVisible, setCountryModalVisible] = useState(false);
   const [city, setCity] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
@@ -78,6 +80,7 @@ export default function AuthScreen() {
     setError("");
     setLoading(true);
 
+    const cleanEmail = email.trim().toLowerCase();
     try {
       if (mode === "register" && registerRole === "structure") {
         if (!name || !phone || !city || !businessType) {
@@ -89,31 +92,44 @@ export default function AuthScreen() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            email,
+            email: cleanEmail,
             contactName: name,
             businessName: name,
             businessType,
             phone,
             city,
+            country,
             latitude,
             longitude,
             description: description || null,
           }),
         });
+        const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          setError(err.error || (lang === "fr" ? "Erreur lors de l'inscription." : "Registration error."));
+          // 409 → friendly message + flip to Login mode if "already registered"
+          if (res.status === 409 && data?.alreadyRegistered) {
+            setError(data.error || (lang === "fr"
+              ? "Compte déjà existant. Connectez-vous."
+              : "Account already exists. Please log in."));
+            setMode("login");
+            setLoading(false);
+            return;
+          }
+          setError(data.error || (lang === "fr" ? "Erreur lors de l'inscription." : "Registration error."));
           setLoading(false);
           return;
         }
+        const partner = data.partner || {};
         const mockUser = {
-          id: "u_" + Date.now(),
-          email,
-          name,
-          phone,
+          id: String(partner.id || "u_" + Date.now()),
+          email: partner.email || cleanEmail,
+          name: partner.contactName || name,
+          phone: partner.phone || phone,
           role: "structure" as const,
           favorites: [],
-          partnerStatus: "pending" as const,
+          partnerStatus: (partner.status || "pending") as "pending" | "approved" | "rejected",
+          businessName: partner.businessName || name,
+          city: partner.city || city,
         };
         await setUser(mockUser);
         await setToken("mock_token_" + Date.now());
@@ -133,7 +149,7 @@ export default function AuthScreen() {
         const loginRes = await fetch(`${API_BASE}/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ email: cleanEmail, password }),
         });
         if (!loginRes.ok) {
           const errData = await loginRes.json().catch(() => ({}));
@@ -157,7 +173,7 @@ export default function AuthScreen() {
         const regRes = await fetch(`${API_BASE}/auth/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password, name: name || email.split("@")[0], phone }),
+          body: JSON.stringify({ email: cleanEmail, password, name: name || cleanEmail.split("@")[0], phone }),
         });
         if (!regRes.ok) {
           const errData = await regRes.json().catch(() => ({}));
@@ -394,7 +410,24 @@ export default function AuthScreen() {
               </View>
 
               <View style={styles.field}>
-                <Text style={styles.fieldLabel}>Ville au Togo</Text>
+                <Text style={styles.fieldLabel}>{lang === "fr" ? "Pays" : "Country"}</Text>
+                <TouchableOpacity
+                  style={[styles.inputRow, { justifyContent: "space-between" }]}
+                  onPress={() => setCountryModalVisible(true)}
+                  activeOpacity={0.8}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    <Text style={{ fontSize: 18 }}>
+                      {COUNTRIES.find(c => c.name === country)?.emoji ?? "🌍"}
+                    </Text>
+                    <Text style={[styles.input, { color: C.text }]}>{country}</Text>
+                  </View>
+                  <Ionicons name="chevron-down" size={16} color={C.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>{lang === "fr" ? `Ville (${country})` : `City (${country})`}</Text>
                 <TouchableOpacity
                   style={[styles.inputRow, { justifyContent: "space-between" }]}
                   onPress={() => setCityModalVisible(true)}
@@ -403,7 +436,7 @@ export default function AuthScreen() {
                   <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                     <Ionicons name="location-outline" size={18} color={C.textMuted} />
                     <Text style={[styles.input, { color: city ? C.text : C.textMuted }]}>
-                      {city || "Sélectionner une ville…"}
+                      {city || (lang === "fr" ? "Sélectionner une ville…" : "Select a city…")}
                     </Text>
                   </View>
                   <Ionicons name="chevron-down" size={16} color={C.textMuted} />
@@ -575,6 +608,47 @@ export default function AuthScreen() {
       </Modal>
 
       <Modal
+        visible={countryModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setCountryModalVisible(false)}
+      >
+        <View style={[modal.root, { paddingTop: insets.top + 16 }]}>
+          <View style={modal.header}>
+            <Text style={modal.title}>{lang === "fr" ? "Choisir un pays" : "Choose a country"}</Text>
+            <TouchableOpacity onPress={() => setCountryModalVisible(false)} style={modal.closeBtn}>
+              <Ionicons name="close" size={22} color={C.textMuted} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}>
+            {COUNTRIES.map((c) => {
+              const selected = country === c.name;
+              return (
+                <TouchableOpacity
+                  key={c.code}
+                  style={[modal.item, selected && modal.itemActive]}
+                  onPress={() => {
+                    if (c.name !== country) {
+                      setCountry(c.name);
+                      setCity(""); setLatitude(""); setLongitude("");
+                    }
+                    setCountryModalVisible(false);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={modal.emoji}>{c.emoji}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[modal.cityName, selected && { color: C.gold }]}>{c.name}</Text>
+                  </View>
+                  {selected && <Ionicons name="checkmark-circle" size={20} color={C.gold} />}
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
+      </Modal>
+
+      <Modal
         visible={cityModalVisible}
         animationType="slide"
         presentationStyle="pageSheet"
@@ -582,13 +656,13 @@ export default function AuthScreen() {
       >
         <View style={[modal.root, { paddingTop: insets.top + 16 }]}>
           <View style={modal.header}>
-            <Text style={modal.title}>Choisir une ville du Togo</Text>
+            <Text style={modal.title}>{lang === "fr" ? `Ville (${country})` : `City (${country})`}</Text>
             <TouchableOpacity onPress={() => setCityModalVisible(false)} style={modal.closeBtn}>
               <Ionicons name="close" size={22} color={C.textMuted} />
             </TouchableOpacity>
           </View>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}>
-            {MOCK_CITIES.map((c) => {
+            {MOCK_CITIES.filter((c) => c.country === country).map((c) => {
               const selected = city === c.name;
               return (
                 <TouchableOpacity

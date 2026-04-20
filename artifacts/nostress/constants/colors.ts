@@ -5,16 +5,16 @@ export const TOGO_RED    = "#D21034";
 
 /* ── Dark theme (default) ────────────────────────────────── */
 const DARK = {
-  bg:          "#0E1120",
-  card:        "#161829",
-  card2:       "#1E2035",
-  border:      "#2A2D45",
+  bg:          "#1A1F38",
+  card:        "#232944",
+  card2:       "#2C3252",
+  border:      "#3A406A",
   lavender:    "#9B8FE8",
   lavenderDim: "#7B6FD4",
   gold:        "#D4AF37",
   goldDim:     "#B8961E",
   text:        "#F0EDF8",
-  textMuted:   "#8B89A6",
+  textMuted:   "#A6A4C2",
   success:     "#4CAF82",
   error:       "#E05C5C",
   white:       "#FFFFFF",

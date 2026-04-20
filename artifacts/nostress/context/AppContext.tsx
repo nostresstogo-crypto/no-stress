@@ -146,7 +146,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         AsyncStorage.getItem(KEYS.locationNotif),
         AsyncStorage.getItem(KEYS.lastNotifCity),
       ]);
-      if (l) setLangState(l as Lang);
+      if (l) {
+        const validLang = (l === "fr" || l === "en") ? (l as Lang) : "fr";
+        setLangState(validLang);
+        if (validLang !== l) {
+          AsyncStorage.setItem(KEYS.lang, validLang).catch(() => {});
+        }
+      }
       if (u) setUserState(JSON.parse(u));
       if (t) setTokenState(t);
       if (f) setFavorites(JSON.parse(f));

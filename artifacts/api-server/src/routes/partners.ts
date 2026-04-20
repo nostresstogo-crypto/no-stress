@@ -10,8 +10,16 @@ import {
   sendAccountDeletedEmail,
 } from "../email.js";
 import { requireAdmin } from "./admin.js";
+import { users } from "./auth.js";
 
 const router: IRouter = Router();
+
+function normEmail(s: string) {
+  return String(s || "").trim().toLowerCase();
+}
+function normPhone(s: string) {
+  return String(s || "").replace(/[^0-9+]/g, "");
+}
 
 function serializePartner(p: any) {
   if (!p) return p;
@@ -66,13 +74,37 @@ router.get("/partners/approved-map", async (_req, res) => {
 });
 
 router.post("/partners/register", async (req, res) => {
-  const { email, contactName, businessName, businessType, phone, city, description, websiteUrl, latitude, longitude } = req.body;
+  const email = normEmail(req.body?.email);
+  const phone = normPhone(req.body?.phone);
+  const { contactName, businessName, businessType, city, description, websiteUrl, latitude, longitude, country } = req.body || {};
   if (!email || !contactName || !businessName || !businessType || !phone || !city) {
     return res.status(400).json({ error: "Tous les champs obligatoires doivent être remplis." });
   }
-  const [existing] = await db.select().from(partnersTable).where(eq(partnersTable.email, email));
-  if (existing) {
-    return res.status(409).json({ error: "Une demande avec cet email existe déjà." });
+  // Cross-check: same email should not exist as a regular user
+  const existingUser = users.find((u: any) => u.email === email || (phone && u.phone && normPhone(u.phone) === phone));
+  if (existingUser) {
+    return res.status(409).json({ error: "Cet email/numéro est déjà utilisé pour un compte personnel. Utilisez un autre email ou supprimez l'ancien compte." });
+  }
+  // If a partner with same email exists → friendly 409 telling user to log in (no data leaked).
+  const [existingByEmail] = await db
+    .select({ id: partnersTable.id })
+    .from(partnersTable)
+    .where(eq(partnersTable.email, email));
+  if (existingByEmail) {
+    return res.status(409).json({
+      error: "Une demande avec cet email existe déjà. Connectez-vous pour reprendre votre dossier.",
+      alreadyRegistered: true,
+    });
+  }
+  // Phone collision under a different email → reject to prevent duplicate businesses
+  if (phone) {
+    const [existingByPhone] = await db
+      .select()
+      .from(partnersTable)
+      .where(eq(partnersTable.phone, phone));
+    if (existingByPhone) {
+      return res.status(409).json({ error: "Ce numéro de téléphone est déjà utilisé par un autre partenaire." });
+    }
   }
   const [partner] = await db
     .insert(partnersTable)
@@ -82,7 +114,7 @@ router.post("/partners/register", async (req, res) => {
       businessName,
       businessType,
       phone,
-      city,
+      city: country ? `${city}, ${country}` : city,
       latitude: latitude ? parseFloat(latitude) : null,
       longitude: longitude ? parseFloat(longitude) : null,
       description: description || null,

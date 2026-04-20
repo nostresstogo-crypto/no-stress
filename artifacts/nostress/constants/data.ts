@@ -40,6 +40,17 @@ export const VENUE_TYPES = [
   "Comedy Club",
 ];
 
+export const COUNTRIES = [
+  { code: "TG", name: "Togo",          emoji: "🇹🇬" },
+  { code: "BJ", name: "Bénin",         emoji: "🇧🇯" },
+  { code: "CI", name: "Côte d'Ivoire", emoji: "🇨🇮" },
+  { code: "GH", name: "Ghana",         emoji: "🇬🇭" },
+  { code: "BF", name: "Burkina Faso",  emoji: "🇧🇫" },
+  { code: "SN", name: "Sénégal",       emoji: "🇸🇳" },
+] as const;
+
+export type CountryCode = typeof COUNTRIES[number]["code"];
+
 export const MOCK_CITIES = [
   { id: "lome",         name: "Lomé",           country: "Togo", emoji: "🏙️", latitude: 6.1374,  longitude: 1.2123 },
   { id: "tsevie",       name: "Tsévié",          country: "Togo", emoji: "🏘️", latitude: 6.4247,  longitude: 1.2159 },
@@ -64,6 +75,55 @@ export const MOCK_CITIES = [
   { id: "mango",        name: "Mango",           country: "Togo", emoji: "🥭", latitude: 10.3651, longitude: 0.4714 },
   { id: "dapaong",      name: "Dapaong",         country: "Togo", emoji: "🌅", latitude: 10.8667, longitude: 0.2167 },
   { id: "cinkasse",     name: "Cinkassé",        country: "Togo", emoji: "🌐", latitude: 10.9833, longitude: -0.0167 },
+
+  // Bénin
+  { id: "cotonou",      name: "Cotonou",         country: "Bénin", emoji: "🏙️", latitude: 6.3703,  longitude: 2.3912 },
+  { id: "porto-novo",   name: "Porto-Novo",      country: "Bénin", emoji: "🏛️", latitude: 6.4969,  longitude: 2.6289 },
+  { id: "parakou",      name: "Parakou",         country: "Bénin", emoji: "🌾", latitude: 9.3370,  longitude: 2.6303 },
+  { id: "abomey",       name: "Abomey",          country: "Bénin", emoji: "🏰", latitude: 7.1850,  longitude: 1.9912 },
+  { id: "djougou",      name: "Djougou",         country: "Bénin", emoji: "🌿", latitude: 9.7090,  longitude: 1.6660 },
+  { id: "natitingou",   name: "Natitingou",      country: "Bénin", emoji: "🏔️", latitude: 10.3167, longitude: 1.3833 },
+  { id: "ouidah",       name: "Ouidah",          country: "Bénin", emoji: "🏖️", latitude: 6.3622,  longitude: 2.0852 },
+  { id: "bohicon",      name: "Bohicon",         country: "Bénin", emoji: "🌴", latitude: 7.1782,  longitude: 2.0667 },
+
+  // Côte d'Ivoire
+  { id: "abidjan",      name: "Abidjan",         country: "Côte d'Ivoire", emoji: "🌆", latitude: 5.3600,  longitude: -4.0083 },
+  { id: "yamoussoukro", name: "Yamoussoukro",    country: "Côte d'Ivoire", emoji: "🏛️", latitude: 6.8276,  longitude: -5.2893 },
+  { id: "bouake",       name: "Bouaké",          country: "Côte d'Ivoire", emoji: "🌳", latitude: 7.6906,  longitude: -5.0301 },
+  { id: "san-pedro",    name: "San-Pédro",       country: "Côte d'Ivoire", emoji: "🏖️", latitude: 4.7485,  longitude: -6.6363 },
+  { id: "korhogo",      name: "Korhogo",         country: "Côte d'Ivoire", emoji: "🌾", latitude: 9.4580,  longitude: -5.6294 },
+  { id: "daloa",        name: "Daloa",           country: "Côte d'Ivoire", emoji: "🌿", latitude: 6.8770,  longitude: -6.4502 },
+  { id: "man",          name: "Man",             country: "Côte d'Ivoire", emoji: "🏔️", latitude: 7.4128,  longitude: -7.5536 },
+  { id: "grand-bassam", name: "Grand-Bassam",    country: "Côte d'Ivoire", emoji: "🏝️", latitude: 5.2118,  longitude: -3.7383 },
+
+  // Ghana
+  { id: "accra",        name: "Accra",           country: "Ghana", emoji: "🏙️", latitude: 5.6037,  longitude: -0.1870 },
+  { id: "kumasi",       name: "Kumasi",          country: "Ghana", emoji: "🌳", latitude: 6.6885,  longitude: -1.6244 },
+  { id: "tamale",       name: "Tamale",          country: "Ghana", emoji: "🌾", latitude: 9.4035,  longitude: -0.8424 },
+  { id: "takoradi",     name: "Takoradi",        country: "Ghana", emoji: "🏖️", latitude: 4.8845,  longitude: -1.7554 },
+  { id: "cape-coast",   name: "Cape Coast",      country: "Ghana", emoji: "🏰", latitude: 5.1054,  longitude: -1.2466 },
+  { id: "ho",           name: "Ho",              country: "Ghana", emoji: "🌿", latitude: 6.6000,  longitude: 0.4667 },
+  { id: "sunyani",      name: "Sunyani",         country: "Ghana", emoji: "🌳", latitude: 7.3349,  longitude: -2.3268 },
+  { id: "tema",         name: "Tema",            country: "Ghana", emoji: "🚢", latitude: 5.6698,  longitude: -0.0166 },
+
+  // Burkina Faso
+  { id: "ouagadougou",  name: "Ouagadougou",     country: "Burkina Faso", emoji: "🏙️", latitude: 12.3714, longitude: -1.5197 },
+  { id: "bobo-dioulasso",name: "Bobo-Dioulasso", country: "Burkina Faso", emoji: "🎶", latitude: 11.1771, longitude: -4.2979 },
+  { id: "koudougou",    name: "Koudougou",       country: "Burkina Faso", emoji: "🌾", latitude: 12.2530, longitude: -2.3622 },
+  { id: "ouahigouya",   name: "Ouahigouya",      country: "Burkina Faso", emoji: "🌵", latitude: 13.5828, longitude: -2.4214 },
+  { id: "banfora",      name: "Banfora",         country: "Burkina Faso", emoji: "🌿", latitude: 10.6308, longitude: -4.7596 },
+  { id: "kaya",         name: "Kaya",            country: "Burkina Faso", emoji: "🏘️", latitude: 13.0917, longitude: -1.0850 },
+  { id: "fada-ngourma", name: "Fada N'Gourma",   country: "Burkina Faso", emoji: "🌾", latitude: 12.0617, longitude: 0.3585 },
+
+  // Sénégal
+  { id: "dakar",        name: "Dakar",           country: "Sénégal", emoji: "🏙️", latitude: 14.7167, longitude: -17.4677 },
+  { id: "thies",        name: "Thiès",           country: "Sénégal", emoji: "🌾", latitude: 14.7910, longitude: -16.9359 },
+  { id: "saint-louis",  name: "Saint-Louis",     country: "Sénégal", emoji: "🏛️", latitude: 16.0179, longitude: -16.4896 },
+  { id: "kaolack",      name: "Kaolack",         country: "Sénégal", emoji: "🥜", latitude: 14.1652, longitude: -16.0726 },
+  { id: "ziguinchor",   name: "Ziguinchor",      country: "Sénégal", emoji: "🌿", latitude: 12.5681, longitude: -16.2719 },
+  { id: "touba",        name: "Touba",           country: "Sénégal", emoji: "🕌", latitude: 14.8500, longitude: -15.8833 },
+  { id: "mbour",        name: "Mbour",           country: "Sénégal", emoji: "🏖️", latitude: 14.4198, longitude: -16.9648 },
+  { id: "rufisque",     name: "Rufisque",        country: "Sénégal", emoji: "🚢", latitude: 14.7167, longitude: -17.2667 },
 ];
 
 export const MOCK_EVENTS = [

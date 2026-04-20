@@ -10,8 +10,16 @@ const users: any[] = [];
 
 export { users };
 
+function normEmail(s: string) {
+  return String(s || "").trim().toLowerCase();
+}
+function normPhone(s: string) {
+  return String(s || "").replace(/[^0-9+]/g, "");
+}
+
 router.post("/auth/login", async (req, res) => {
-  const { email, password } = req.body;
+  const email = normEmail(req.body?.email);
+  const { password } = req.body || {};
   if (!email || !password) {
     return res.status(400).json({ error: "Email and password are required" });
   }
@@ -54,18 +62,32 @@ router.post("/auth/login", async (req, res) => {
   res.json({ token, user });
 });
 
-router.post("/auth/register", (req, res) => {
-  const { email, password, name, phone } = req.body;
+router.post("/auth/register", async (req, res) => {
+  const email = normEmail(req.body?.email);
+  const phone = normPhone(req.body?.phone);
+  const { password, name } = req.body || {};
   if (!email || !password || !name) {
     return res.status(400).json({ error: "Email, password, and name are required" });
   }
-  const existingUser = users.find((u: any) => u.email === email);
+  const existingUser = users.find((u: any) => u.email === email || (phone && u.phone && normPhone(u.phone) === phone));
   if (existingUser) {
-    return res.status(409).json({ error: "Un compte existe déjà avec cet email." });
+    return res.status(409).json({ error: "Un compte existe déjà avec cet email ou numéro." });
   }
-  const existingPartner = partners.find((p: any) => p.email === email);
+  const [existingPartner] = await db
+    .select({ id: partnersTable.id })
+    .from(partnersTable)
+    .where(eq(partnersTable.email, email));
   if (existingPartner) {
     return res.status(409).json({ error: "Cet email est déjà associé à un compte partenaire. Utilisez la connexion." });
+  }
+  if (phone) {
+    const [partnerByPhone] = await db
+      .select({ id: partnersTable.id })
+      .from(partnersTable)
+      .where(eq(partnersTable.phone, phone));
+    if (partnerByPhone) {
+      return res.status(409).json({ error: "Ce numéro est déjà utilisé par un compte partenaire." });
+    }
   }
   const user = {
     id: `u_${Date.now()}`,

@@ -1,4 +1,4 @@
-export type Lang = "fr" | "en" | "ewe" | "kab";
+export type Lang = "fr" | "en";
 
 const baseTranslations = {
   fr: {
@@ -405,66 +405,14 @@ const baseTranslations = {
 
 type FrShape = { [K in keyof typeof baseTranslations.fr]: string };
 
-const ewe: Partial<FrShape> = {
-  home: "Aƒé",
-  venues: "Tetenƒe",
-  map: "Anyigbatata",
-  tickets: "Agbalẽviwo",
-  account: "Akɔnta",
-  discover: "Kpɔ",
-  searchPlaceholder: "Di nudzedze aɖe...",
-  free: "Femaxee",
-  login: "Ge ɖe eme",
-  logout: "Do go",
-  register: "Ŋlɔ ŋkɔ",
-  language: "Gbegbɔgblɔ",
-  favorites: "Lɔlɔ̃tɔwo",
-  notifications: "Nyatakakawo",
-  myAccount: "Nye akɔnta",
-  loading: "Le tsɔm...",
-  error: "Vodada",
-  back: "Trɔ yi",
-  cancel: "Mlɔeba",
-  save: "Dzra ɖo",
-  confirm: "Ɖo kpe edzi",
-};
-
-const kab: Partial<FrShape> = {
-  home: "Akkay",
-  venues: "Imukan",
-  map: "Takarda",
-  tickets: "Ibilitn",
-  account: "Amiḍan",
-  discover: "Af",
-  searchPlaceholder: "Nadi tameṭṭut...",
-  free: "Baṭel",
-  login: "Kcem",
-  logout: "Ffeɣ",
-  register: "Jerred",
-  language: "Tutlayt",
-  favorites: "Imerwasen",
-  notifications: "Ilɣa",
-  myAccount: "Amiḍan-iw",
-  loading: "Asali...",
-  error: "Tuccḍa",
-  back: "Uɣal",
-  cancel: "Sefsex",
-  save: "Sekles",
-  confirm: "Sentem",
-};
-
 export const translations: Record<Lang, FrShape> = {
   fr: baseTranslations.fr,
   en: baseTranslations.en,
-  ewe: { ...baseTranslations.fr, ...ewe },
-  kab: { ...baseTranslations.fr, ...kab },
 };
 
 export const LANG_LABELS: Record<Lang, string> = {
   fr: "Français",
   en: "English",
-  ewe: "Eʋegbe",
-  kab: "Taqbaylit",
 };
 
 export type TranslationKey = keyof FrShape;

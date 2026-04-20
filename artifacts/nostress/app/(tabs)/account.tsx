@@ -319,7 +319,6 @@ export default function AccountScreen() {
           <Text style={styles.settingLabel}>
             {lang === "fr" ? "Support WhatsApp" : "WhatsApp support"}
           </Text>
-          <Text style={styles.settingValue}>{SUPPORT_WHATSAPP}</Text>
           <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
         </TouchableOpacity>
 
