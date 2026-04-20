@@ -25,6 +25,9 @@ import { StatusBar } from "expo-status-bar";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider, useApp, useColors } from "@/context/AppContext";
+import { initSentry, Sentry } from "@/lib/sentry";
+
+initSentry();
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient({
@@ -413,7 +416,7 @@ const splash = StyleSheet.create({
   },
 });
 
-export default function RootLayout() {
+function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -447,3 +450,7 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+export default process.env.EXPO_PUBLIC_SENTRY_DSN
+  ? Sentry.wrap(RootLayout)
+  : RootLayout;
