@@ -41,12 +41,8 @@ export const VENUE_TYPES = [
 ];
 
 export const COUNTRIES = [
-  { code: "TG", name: "Togo",          emoji: "🇹🇬" },
-  { code: "BJ", name: "Bénin",         emoji: "🇧🇯" },
-  { code: "CI", name: "Côte d'Ivoire", emoji: "🇨🇮" },
-  { code: "GH", name: "Ghana",         emoji: "🇬🇭" },
-  { code: "BF", name: "Burkina Faso",  emoji: "🇧🇫" },
-  { code: "SN", name: "Sénégal",       emoji: "🇸🇳" },
+  { code: "TG", name: "Togo",  emoji: "🇹🇬" },
+  { code: "BJ", name: "Bénin", emoji: "🇧🇯" },
 ] as const;
 
 export type CountryCode = typeof COUNTRIES[number]["code"];

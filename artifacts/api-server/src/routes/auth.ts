@@ -65,7 +65,7 @@ router.post("/auth/login", async (req, res) => {
 router.post("/auth/register", async (req, res) => {
   const email = normEmail(req.body?.email);
   const phone = normPhone(req.body?.phone);
-  const { password, name } = req.body || {};
+  const { password, name, country } = req.body || {};
   if (!email || !password || !name) {
     return res.status(400).json({ error: "Email, password, and name are required" });
   }
@@ -94,6 +94,7 @@ router.post("/auth/register", async (req, res) => {
     email,
     name,
     phone,
+    country: country || null,
     role: "user",
     favorites: [],
     createdAt: new Date().toISOString(),

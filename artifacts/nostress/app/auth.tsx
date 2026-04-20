@@ -173,7 +173,7 @@ export default function AuthScreen() {
         const regRes = await fetch(`${API_BASE}/auth/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: cleanEmail, password, name: name || cleanEmail.split("@")[0], phone }),
+          body: JSON.stringify({ email: cleanEmail, password, name: name || cleanEmail.split("@")[0], phone, country }),
         });
         if (!regRes.ok) {
           const errData = await regRes.json().catch(() => ({}));
@@ -400,6 +400,25 @@ export default function AuthScreen() {
             </View>
           )}
 
+          {mode === "register" && (
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>{lang === "fr" ? "Pays" : "Country"}</Text>
+              <TouchableOpacity
+                style={[styles.inputRow, { justifyContent: "space-between" }]}
+                onPress={() => setCountryModalVisible(true)}
+                activeOpacity={0.8}
+              >
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <Text style={{ fontSize: 18 }}>
+                    {COUNTRIES.find(c => c.name === country)?.emoji ?? "🌍"}
+                  </Text>
+                  <Text style={[styles.input, { color: C.text }]}>{country}</Text>
+                </View>
+                <Ionicons name="chevron-down" size={16} color={C.textMuted} />
+              </TouchableOpacity>
+            </View>
+          )}
+
           {mode === "register" && registerRole === "structure" && (
             <>
               <View style={styles.sectionDivider}>
@@ -407,23 +426,6 @@ export default function AuthScreen() {
                 <Text style={[styles.sectionLabel, { color: C.gold }]}>
                   Localisation géographique
                 </Text>
-              </View>
-
-              <View style={styles.field}>
-                <Text style={styles.fieldLabel}>{lang === "fr" ? "Pays" : "Country"}</Text>
-                <TouchableOpacity
-                  style={[styles.inputRow, { justifyContent: "space-between" }]}
-                  onPress={() => setCountryModalVisible(true)}
-                  activeOpacity={0.8}
-                >
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                    <Text style={{ fontSize: 18 }}>
-                      {COUNTRIES.find(c => c.name === country)?.emoji ?? "🌍"}
-                    </Text>
-                    <Text style={[styles.input, { color: C.text }]}>{country}</Text>
-                  </View>
-                  <Ionicons name="chevron-down" size={16} color={C.textMuted} />
-                </TouchableOpacity>
               </View>
 
               <View style={styles.field}>
