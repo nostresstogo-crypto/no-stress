@@ -16,7 +16,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 
 import { useT, useApp, useColors } from "@/context/AppContext";
-import { MOCK_EVENTS } from "@/constants/data";
 import { EventCard } from "@/components/EventCard";
 import { ColorPalette } from "@/constants/colors";
 import { LANG_LABELS, type Lang } from "@/constants/i18n";
@@ -196,7 +195,7 @@ function makeStyles(C: ColorPalette) {
 export default function AccountScreen() {
   const t = useT();
   const C = useColors();
-  const { user, lang, setLang, logout, favorites, notifications, markAllRead, removeNotification, unreadCount, isDark, themeMode, setThemeMode, locationNotificationsEnabled, setLocationNotificationsEnabled, selectedCity, nearbyEventsCount } = useApp();
+  const { user, lang, setLang, logout, favorites, notifications, markAllRead, removeNotification, unreadCount, isDark, themeMode, setThemeMode, locationNotificationsEnabled, setLocationNotificationsEnabled, selectedCity, nearbyEventsCount, apiEvents } = useApp();
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>("favorites");
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -242,7 +241,21 @@ export default function AccountScreen() {
     }
   };
 
-  const favoriteEvents = MOCK_EVENTS.filter((e) => favorites.includes(e.id));
+  const favoriteEvents = apiEvents
+    .filter((e) => favorites.includes(String(e.id)))
+    .map((e) => ({
+      id: String(e.id),
+      title: e.title || e.titleFr || "",
+      titleFr: e.titleFr || e.title || "",
+      date: e.date,
+      time: e.time || "",
+      venue: e.venue || "",
+      city: e.city || "",
+      category: e.category || "",
+      imageUrl: e.imageUrl,
+      price: typeof e.price === "number" ? e.price : 0,
+      status: e.status || "approved",
+    }));
 
   if (!user) {
     return (

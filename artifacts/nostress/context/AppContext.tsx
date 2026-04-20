@@ -12,7 +12,27 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useColorScheme } from "react-native";
 import { Lang } from "@/constants/i18n";
 import { getThemeColors, ColorPalette } from "@/constants/colors";
-import { MOCK_EVENTS, MOCK_CITIES } from "@/constants/data";
+import { MOCK_CITIES } from "@/constants/data";
+
+const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
+  ? `${process.env.EXPO_PUBLIC_DOMAIN}/api`
+  : "http://localhost:8080/api";
+
+export interface ApiEvent {
+  id: string | number;
+  title?: string;
+  titleFr?: string;
+  category?: string;
+  city?: string;
+  venue?: string;
+  date: string;
+  time?: string;
+  description?: string;
+  descriptionFr?: string;
+  price?: number;
+  imageUrl?: string;
+  status?: string;
+}
 
 type UserRole = "user" | "structure" | "admin";
 type ThemeMode = "dark" | "light" | "system";
@@ -92,6 +112,8 @@ interface AppContextValue {
   locationNotificationsEnabled: boolean;
   setLocationNotificationsEnabled: (enabled: boolean) => void;
   nearbyEventsCount: number;
+  apiEvents: ApiEvent[];
+  refreshApiEvents: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -123,7 +145,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [myEvents, setMyEvents] = useState<MyEvent[]>([]);
   const [themeMode, setThemeModeState] = useState<ThemeMode>("dark");
   const [locationNotificationsEnabled, setLocationNotificationsEnabledState] = useState<boolean>(true);
+  const [apiEvents, setApiEvents] = useState<ApiEvent[]>([]);
   const notifiedCityRef = useRef<string>("");
+
+  const refreshApiEvents = useCallback(async () => {
+    try {
+      const r = await fetch(`${API_BASE}/events`);
+      if (!r.ok) return;
+      const data = await r.json();
+      setApiEvents(Array.isArray(data?.events) ? data.events : []);
+    } catch {}
+  }, []);
+
+  useEffect(() => { refreshApiEvents(); }, [refreshApiEvents]);
 
   const isDark = useMemo(() => {
     if (themeMode === "system") return systemScheme !== "light";
@@ -285,17 +319,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const nearbyEventsCount = useMemo(() => {
     const city = selectedCity || (user?.role === "user" ? "" : "");
     if (!city) return 0;
-    return MOCK_EVENTS.filter(
-      (e) => e.status === "approved" && e.city.toLowerCase() === city.toLowerCase()
+    return apiEvents.filter(
+      (e) => (e.status ?? "approved") === "approved" && (e.city || "").toLowerCase() === city.toLowerCase()
     ).length;
-  }, [selectedCity, user]);
+  }, [selectedCity, user, apiEvents]);
 
   useEffect(() => {
     if (!locationNotificationsEnabled || !user || user.role !== "user") return;
     const city = selectedCity;
     if (!city || city === notifiedCityRef.current) return;
-    const upcomingInCity = MOCK_EVENTS.filter(
-      (e) => e.status === "approved" && e.city.toLowerCase() === city.toLowerCase()
+    const upcomingInCity = apiEvents.filter(
+      (e) => (e.status ?? "approved") === "approved" && (e.city || "").toLowerCase() === city.toLowerCase()
     );
     if (upcomingInCity.length === 0) return;
     notifiedCityRef.current = city;
@@ -303,14 +337,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const cityObj = MOCK_CITIES.find((c) => c.name === city);
     const emoji = cityObj ? cityObj.emoji + " " : "";
     const count = upcomingInCity.length;
+    const titles = upcomingInCity.slice(0, 3).map((e) => e.titleFr || e.title || "").filter(Boolean);
     setNotifications((prev) => {
       const next = [
         {
           id: "loc_" + Date.now().toString(),
           title: `${emoji}${count} event${count > 1 ? "s" : ""} near ${city}!`,
           titleFr: `${emoji}${count} événement${count > 1 ? "s" : ""} près de ${city} !`,
-          body: upcomingInCity.slice(0, 3).map((e) => e.titleFr).join(", ") + (count > 3 ? `… +${count - 3}` : ""),
-          bodyFr: upcomingInCity.slice(0, 3).map((e) => e.titleFr).join(", ") + (count > 3 ? `… +${count - 3}` : ""),
+          body: titles.join(", ") + (count > 3 ? `… +${count - 3}` : ""),
+          bodyFr: titles.join(", ") + (count > 3 ? `… +${count - 3}` : ""),
           read: false,
           createdAt: new Date().toISOString(),
         },
@@ -343,6 +378,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       isDark, colors,
       locationNotificationsEnabled, setLocationNotificationsEnabled,
       nearbyEventsCount,
+      apiEvents, refreshApiEvents,
     }),
     [
       lang, setLang,
@@ -360,6 +396,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       isDark, colors,
       locationNotificationsEnabled, setLocationNotificationsEnabled,
       nearbyEventsCount,
+      apiEvents, refreshApiEvents,
     ]
   );
 
