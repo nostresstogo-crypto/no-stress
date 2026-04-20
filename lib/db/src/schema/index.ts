@@ -5,8 +5,10 @@ import { z } from "zod/v4";
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
   name: text("name").notNull(),
   phone: text("phone"),
+  country: text("country"),
   role: text("role").notNull().default("user"),
   status: text("status").notNull().default("active"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -20,6 +22,7 @@ export const partnersTable = pgTable("partners", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => usersTable.id),
   email: text("email").notNull(),
+  passwordHash: text("password_hash"),
   contactName: text("contact_name").notNull(),
   businessName: text("business_name").notNull(),
   businessType: text("business_type").notNull(),

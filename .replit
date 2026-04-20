@@ -32,3 +32,7 @@ SMTP_HOST = "smtp-relay.brevo.com"
 SMTP_PORT = "587"
 SMTP_USER = "a7ef82001@smtp-brevo.com"
 SMTP_PASS = "xsmtpsib-497332e1a59eaa4be1b9d73d6af462c178f092688e1eb629c77e14df7d1a622f-11nRSkQzzkHnNY2b"
+JWT_SECRET = "e882b36856ea709c4c5556f78a38b0ac355e366011997b2400156e031540c1b91bcc4851c387894431244b9c11664522"
+
+[nix]
+channel = "stable-25_05"

@@ -93,6 +93,7 @@ export default function AuthScreen() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: cleanEmail,
+            password,
             contactName: name,
             businessName: name,
             businessType,
@@ -132,7 +133,9 @@ export default function AuthScreen() {
           city: partner.city || city,
         };
         await setUser(mockUser);
-        await setToken("mock_token_" + Date.now());
+        if (data.token) {
+          await setToken(data.token);
+        }
         addNotification({
           title: "Partner request submitted!",
           titleFr: "Demande partenaire envoyée !",

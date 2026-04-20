@@ -1,6 +1,9 @@
 import { Router, type IRouter } from "express";
 import { eq, and, sql } from "drizzle-orm";
-import { db, partnersTable, eventsTable, registrationLogTable } from "@workspace/db";
+import { db, partnersTable, usersTable, eventsTable, registrationLogTable } from "@workspace/db";
+import { hashPassword, signToken, rateLimit } from "../lib/auth-utils.js";
+
+const partnerRegisterLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, key: "partner-register" });
 import {
   sendPartnerRegistrationEmailToPartner,
   sendPartnerRegistrationEmailToAdmin,
@@ -10,7 +13,6 @@ import {
   sendAccountDeletedEmail,
 } from "../email.js";
 import { requireAdmin } from "./admin.js";
-import { users } from "./auth.js";
 
 const router: IRouter = Router();
 
@@ -23,7 +25,8 @@ function normPhone(s: string) {
 
 function serializePartner(p: any) {
   if (!p) return p;
-  return { ...p, id: String(p.id) };
+  const { passwordHash: _ph, ...rest } = p;
+  return { ...rest, id: String(p.id) };
 }
 
 router.get("/partners", async (req, res) => {
@@ -73,17 +76,23 @@ router.get("/partners/approved-map", async (_req, res) => {
   );
 });
 
-router.post("/partners/register", async (req, res) => {
+router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
   const email = normEmail(req.body?.email);
   const phone = normPhone(req.body?.phone);
-  const { contactName, businessName, businessType, city, description, websiteUrl, latitude, longitude, country } = req.body || {};
+  const { password, contactName, businessName, businessType, city, description, websiteUrl, latitude, longitude, country } = req.body || {};
   if (!email || !contactName || !businessName || !businessType || !phone || !city) {
     return res.status(400).json({ error: "Tous les champs obligatoires doivent être remplis." });
   }
+  if (typeof password !== "string" || password.length < 8) {
+    return res.status(400).json({ error: "Le mot de passe doit faire au moins 8 caractères." });
+  }
   // Cross-check: same email should not exist as a regular user
-  const existingUser = users.find((u: any) => u.email === email || (phone && u.phone && normPhone(u.phone) === phone));
+  const [existingUser] = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(eq(usersTable.email, email));
   if (existingUser) {
-    return res.status(409).json({ error: "Cet email/numéro est déjà utilisé pour un compte personnel. Utilisez un autre email ou supprimez l'ancien compte." });
+    return res.status(409).json({ error: "Cet email est déjà utilisé pour un compte personnel. Utilisez un autre email ou supprimez l'ancien compte." });
   }
   // If a partner with same email exists → friendly 409 telling user to log in (no data leaked).
   const [existingByEmail] = await db
@@ -106,10 +115,12 @@ router.post("/partners/register", async (req, res) => {
       return res.status(409).json({ error: "Ce numéro de téléphone est déjà utilisé par un autre partenaire." });
     }
   }
+  const passwordHash = await hashPassword(password);
   const [partner] = await db
     .insert(partnersTable)
     .values({
       email,
+      passwordHash,
       contactName,
       businessName,
       businessType,
@@ -122,7 +133,12 @@ router.post("/partners/register", async (req, res) => {
     })
     .returning();
   await db.insert(registrationLogTable).values({ type: "partner" });
-  res.status(201).json({ message: "Demande d'inscription soumise avec succès. Elle sera examinée sous 48h.", partner: serializePartner(partner) });
+  const token = signToken({ sub: `p_${partner.id}`, email: partner.email, role: "structure" });
+  res.status(201).json({
+    message: "Demande d'inscription soumise avec succès. Elle sera examinée sous 48h.",
+    token,
+    partner: serializePartner(partner),
+  });
   sendPartnerRegistrationEmailToPartner(email, contactName, businessName).catch(() => {});
   sendPartnerRegistrationEmailToAdmin(email, contactName, businessName, businessType, city, phone).catch(() => {});
 });

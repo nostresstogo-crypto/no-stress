@@ -1,14 +1,11 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, partnersTable } from "@workspace/db";
+import { db, partnersTable, usersTable } from "@workspace/db";
 import { sendWelcomeEmail, sendAccountDeletedEmail } from "../email.js";
 import { requireAdmin } from "./admin.js";
+import { hashPassword, verifyPassword, signToken, rateLimit } from "../lib/auth-utils.js";
 
 const router: IRouter = Router();
-
-const users: any[] = [];
-
-export { users };
 
 function normEmail(s: string) {
   return String(s || "").trim().toLowerCase();
@@ -17,16 +14,36 @@ function normPhone(s: string) {
   return String(s || "").replace(/[^0-9+]/g, "");
 }
 
-router.post("/auth/login", async (req, res) => {
+function publicUser(u: typeof usersTable.$inferSelect) {
+  return {
+    id: String(u.id),
+    email: u.email,
+    name: u.name,
+    phone: u.phone,
+    country: u.country,
+    role: u.role,
+    favorites: [],
+  };
+}
+
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: "login" });
+const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, key: "register" });
+
+router.post("/auth/login", loginLimiter, async (req, res) => {
   const email = normEmail(req.body?.email);
   const { password } = req.body || {};
   if (!email || !password) {
-    return res.status(400).json({ error: "Email and password are required" });
+    return res.status(400).json({ error: "Email et mot de passe requis." });
   }
 
+  // Try partner first
   const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.email, email));
   if (partner) {
-    const token = `mock_token_${Date.now()}`;
+    const ok = await verifyPassword(password, partner.passwordHash);
+    if (!ok) {
+      return res.status(401).json({ error: "Email ou mot de passe incorrect." });
+    }
+    const token = signToken({ sub: `p_${partner.id}`, email: partner.email, role: "structure" });
     return res.json({
       token,
       user: {
@@ -46,32 +63,31 @@ router.post("/auth/login", async (req, res) => {
     });
   }
 
-  let user = users.find((u: any) => u.email === email);
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
   if (!user) {
-    user = {
-      id: `u_${Date.now()}`,
-      email,
-      name: email.split("@")[0],
-      role: email.includes("admin") ? "admin" : "user",
-      favorites: [],
-      createdAt: new Date().toISOString(),
-    };
-    users.push(user);
+    return res.status(401).json({ error: "Email ou mot de passe incorrect." });
   }
-  const token = `mock_token_${Date.now()}`;
-  res.json({ token, user });
+  const ok = await verifyPassword(password, user.passwordHash);
+  if (!ok) {
+    return res.status(401).json({ error: "Email ou mot de passe incorrect." });
+  }
+  const token = signToken({ sub: `u_${user.id}`, email: user.email, role: user.role as any });
+  res.json({ token, user: publicUser(user) });
 });
 
-router.post("/auth/register", async (req, res) => {
+router.post("/auth/register", registerLimiter, async (req, res) => {
   const email = normEmail(req.body?.email);
   const phone = normPhone(req.body?.phone);
   const { password, name, country } = req.body || {};
   if (!email || !password || !name) {
-    return res.status(400).json({ error: "Email, password, and name are required" });
+    return res.status(400).json({ error: "Email, mot de passe et nom requis." });
   }
-  const existingUser = users.find((u: any) => u.email === email || (phone && u.phone && normPhone(u.phone) === phone));
+  if (typeof password !== "string" || password.length < 8) {
+    return res.status(400).json({ error: "Le mot de passe doit faire au moins 8 caractères." });
+  }
+  const [existingUser] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, email));
   if (existingUser) {
-    return res.status(409).json({ error: "Un compte existe déjà avec cet email ou numéro." });
+    return res.status(409).json({ error: "Un compte existe déjà avec cet email." });
   }
   const [existingPartner] = await db
     .select({ id: partnersTable.id })
@@ -89,30 +105,36 @@ router.post("/auth/register", async (req, res) => {
       return res.status(409).json({ error: "Ce numéro est déjà utilisé par un compte partenaire." });
     }
   }
-  const user = {
-    id: `u_${Date.now()}`,
-    email,
-    name,
-    phone,
-    country: country || null,
-    role: "user",
-    favorites: [],
-    createdAt: new Date().toISOString(),
-  };
-  users.push(user);
-  const token = `mock_token_${Date.now()}`;
-  res.status(201).json({ token, user });
+  const passwordHash = await hashPassword(password);
+  const [user] = await db
+    .insert(usersTable)
+    .values({
+      email,
+      passwordHash,
+      name,
+      phone: phone || null,
+      country: country || null,
+      role: email.includes("admin") ? "admin" : "user",
+    })
+    .returning();
+  const token = signToken({ sub: `u_${user.id}`, email: user.email, role: user.role as any });
+  res.status(201).json({ token, user: publicUser(user) });
   sendWelcomeEmail(email, name).catch(() => {});
 });
 
-router.delete("/admin/users/:id", requireAdmin, (req: any, res) => {
-  const idx = users.findIndex((u: any) => u.id === req.params.id);
-  if (idx === -1) return res.status(404).json({ error: "Utilisateur introuvable." });
+router.delete("/admin/users/:id", requireAdmin, async (req: any, res) => {
+  const idStr = req.params.id;
+  const numericId = parseInt(idStr.replace(/^u_/, ""), 10);
+  if (!Number.isFinite(numericId)) {
+    return res.status(400).json({ error: "ID utilisateur invalide." });
+  }
+  const [target] = await db.select().from(usersTable).where(eq(usersTable.id, numericId));
+  if (!target) return res.status(404).json({ error: "Utilisateur introuvable." });
   const { reason } = req.body || {};
   const deleteReason = reason || "Compte jugé frauduleux ou non conforme.";
-  const [deleted] = users.splice(idx, 1);
-  sendAccountDeletedEmail(deleted.email, deleted.name, deleteReason).catch(() => {});
-  res.json({ message: "Compte utilisateur supprimé. Email d'avertissement envoyé.", deleted });
+  await db.delete(usersTable).where(eq(usersTable.id, numericId));
+  sendAccountDeletedEmail(target.email, target.name, deleteReason).catch(() => {});
+  res.json({ message: "Compte utilisateur supprimé. Email d'avertissement envoyé.", deleted: publicUser(target) });
 });
 
 export default router;
