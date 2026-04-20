@@ -34,6 +34,13 @@ artifacts/
 - Migrations : `pnpm --filter @workspace/db drizzle-kit push`.
 - IDs sérialisés en string dans toutes les réponses API (compat client mobile).
 
+## Sécurité & santé (API)
+
+- **helmet** activé sur toutes les routes : X-Frame-Options, X-Content-Type-Options, Referrer-Policy, COOP, CORP, etc. HSTS activé en production uniquement.
+- `app.set("trust proxy", 1)` pour récupérer la vraie IP client derrière le proxy Replit (rate limiting + logs).
+- **`/api/healthz`** : liveness (process up). Retourne 200 immédiatement.
+- **`/api/readyz`** : readiness (process + DB). Ping `select 1` ; 200 si OK, 503 si la DB est injoignable. À utiliser pour les health checks de load balancer.
+
 ## Pages légales (App Store / Google Play)
 
 - **Politique de confidentialité** : `/nostress-web/politique-confidentialite`
