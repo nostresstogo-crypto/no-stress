@@ -150,7 +150,7 @@ export interface Partner {
   longitude: number | null;
   description: string | null;
   websiteUrl: string | null;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "archived";
   rejectionReason: string | null;
   createdAt: string;
   updatedAt: string;
@@ -168,7 +168,7 @@ export interface PartnerEvent {
   category: string;
   priceFCFA: number;
   isFree: boolean;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "approved" | "rejected" | "archived";
   createdAt: string;
 }
 

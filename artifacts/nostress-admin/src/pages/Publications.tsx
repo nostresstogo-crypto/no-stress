@@ -32,6 +32,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; 
   pending: { label: "En attente", color: "text-yellow-400", bg: "bg-yellow-400/10", icon: <Clock className="w-3 h-3" /> },
   approved: { label: "Approuvé", color: "text-green-400", bg: "bg-green-400/10", icon: <CheckCircle className="w-3 h-3" /> },
   rejected: { label: "Rejeté", color: "text-destructive", bg: "bg-destructive/10", icon: <XCircle className="w-3 h-3" /> },
+  archived: { label: "Archivé", color: "text-slate-400", bg: "bg-slate-400/10", icon: <Clock className="w-3 h-3" /> },
 };
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -56,7 +57,7 @@ export default function Publications() {
   const [events, setEvents] = useState<PartnerEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected" | "archived">("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [selected, setSelected] = useState<PartnerEvent | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -94,6 +95,7 @@ export default function Publications() {
     pending: events.filter((e) => e.status === "pending").length,
     approved: events.filter((e) => e.status === "approved").length,
     rejected: events.filter((e) => e.status === "rejected").length,
+    archived: events.filter((e) => e.status === "archived").length,
   };
 
   const handleApprove = async (ev: PartnerEvent) => {
@@ -180,8 +182,8 @@ export default function Publications() {
             />
           </div>
           <div className="flex flex-wrap gap-2">
-            {(["all", "pending", "approved", "rejected"] as const).map((f) => {
-              const labels = { all: "Tous", pending: "En attente", approved: "Approuvés", rejected: "Rejetés" };
+            {(["all", "pending", "approved", "rejected", "archived"] as const).map((f) => {
+              const labels = { all: "Tous", pending: "En attente", approved: "Approuvés", rejected: "Rejetés", archived: "Archivés" };
               const active = statusFilter === f;
               return (
                 <button
@@ -260,7 +262,19 @@ export default function Publications() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-1.5 flex-wrap">
-                          {ev.status !== "approved" && (
+                          {ev.status === "archived" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={actionLoading === ev.id}
+                              className="text-blue-400 border-blue-400/30 hover:bg-blue-400/10 h-7 text-xs gap-1"
+                              onClick={() => handleApprove(ev)}
+                            >
+                              <CheckCircle className="w-3 h-3" />
+                              Restaurer
+                            </Button>
+                          )}
+                          {ev.status !== "approved" && ev.status !== "archived" && (
                             <Button
                               size="sm"
                               variant="outline"
@@ -272,7 +286,7 @@ export default function Publications() {
                               Approuver
                             </Button>
                           )}
-                          {ev.status !== "rejected" && (
+                          {ev.status !== "rejected" && ev.status !== "archived" && (
                             <Button
                               size="sm"
                               variant="outline"
