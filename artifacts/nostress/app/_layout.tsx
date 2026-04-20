@@ -33,11 +33,11 @@ const queryClient = new QueryClient({
   },
 });
 
-const LAVENDER = "#9B8FE8";
-const GOLD = "#D4AF37";
-const CORAL = "#FF6B8A";
-const CYAN = "#00D4FF";
-const BG = "#0E1120";
+const LAVENDER = "#A89AF0";
+const GOLD = "#E5C46B";
+const CORAL = "#F47A95";
+const CYAN = "#5FD4F5";
+const BG = "#07091A";
 
 const FLOATING_ICONS = [
   { name: "musical-notes", x: 0.15, y: 0.18, size: 22, color: CORAL, delay: 200 },
@@ -172,12 +172,6 @@ function CustomSplash() {
 
   return (
     <View style={splash.root}>
-      <Animated.View style={[splash.accentBar, { opacity: flagOpacity }]}>
-        <View style={[splash.accentSegment, { backgroundColor: LAVENDER }]} />
-        <View style={[splash.accentSegment, { backgroundColor: CORAL }]} />
-        <View style={[splash.accentSegment, { backgroundColor: CYAN }]} />
-      </Animated.View>
-
       <View style={splash.glowTop} />
       <View style={splash.glowBottom} />
       <View style={splash.glowCenter} />
@@ -212,7 +206,7 @@ function CustomSplash() {
 
       <Animated.View style={[splash.taglineRow, { opacity: taglineOpacity, transform: [{ translateY: taglineY }] }]}>
         <View style={splash.accentLine} />
-        <Text style={splash.tagline}>ÉVÉNEMENTS DU TOGO</Text>
+        <Text style={splash.tagline}>ÉVÉNEMENTS · TOGO & BÉNIN</Text>
         <View style={splash.accentLine} />
       </Animated.View>
 
@@ -230,11 +224,7 @@ function CustomSplash() {
         ))}
       </Animated.View>
 
-      <Animated.View style={[splash.accentBarBottom, { opacity: flagOpacity }]}>
-        <View style={[splash.accentSegment, { backgroundColor: LAVENDER }]} />
-        <View style={[splash.accentSegment, { backgroundColor: CORAL }]} />
-        <View style={[splash.accentSegment, { backgroundColor: CYAN }]} />
-      </Animated.View>
+      <Animated.View style={[splash.accentBarBottom, { opacity: flagOpacity }]} />
     </View>
   );
 }
@@ -293,54 +283,42 @@ const splash = StyleSheet.create({
     justifyContent: "center",
     gap: 16,
   },
-  accentBar: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    flexDirection: "row",
-  },
   accentBarBottom: {
     position: "absolute",
     bottom: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    flexDirection: "row",
-  },
-  accentSegment: {
-    flex: 1,
-    height: "100%",
+    left: "30%",
+    right: "30%",
+    height: 1,
+    backgroundColor: LAVENDER + "33",
   },
   glowTop: {
     position: "absolute",
-    top: -100,
+    top: -140,
     left: "50%",
-    marginLeft: -180,
-    width: 360,
-    height: 360,
-    borderRadius: 180,
-    backgroundColor: LAVENDER + "12",
+    marginLeft: -200,
+    width: 400,
+    height: 400,
+    borderRadius: 200,
+    backgroundColor: LAVENDER + "0E",
   },
   glowBottom: {
     position: "absolute",
-    bottom: 40,
-    right: -100,
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: GOLD + "0C",
+    bottom: -80,
+    right: -120,
+    width: 280,
+    height: 280,
+    borderRadius: 140,
+    backgroundColor: GOLD + "08",
   },
   glowCenter: {
     position: "absolute",
-    top: "35%",
+    top: "32%",
     left: "50%",
-    marginLeft: -100,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: LAVENDER + "08",
+    marginLeft: -120,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: LAVENDER + "0A",
   },
   pulseRing: {
     position: "absolute",
@@ -382,14 +360,16 @@ const splash = StyleSheet.create({
     alignItems: "baseline",
   },
   brandNo: {
-    fontSize: 38,
+    fontSize: 40,
     fontFamily: "Inter_700Bold",
-    color: "#F0EDF8",
+    color: "#F4F1FA",
+    letterSpacing: -0.5,
   },
   brandStress: {
-    fontSize: 38,
+    fontSize: 40,
     fontFamily: "Inter_700Bold",
     color: LAVENDER,
+    letterSpacing: -0.5,
   },
   taglineRow: {
     flexDirection: "row",
@@ -397,16 +377,15 @@ const splash = StyleSheet.create({
     gap: 12,
   },
   tagline: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontFamily: "Inter_600SemiBold",
-    color: "#6B6D8A",
-    letterSpacing: 2.5,
+    color: "#8A8AAB",
+    letterSpacing: 2.8,
   },
   accentLine: {
-    width: 28,
-    height: 2,
-    borderRadius: 1,
-    backgroundColor: GOLD + "88",
+    width: 22,
+    height: 1,
+    backgroundColor: GOLD + "66",
   },
   mottoRow: {
     flexDirection: "row",

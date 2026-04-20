@@ -11,14 +11,14 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0E1120"
+      "backgroundColor": "#07091A"
     },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.nostress.app"
     },
     "android": {
-      "backgroundColor": "#0E1120"
+      "backgroundColor": "#07091A"
     },
     "web": {
       "favicon": "./assets/images/icon.png"
