@@ -39,6 +39,7 @@ type ThemeMode = "dark" | "light" | "system";
 
 export interface MyEvent {
   id: string;
+  apiId?: string;
   titleFr: string;
   titleEn: string;
   category: string;
@@ -110,6 +111,7 @@ interface AppContextValue {
   addMyEvent: (event: Omit<MyEvent, "id" | "status" | "createdAt">) => void;
   updateMyEvent: (id: string, patch: Partial<MyEvent>) => void;
   removeMyEvent: (id: string) => void;
+  syncMyEventsStatus: () => Promise<void>;
   themeMode: ThemeMode;
   setThemeMode: (mode: ThemeMode) => void;
   isDark: boolean;
@@ -400,6 +402,45 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const syncMyEventsStatus = useCallback(async () => {
+    setMyEvents((prev) => {
+      const withApiId = prev.filter((e) => e.apiId);
+      if (withApiId.length === 0) return prev;
+      Promise.all(
+        withApiId.map(async (ev) => {
+          try {
+            const r = await fetch(`${API_BASE}/events/${ev.apiId}`);
+            if (!r.ok) return null;
+            const data = await r.json();
+            return { localId: ev.id, status: data?.status as MyEvent["status"] | undefined };
+          } catch {
+            return null;
+          }
+        })
+      ).then((results) => {
+        const map = new Map<string, MyEvent["status"]>();
+        for (const r of results) {
+          if (r && r.status) map.set(r.localId, r.status);
+        }
+        if (map.size === 0) return;
+        setMyEvents((cur) => {
+          let changed = false;
+          const next = cur.map((e) => {
+            const newStatus = map.get(e.id);
+            if (newStatus && newStatus !== e.status) {
+              changed = true;
+              return { ...e, status: newStatus };
+            }
+            return e;
+          });
+          if (changed) AsyncStorage.setItem(KEYS.myEvents, JSON.stringify(next));
+          return changed ? next : cur;
+        });
+      });
+      return prev;
+    });
+  }, []);
+
   const removeNotification = useCallback((id: string) => {
     setNotifications((prev) => {
       const next = prev.filter((n) => n.id !== id);
@@ -476,7 +517,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       logout,
       hasOnboarded, setHasOnboarded,
       appReady,
-      myEvents, addMyEvent, updateMyEvent, removeMyEvent,
+      myEvents, addMyEvent, updateMyEvent, removeMyEvent, syncMyEventsStatus,
       themeMode, setThemeMode,
       isDark, colors,
       locationNotificationsEnabled, setLocationNotificationsEnabled,
@@ -495,7 +536,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       logout,
       hasOnboarded, setHasOnboarded,
       appReady,
-      myEvents, addMyEvent, updateMyEvent, removeMyEvent,
+      myEvents, addMyEvent, updateMyEvent, removeMyEvent, syncMyEventsStatus,
       themeMode, setThemeMode,
       isDark, colors,
       locationNotificationsEnabled, setLocationNotificationsEnabled,

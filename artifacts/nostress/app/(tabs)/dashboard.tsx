@@ -49,7 +49,7 @@ const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
 
 export default function DashboardScreen() {
   const t = useT();
-  const { user, lang, myEvents, setUser, addNotification, updateMyEvent, removeMyEvent } = useApp();
+  const { user, lang, myEvents, setUser, addNotification, updateMyEvent, removeMyEvent, syncMyEventsStatus } = useApp();
   const insets = useSafeAreaInsets();
   const C = useColors();
 
@@ -233,7 +233,8 @@ export default function DashboardScreen() {
   useFocusEffect(
     useCallback(() => {
       checkPartnerStatus();
-    }, [checkPartnerStatus])
+      syncMyEventsStatus();
+    }, [checkPartnerStatus, syncMyEventsStatus])
   );
 
   /* ── Not logged in ── */
@@ -535,11 +536,13 @@ export default function DashboardScreen() {
                         style: "destructive",
                         onPress: () => {
                           updateMyEvent(event.id, { status: "cancelled" });
-                          fetch(`${API_BASE}/events/${event.id}`, {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ status: "cancelled" }),
-                          }).catch(() => {});
+                          if (event.apiId) {
+                            fetch(`${API_BASE}/events/${event.apiId}`, {
+                              method: "PATCH",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ status: "cancelled" }),
+                            }).catch(() => {});
+                          }
                         },
                       },
                     ]
@@ -556,11 +559,25 @@ export default function DashboardScreen() {
                         style: "destructive",
                         onPress: () => {
                           removeMyEvent(event.id);
-                          fetch(`${API_BASE}/events/${event.id}`, { method: "DELETE" }).catch(() => {});
+                          if (event.apiId) {
+                            fetch(`${API_BASE}/events/${event.apiId}`, { method: "DELETE" }).catch(() => {});
+                          }
                         },
                       },
                     ]
                   );
+                };
+                const editEvent = () => {
+                  if (!event.apiId) {
+                    Alert.alert(
+                      lang === "fr" ? "Modification impossible" : "Cannot edit",
+                      lang === "fr"
+                        ? "Cet événement n'est pas synchronisé avec le serveur."
+                        : "This event is not synced with the server.",
+                    );
+                    return;
+                  }
+                  router.push(`/create-event?editId=${event.apiId}&localId=${event.id}` as any);
                 };
                 return (
                   <View key={event.id} style={styles.eventRow}>
@@ -597,7 +614,16 @@ export default function DashboardScreen() {
                       </View>
                     </View>
                     <View style={{ flexDirection: "column", gap: 10, alignItems: "center", marginLeft: 8 }}>
-                      {!isCancelled && !isPast && (
+                      {(event.status === "pending" || event.status === "rejected") && !isPast && (
+                        <TouchableOpacity
+                          onPress={editEvent}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                          accessibilityLabel={lang === "fr" ? "Modifier" : "Edit"}
+                        >
+                          <Ionicons name="create-outline" size={22} color={C.gold} />
+                        </TouchableOpacity>
+                      )}
+                      {!isCancelled && !isPast && event.status === "approved" && (
                         <TouchableOpacity
                           onPress={cancelEvent}
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

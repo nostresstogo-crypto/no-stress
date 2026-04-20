@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 
 import { C } from "@/constants/colors";
@@ -97,14 +97,55 @@ const INITIAL_FORM: FormData = {
 
 export default function CreateEventScreen() {
   const t = useT();
-  const { lang, addMyEvent, user } = useApp();
+  const { lang, addMyEvent, updateMyEvent, user } = useApp();
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ editId?: string; localId?: string }>();
+  const editId = typeof params.editId === "string" ? params.editId : undefined;
+  const localId = typeof params.localId === "string" ? params.localId : undefined;
+  const isEdit = !!editId;
   const [form, setForm] = useState<FormData>(INITIAL_FORM);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [loadingExisting, setLoadingExisting] = useState(isEdit);
   const [apiVenues, setApiVenues] = useState<Array<{ id: string; name: string; city?: string | null }>>([]);
   const scrollRef = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    if (!isEdit || !editId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`${API_BASE}/events/${editId}`);
+        if (!r.ok) throw new Error("not found");
+        const ev = await r.json();
+        if (cancelled) return;
+        setForm({
+          titleFr: ev.title || "",
+          titleEn: ev.title || "",
+          category: (ev.category as CategoryKey) || "",
+          city: ev.city || "",
+          venue: ev.venue || "",
+          date: ev.date || "",
+          time: ev.time || "",
+          descriptionFr: ev.description || "",
+          descriptionEn: ev.description || "",
+          priceFCFA: ev.price != null ? String(ev.price) : "",
+          isFree: !ev.price || Number(ev.price) === 0,
+          isSponsored: false,
+          imageUrl: ev.imageUrl || "",
+        });
+      } catch {
+        Alert.alert(
+          lang === "fr" ? "Erreur" : "Error",
+          lang === "fr" ? "Impossible de charger cet événement." : "Could not load this event.",
+        );
+      } finally {
+        if (!cancelled) setLoadingExisting(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isEdit, editId, lang]);
 
   useEffect(() => {
     let cancelled = false;
@@ -173,31 +214,55 @@ export default function CreateEventScreen() {
         imageUrl: finalImageUrl || null,
         partnerId: user?.id || null,
       };
-      const res = await fetch(`${API_BASE}/events`, {
-        method: "POST",
+      const url = isEdit ? `${API_BASE}/events/${editId}` : `${API_BASE}/events`;
+      const method = isEdit ? "PATCH" : "POST";
+      const editPayload = isEdit ? { ...payload, status: "pending" } : payload;
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(editPayload),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Échec de la création de l'événement");
+        throw new Error(err.error || (isEdit ? "Échec de la mise à jour de l'événement" : "Échec de la création de l'événement"));
       }
-      const created = await res.json();
-      addMyEvent({
-        titleFr: form.titleFr.trim(),
-        titleEn: form.titleEn.trim(),
-        category: form.category,
-        city: form.city,
-        venue: form.venue,
-        date: form.date.trim(),
-        time: form.time.trim(),
-        descriptionFr: form.descriptionFr.trim(),
-        descriptionEn: form.descriptionEn.trim(),
-        priceFCFA,
-        isFree: form.isFree,
-        isSponsored: form.isSponsored,
-        imageUrl: finalImageUrl,
-      });
+      const saved = await res.json();
+      if (isEdit && localId) {
+        updateMyEvent(localId, {
+          apiId: saved?.id ? String(saved.id) : editId,
+          titleFr: form.titleFr.trim(),
+          titleEn: form.titleEn.trim(),
+          category: form.category,
+          city: form.city,
+          venue: form.venue,
+          date: form.date.trim(),
+          time: form.time.trim(),
+          descriptionFr: form.descriptionFr.trim(),
+          descriptionEn: form.descriptionEn.trim(),
+          priceFCFA,
+          isFree: form.isFree,
+          isSponsored: form.isSponsored,
+          imageUrl: finalImageUrl,
+          status: "pending",
+        });
+      } else {
+        addMyEvent({
+          apiId: saved?.id ? String(saved.id) : undefined,
+          titleFr: form.titleFr.trim(),
+          titleEn: form.titleEn.trim(),
+          category: form.category,
+          city: form.city,
+          venue: form.venue,
+          date: form.date.trim(),
+          time: form.time.trim(),
+          descriptionFr: form.descriptionFr.trim(),
+          descriptionEn: form.descriptionEn.trim(),
+          priceFCFA,
+          isFree: form.isFree,
+          isSponsored: form.isSponsored,
+          imageUrl: finalImageUrl,
+        });
+      }
       setSubmitted(true);
     } catch (e: any) {
       Alert.alert(
