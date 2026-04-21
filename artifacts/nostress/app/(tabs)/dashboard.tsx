@@ -50,7 +50,7 @@ const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
 
 export default function DashboardScreen() {
   const t = useT();
-  const { user, lang, myEvents, setUser, addNotification, updateMyEvent, removeMyEvent, syncMyEventsStatus, syncMyEventsFromBackend } = useApp();
+  const { user, lang, myEvents, setUser, addNotification, updateMyEvent, removeMyEvent, syncMyEventsStatus, syncMyEventsFromBackend, refreshApiEvents } = useApp();
   const insets = useSafeAreaInsets();
   const C = useColors();
 
@@ -543,7 +543,9 @@ export default function DashboardScreen() {
                               method: "PATCH",
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({ status: "cancelled" }),
-                            }).catch(() => {});
+                            })
+                              .catch(() => {})
+                              .finally(() => { refreshApiEvents().catch(() => {}); });
                           }
                         },
                       },
@@ -562,7 +564,9 @@ export default function DashboardScreen() {
                         onPress: () => {
                           removeMyEvent(event.id);
                           if (event.apiId) {
-                            fetch(`${API_BASE}/events/${event.apiId}`, { method: "DELETE" }).catch(() => {});
+                            fetch(`${API_BASE}/events/${event.apiId}`, { method: "DELETE" })
+                              .catch(() => {})
+                              .finally(() => { refreshApiEvents().catch(() => {}); });
                           }
                         },
                       },

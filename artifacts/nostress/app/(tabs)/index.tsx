@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { ColorPalette } from "@/constants/colors";
@@ -171,6 +171,7 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => { loadEvents(); }, [loadEvents]);
+  useFocusEffect(useCallback(() => { loadEvents(); }, [loadEvents]));
   const [filterOpen, setFilterOpen] = useState(false);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [draftFilters, setDraftFilters] = useState(DEFAULT_FILTERS);
