@@ -19,6 +19,7 @@ import { useT, useApp, useColors } from "@/context/AppContext";
 import { EventCard } from "@/components/EventCard";
 import { ColorPalette } from "@/constants/colors";
 import { LANG_LABELS, type Lang } from "@/constants/i18n";
+import { formatDateTimeLocalized } from "@/lib/formatDate";
 
 const SUPPORT_WHATSAPP = "+13197774884";
 const SUPPORT_WHATSAPP_URL = `https://wa.me/${SUPPORT_WHATSAPP.replace(/[^0-9]/g, "")}?text=${encodeURIComponent("Bonjour NoStress, j'ai besoin d'aide.")}`;
@@ -521,7 +522,7 @@ export default function AccountScreen() {
               <View style={styles.notifContent}>
                 <Text style={styles.notifTitle}>{lang === "fr" ? n.titleFr : n.title}</Text>
                 <Text style={styles.notifBody}>{lang === "fr" ? n.bodyFr : n.body}</Text>
-                <Text style={styles.notifDate}>{new Date(n.createdAt).toLocaleDateString()}</Text>
+                <Text style={styles.notifDate}>{formatDateTimeLocalized(n.createdAt, lang)}</Text>
               </View>
               <TouchableOpacity
                 onPress={() => removeNotification(n.id)}

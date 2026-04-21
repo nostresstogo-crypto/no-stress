@@ -49,8 +49,16 @@ const CATEGORY_LABELS: Record<string, string> = {
   liveMusic: "Musique live",
 };
 
+function pad2(n: number) { return n < 10 ? `0${n}` : String(n); }
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+function formatDateTime(iso: string) {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return `${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}/${d.getFullYear()} à ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
 export default function Publications() {
@@ -229,10 +237,10 @@ export default function Publications() {
                       <td className="px-4 py-3">
                         <div>
                           <p className="font-medium text-foreground text-sm">{ev.title}</p>
-                          <div className="flex items-center gap-3 mt-0.5">
+                          <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                             <span className="flex items-center gap-1 text-xs text-muted-foreground">
                               <Calendar className="w-3 h-3" />
-                              {ev.date}
+                              {formatDate(ev.date)}{ev.time ? ` à ${ev.time}` : ""}
                             </span>
                             <span className="flex items-center gap-1 text-xs text-muted-foreground">
                               <MapPin className="w-3 h-3" />
@@ -243,6 +251,9 @@ export default function Publications() {
                               {ev.isFree ? "Gratuit" : `${ev.priceFCFA.toLocaleString()} FCFA`}
                             </span>
                           </div>
+                          <p className="text-[11px] text-muted-foreground/70 mt-1">
+                            Posté le {formatDateTime(ev.createdAt)}
+                          </p>
                         </div>
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">

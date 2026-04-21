@@ -28,13 +28,11 @@ interface Stats {
   totalPublications: number;
 }
 
-const formatDate = (d: Date) =>
-  d.toLocaleDateString("fr-FR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+const WEEKDAYS_FR = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+const formatDate = (d: Date) => {
+  const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
+  return `${WEEKDAYS_FR[d.getDay()]} ${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+};
 
 export default function Dashboard() {
   const { admin } = useAuth();

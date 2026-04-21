@@ -88,17 +88,35 @@ export async function notifyEventApproved(eventId: number): Promise<void> {
     const titleEn = event.title || event.titleFr || "";
     const cityLabel = event.city ? ` à ${event.city}` : "";
 
+    const formatEventDate = (lang: "fr" | "en") => {
+      const raw = event.date;
+      if (!raw) return "";
+      const d = new Date(raw);
+      if (isNaN(d.getTime())) return raw;
+      const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
+      const dmy = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+      const sep = lang === "fr" ? " à " : " at ";
+      return event.time ? `${dmy}${sep}${event.time}` : dmy;
+    };
+
     const messages: ExpoPushMessage[] = matches
       .filter((t) => isValidExpoToken(t.token))
       .map((t) => {
-        const lang = t.language === "en" ? "en" : "fr";
+        const lang: "fr" | "en" = t.language === "en" ? "en" : "fr";
+        const when = formatEventDate(lang);
+        const baseTitle = lang === "fr" ? titleFr : titleEn;
+        const body = when
+          ? lang === "fr"
+            ? `${baseTitle} — ${when}`
+            : `${baseTitle} — ${when}`
+          : baseTitle;
         return {
           to: t.token,
           sound: "default",
           priority: "high",
           channelId: "default",
           title: lang === "fr" ? `🎉 Nouvel événement${cityLabel}` : `🎉 New event${event.city ? ` in ${event.city}` : ""}`,
-          body: lang === "fr" ? titleFr : titleEn,
+          body,
           data: { type: "event", eventId: event.id, url: `/event/${event.id}` },
         };
       });

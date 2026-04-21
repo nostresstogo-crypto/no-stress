@@ -22,6 +22,7 @@ import * as ImagePicker from "expo-image-picker";
 import { C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_SUBSCRIPTION_PLANS, MOCK_CITIES } from "@/constants/data";
+import { formatDateLocalized, formatDateTimeLocalized } from "@/lib/formatDate";
 
 interface MyVenue {
   id: string;
@@ -587,8 +588,14 @@ export default function DashboardScreen() {
                         {lang === "fr" && event.titleFr ? event.titleFr : event.titleEn || event.titleFr}
                       </Text>
                       <Text style={styles.eventMeta}>
-                        {event.date} · {event.city}
+                        {formatDateLocalized(event.date, lang)}{event.time ? ` · ${event.time}` : ""} · {event.city}
                       </Text>
+                      {event.createdAt ? (
+                        <Text style={[styles.eventMeta, { fontSize: 11, opacity: 0.7, marginTop: 2 }]}>
+                          {lang === "fr" ? "Posté le " : "Posted on "}
+                          {formatDateTimeLocalized(event.createdAt, lang)}
+                        </Text>
+                      ) : null}
                       <Text style={styles.eventPrice}>
                         {event.isFree
                           ? t("free")
