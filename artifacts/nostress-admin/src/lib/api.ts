@@ -169,6 +169,7 @@ export interface PartnerEvent {
   priceFCFA: number;
   isFree: boolean;
   status: "pending" | "approved" | "rejected" | "archived";
+  isArchived?: boolean;
   createdAt: string;
 }
 

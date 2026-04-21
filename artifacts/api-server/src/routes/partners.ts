@@ -161,10 +161,21 @@ router.get("/partners/:id/public", async (req, res) => {
   if (!partner || partner.status !== "approved") {
     return res.status(404).json({ error: "Partenaire introuvable." });
   }
+  const archiveCutoff = (() => {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - 30);
+    return d.toISOString().slice(0, 10);
+  })();
   const events = await db
     .select()
     .from(eventsTable)
-    .where(and(eq(eventsTable.partnerId, id), eq(eventsTable.status, "approved")));
+    .where(
+      and(
+        eq(eventsTable.partnerId, id),
+        eq(eventsTable.status, "approved"),
+        gte(eventsTable.date, archiveCutoff),
+      ),
+    );
   res.json({
     partner: {
       id: String(partner.id),
@@ -232,6 +243,11 @@ router.get("/admin/events", requireAdmin, async (_req: any, res) => {
     })
     .from(eventsTable)
     .leftJoin(partnersTable, eq(eventsTable.partnerId, partnersTable.id));
+  const cutoff = (() => {
+    const d = new Date();
+    d.setUTCDate(d.getUTCDate() - 30);
+    return d.toISOString().slice(0, 10);
+  })();
   res.json(
     rows.map((e) => ({
       id: String(e.id),
@@ -246,6 +262,7 @@ router.get("/admin/events", requireAdmin, async (_req: any, res) => {
       priceFCFA: e.price ?? 0,
       isFree: e.price == null || e.price === 0,
       status: e.status,
+      isArchived: typeof e.date === "string" && e.date < cutoff,
       createdAt: e.createdAt,
     })),
   );

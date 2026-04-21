@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, ilike } from "drizzle-orm";
+import { eq, and, ilike, gte, lt } from "drizzle-orm";
 import { db, eventsTable } from "@workspace/db";
 import { requireAdmin } from "./admin.js";
 import { notifyEventApproved } from "../lib/pushNotifications.js";
@@ -11,8 +11,16 @@ function serialize(e: any) {
   return { ...e, id: String(e.id), partnerId: e.partnerId != null ? String(e.partnerId) : null };
 }
 
+const ARCHIVE_AFTER_DAYS = 30;
+
+function archiveCutoffDate(): string {
+  const d = new Date();
+  d.setUTCDate(d.getUTCDate() - ARCHIVE_AFTER_DAYS);
+  return d.toISOString().slice(0, 10);
+}
+
 router.get("/events", async (req, res) => {
-  const { city, category, partnerId, status, page = 1, limit = 20 } = req.query;
+  const { city, category, partnerId, status, includeArchived, archivedOnly, page = 1, limit = 20 } = req.query;
   const conds: any[] = [];
   if (partnerId) {
     const pid = parseInt(String(partnerId), 10);
@@ -23,6 +31,12 @@ router.get("/events", async (req, res) => {
   }
   if (city) conds.push(ilike(eventsTable.city, `%${String(city)}%`));
   if (category) conds.push(eq(eventsTable.category, String(category)));
+  const cutoff = archiveCutoffDate();
+  if (String(archivedOnly) === "1" || String(archivedOnly) === "true") {
+    conds.push(lt(eventsTable.date, cutoff));
+  } else if (String(includeArchived) !== "1" && String(includeArchived) !== "true") {
+    conds.push(gte(eventsTable.date, cutoff));
+  }
   const rows = conds.length
     ? await db.select().from(eventsTable).where(and(...conds))
     : await db.select().from(eventsTable);

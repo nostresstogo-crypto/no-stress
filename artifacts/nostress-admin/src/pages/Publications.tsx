@@ -80,22 +80,24 @@ export default function Publications() {
 
   useEffect(() => { load(); }, [load]);
 
+  const effectiveStatus = (e: PartnerEvent) => (e.isArchived ? "archived" : e.status);
+
   const filtered = events.filter((e) => {
     const q = search.toLowerCase();
     const searchOk = !search ||
       (e.title ?? "").toLowerCase().includes(q) ||
       (e.partnerName ?? "").toLowerCase().includes(q) ||
       (e.city ?? "").toLowerCase().includes(q);
-    const statusOk = statusFilter === "all" || e.status === statusFilter;
+    const statusOk = statusFilter === "all" || effectiveStatus(e) === statusFilter;
     return searchOk && statusOk;
   });
 
   const counts = {
     all: events.length,
-    pending: events.filter((e) => e.status === "pending").length,
-    approved: events.filter((e) => e.status === "approved").length,
-    rejected: events.filter((e) => e.status === "rejected").length,
-    archived: events.filter((e) => e.status === "archived").length,
+    pending: events.filter((e) => effectiveStatus(e) === "pending").length,
+    approved: events.filter((e) => effectiveStatus(e) === "approved").length,
+    rejected: events.filter((e) => effectiveStatus(e) === "rejected").length,
+    archived: events.filter((e) => effectiveStatus(e) === "archived").length,
   };
 
   const handleApprove = async (ev: PartnerEvent) => {
@@ -251,7 +253,8 @@ export default function Publications() {
                       </td>
                       <td className="px-4 py-3">
                         {(() => {
-                          const s = STATUS_LABELS[ev.status] || STATUS_LABELS.pending;
+                          const es = effectiveStatus(ev);
+                          const s = STATUS_LABELS[es] || STATUS_LABELS.pending;
                           return (
                             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${s.bg} ${s.color}`}>
                               {s.icon}
@@ -262,7 +265,7 @@ export default function Publications() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-1.5 flex-wrap">
-                          {ev.status === "archived" && (
+                          {effectiveStatus(ev) === "archived" && (
                             <Button
                               size="sm"
                               variant="outline"
@@ -274,7 +277,7 @@ export default function Publications() {
                               Restaurer
                             </Button>
                           )}
-                          {ev.status !== "approved" && ev.status !== "archived" && (
+                          {effectiveStatus(ev) !== "approved" && effectiveStatus(ev) !== "archived" && (
                             <Button
                               size="sm"
                               variant="outline"

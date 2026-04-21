@@ -478,15 +478,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
             createdAt: ev.createdAt || new Date().toISOString(),
           });
         }
-        const updated = prev.map((e) => {
-          if (!e.apiId) return e;
+        const remoteIds = new Set(remote.map((r) => String(r.id)));
+        const updated = prev.flatMap((e) => {
+          if (!e.apiId) return [e];
+          if (!remoteIds.has(String(e.apiId))) return [];
           const remoteMatch = remote.find((r) => String(r.id) === String(e.apiId));
           if (remoteMatch && remoteMatch.status && remoteMatch.status !== e.status) {
-            return { ...e, status: remoteMatch.status as MyEvent["status"] };
+            return [{ ...e, status: remoteMatch.status as MyEvent["status"] }];
           }
-          return e;
+          return [e];
         });
-        if (imports.length === 0 && updated.every((e, i) => e === prev[i])) return prev;
+        if (imports.length === 0 && updated.length === prev.length && updated.every((e, i) => e === prev[i])) return prev;
         const next = [...imports, ...updated];
         AsyncStorage.setItem(KEYS.myEvents, JSON.stringify(next));
         return next;
