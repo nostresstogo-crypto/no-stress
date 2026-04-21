@@ -88,7 +88,8 @@ export default function Publications() {
 
   useEffect(() => { load(); }, [load]);
 
-  const effectiveStatus = (e: PartnerEvent) => (e.isArchived ? "archived" : e.status);
+  const effectiveStatus = (e: PartnerEvent) =>
+    e.status === "archived" || e.isArchived ? "archived" : e.status;
 
   const filtered = events.filter((e) => {
     const q = search.toLowerCase();

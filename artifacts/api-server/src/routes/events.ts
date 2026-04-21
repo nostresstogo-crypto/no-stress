@@ -92,7 +92,11 @@ router.patch("/events/:id", async (req, res) => {
 router.delete("/events/:id", async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Event not found" });
-  const [event] = await db.delete(eventsTable).where(eq(eventsTable.id, id)).returning();
+  const [event] = await db
+    .update(eventsTable)
+    .set({ status: "archived" })
+    .where(eq(eventsTable.id, id))
+    .returning();
   if (!event) return res.status(404).json({ error: "Event not found" });
   res.json({ success: true });
 });

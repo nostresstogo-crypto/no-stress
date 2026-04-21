@@ -271,7 +271,11 @@ router.get("/admin/events", requireAdmin, async (_req: any, res) => {
 router.delete("/admin/events/:id", requireAdmin, async (req: any, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Publication introuvable." });
-  const [deleted] = await db.delete(eventsTable).where(eq(eventsTable.id, id)).returning();
+  const [deleted] = await db
+    .update(eventsTable)
+    .set({ status: "archived" })
+    .where(eq(eventsTable.id, id))
+    .returning();
   if (!deleted) return res.status(404).json({ error: "Publication introuvable." });
   const { reason } = req.body || {};
   const deleteReason = reason || "Publication non conforme aux Conditions Générales d'Utilisation.";

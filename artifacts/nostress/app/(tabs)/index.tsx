@@ -200,7 +200,7 @@ export default function HomeScreen() {
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
   const allEvents = useMemo(() => {
-    const fromApi = apiEvents.map((e) => ({
+    return apiEvents.map((e) => ({
       id: String(e.id),
       title: e.title || e.titleFr || "",
       titleFr: e.titleFr || e.title || "",
@@ -218,28 +218,7 @@ export default function HomeScreen() {
       imageUrl: e.imageUrl || undefined,
       status: "approved" as const,
     }));
-    const partnerApproved = myEvents
-      .filter((e) => e.status === "approved" && !fromApi.find((a) => a.id === e.id))
-      .map((e) => ({
-        id: e.id,
-        title: e.titleEn || e.titleFr,
-        titleFr: e.titleFr,
-        category: e.category,
-        city: e.city,
-        venue: e.venue,
-        venueId: undefined as string | undefined,
-        date: e.date,
-        time: e.time,
-        description: e.descriptionEn || e.descriptionFr,
-        descriptionFr: e.descriptionFr,
-        priceFCFA: e.priceFCFA,
-        isFree: e.isFree,
-        isSponsored: e.isSponsored,
-        imageUrl: e.imageUrl || undefined,
-        status: "approved" as const,
-      }));
-    return [...fromApi, ...partnerApproved];
-  }, [apiEvents, myEvents]);
+  }, [apiEvents]);
 
   const filteredEvents = useMemo(() => {
     const now = new Date();
