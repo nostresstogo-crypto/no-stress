@@ -96,7 +96,10 @@ export default function EventDetailScreen() {
         date: apiEvent.date,
         time: apiEvent.time || "",
         imageUrl: apiEvent.imageUrl || undefined,
-        gallery: apiEvent.gallery || (apiEvent.imageUrl ? [apiEvent.imageUrl] : []),
+        gallery: Array.isArray(apiEvent.images) && apiEvent.images.length > 0
+          ? apiEvent.images
+          : apiEvent.gallery || (apiEvent.imageUrl ? [apiEvent.imageUrl] : []),
+        venueId: apiEvent.venueId ? String(apiEvent.venueId) : null,
         price: apiEvent.price ?? 0,
         currency: "FCFA",
         isSponsored: false,

@@ -92,6 +92,7 @@ export const adminsTable = pgTable("admins", {
 export const eventsTable = pgTable("events", {
   id: serial("id").primaryKey(),
   partnerId: integer("partner_id").references(() => partnersTable.id, { onDelete: "cascade" }),
+  venueId: integer("venue_id"),
   title: text("title").notNull(),
   titleFr: text("title_fr"),
   description: text("description"),
@@ -102,6 +103,7 @@ export const eventsTable = pgTable("events", {
   city: text("city"),
   category: text("category"),
   imageUrl: text("image_url"),
+  images: jsonb("images"),
   price: integer("price"),
   currency: text("currency").default("FCFA"),
   isSponsored: text("is_sponsored").default("false"),
@@ -131,6 +133,7 @@ export const venuesTable = pgTable("venues", {
   address: text("address"),
   description: text("description"),
   imageUrl: text("image_url"),
+  images: jsonb("images"),
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
   isVerified: text("is_verified").notNull().default("false"),

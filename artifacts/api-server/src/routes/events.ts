@@ -8,7 +8,25 @@ const router: IRouter = Router();
 
 function serialize(e: any) {
   if (!e) return e;
-  return { ...e, id: String(e.id), partnerId: e.partnerId != null ? String(e.partnerId) : null };
+  const images = Array.isArray(e.images) ? e.images : [];
+  const imageUrl = e.imageUrl || (images.length > 0 ? images[0] : null);
+  return {
+    ...e,
+    id: String(e.id),
+    partnerId: e.partnerId != null ? String(e.partnerId) : null,
+    venueId: e.venueId != null ? String(e.venueId) : null,
+    images,
+    imageUrl,
+  };
+}
+
+function normalizeImages(input: any): string[] {
+  if (!input) return [];
+  const arr = Array.isArray(input) ? input : [input];
+  return arr
+    .filter((x) => typeof x === "string" && x.trim().length > 0)
+    .map((x) => String(x).trim())
+    .slice(0, 4);
 }
 
 const ARCHIVE_AFTER_DAYS = 30;
@@ -52,22 +70,31 @@ router.get("/events/:id", async (req, res) => {
 });
 
 router.post("/events", async (req, res) => {
-  const { title, description, date, time, venue, city, category, imageUrl, price, partnerId, latitude, longitude, ticketTypes } = req.body || {};
+  const { title, titleFr, description, descriptionFr, date, time, venue, venueId, city, category, imageUrl, images, price, currency, partnerId, latitude, longitude, ticketTypes } = req.body || {};
   if (!title || !date) {
     return res.status(400).json({ error: "Le titre et la date sont obligatoires." });
   }
+  if (!venue && !venueId) {
+    return res.status(400).json({ error: "Le lieu est obligatoire." });
+  }
+  const imgs = normalizeImages(images || (imageUrl ? [imageUrl] : []));
   const [event] = await db
     .insert(eventsTable)
     .values({
       title,
+      titleFr: titleFr || null,
       description: description || null,
+      descriptionFr: descriptionFr || null,
       date,
       time: time || null,
       venue: venue || null,
+      venueId: venueId ? parseInt(String(venueId), 10) || null : null,
       city: city || null,
       category: category || null,
-      imageUrl: imageUrl || null,
+      imageUrl: imgs[0] || imageUrl || null,
+      images: imgs,
       price: price != null ? Number(price) : null,
+      currency: currency || "FCFA",
       partnerId: partnerId ? parseInt(String(partnerId), 10) || null : null,
       latitude: latitude != null ? Number(latitude) : null,
       longitude: longitude != null ? Number(longitude) : null,
@@ -81,8 +108,16 @@ router.patch("/events/:id", async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Event not found" });
   const allowed: any = {};
-  for (const k of ["title","description","date","time","venue","city","category","imageUrl","price","status","ticketTypes","latitude","longitude"]) {
+  for (const k of ["title","titleFr","description","descriptionFr","date","time","venue","city","category","price","currency","status","ticketTypes","latitude","longitude"]) {
     if (k in req.body) allowed[k] = req.body[k];
+  }
+  if ("venueId" in req.body) {
+    allowed.venueId = req.body.venueId ? parseInt(String(req.body.venueId), 10) || null : null;
+  }
+  if ("images" in req.body || "imageUrl" in req.body) {
+    const imgs = normalizeImages(req.body.images || (req.body.imageUrl ? [req.body.imageUrl] : []));
+    allowed.images = imgs;
+    allowed.imageUrl = imgs[0] || null;
   }
   const [event] = await db.update(eventsTable).set(allowed).where(eq(eventsTable.id, id)).returning();
   if (!event) return res.status(404).json({ error: "Event not found" });

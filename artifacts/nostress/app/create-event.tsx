@@ -20,7 +20,7 @@ import * as ImagePicker from "expo-image-picker";
 
 import { C } from "@/constants/colors";
 import { useT, useApp } from "@/context/AppContext";
-import { CATEGORIES, MOCK_CITIES, MOCK_VENUES, CategoryKey } from "@/constants/data";
+import { CATEGORIES, MOCK_CITIES, CategoryKey } from "@/constants/data";
 import type { MyEvent } from "@/context/AppContext";
 
 const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
@@ -67,6 +67,7 @@ type FormData = {
   category: CategoryKey | "";
   city: string;
   venue: string;
+  venueId: string;
   date: string;
   time: string;
   descriptionFr: string;
@@ -74,10 +75,12 @@ type FormData = {
   priceFCFA: string;
   isFree: boolean;
   isSponsored: boolean;
-  imageUrl: string;
+  images: string[];
 };
 
 type FieldErrors = Partial<Record<keyof FormData, string>>;
+
+const MAX_EVENT_IMAGES = 4;
 
 const INITIAL_FORM: FormData = {
   titleFr: "",
@@ -85,6 +88,7 @@ const INITIAL_FORM: FormData = {
   category: "",
   city: "",
   venue: "",
+  venueId: "",
   date: "",
   time: "",
   descriptionFr: "",
@@ -92,7 +96,7 @@ const INITIAL_FORM: FormData = {
   priceFCFA: "",
   isFree: false,
   isSponsored: false,
-  imageUrl: "",
+  images: [],
 };
 
 export default function CreateEventScreen() {
@@ -108,7 +112,7 @@ export default function CreateEventScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [loadingExisting, setLoadingExisting] = useState(isEdit);
-  const [apiVenues, setApiVenues] = useState<Array<{ id: string; name: string; city?: string | null }>>([]);
+  const [apiVenues, setApiVenues] = useState<Array<{ id: string; name: string; city?: string | null; partnerId?: string | null }>>([]);
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -120,12 +124,16 @@ export default function CreateEventScreen() {
         if (!r.ok) throw new Error("not found");
         const ev = await r.json();
         if (cancelled) return;
+        const evImages: string[] = Array.isArray(ev.images) && ev.images.length > 0
+          ? ev.images.filter((s: any) => typeof s === "string" && s).slice(0, MAX_EVENT_IMAGES)
+          : ev.imageUrl ? [ev.imageUrl] : [];
         setForm({
           titleFr: ev.title || "",
           titleEn: ev.title || "",
           category: (ev.category as CategoryKey) || "",
           city: ev.city || "",
           venue: ev.venue || "",
+          venueId: ev.venueId ? String(ev.venueId) : "",
           date: ev.date || "",
           time: ev.time || "",
           descriptionFr: ev.description || "",
@@ -133,7 +141,7 @@ export default function CreateEventScreen() {
           priceFCFA: ev.price != null ? String(ev.price) : "",
           isFree: !ev.price || Number(ev.price) === 0,
           isSponsored: false,
-          imageUrl: ev.imageUrl || "",
+          images: evImages,
         });
       } catch {
         Alert.alert(
@@ -153,7 +161,7 @@ export default function CreateEventScreen() {
       if (!r.ok) return;
       const data = await r.json();
       const list = Array.isArray(data?.venues) ? data.venues : [];
-      setApiVenues(list.map((v: any) => ({ id: String(v.id), name: v.name || "", city: v.city || null })));
+      setApiVenues(list.map((v: any) => ({ id: String(v.id), name: v.name || "", city: v.city || null, partnerId: v.partnerId != null ? String(v.partnerId) : null })));
     } catch {}
   }, []);
 
@@ -175,6 +183,7 @@ export default function CreateEventScreen() {
     if (!form.titleFr.trim()) newErrors.titleFr = t("requiredField");
     if (!form.category) newErrors.category = t("requiredField");
     if (!form.city) newErrors.city = t("requiredField");
+    if (!form.venueId && !form.venue.trim()) newErrors.venue = t("requiredField");
     if (!form.date.trim()) newErrors.date = t("requiredField");
     if (!form.time.trim()) newErrors.time = t("requiredField");
     if (!form.isFree && !form.priceFCFA.trim()) newErrors.priceFCFA = t("requiredField");
@@ -190,15 +199,22 @@ export default function CreateEventScreen() {
     }
     setSubmitting(true);
     try {
-      let finalImageUrl = form.imageUrl.trim();
-      if (finalImageUrl && (finalImageUrl.startsWith("file:") || finalImageUrl.startsWith("content:") || finalImageUrl.startsWith("ph:") || finalImageUrl.startsWith("/"))) {
-        try {
-          finalImageUrl = await uploadImageToBackend(finalImageUrl);
-        } catch (uploadErr: any) {
-          console.warn("Image upload failed, continuing without image:", uploadErr?.message);
-          finalImageUrl = "";
+      const uploadedImages: string[] = [];
+      for (const uri of form.images.slice(0, MAX_EVENT_IMAGES)) {
+        const trimmed = (uri || "").trim();
+        if (!trimmed) continue;
+        if (trimmed.startsWith("file:") || trimmed.startsWith("content:") || trimmed.startsWith("ph:") || trimmed.startsWith("/")) {
+          try {
+            const url = await uploadImageToBackend(trimmed);
+            uploadedImages.push(url);
+          } catch (uploadErr: any) {
+            console.warn("Image upload failed, skipping:", uploadErr?.message);
+          }
+        } else {
+          uploadedImages.push(trimmed);
         }
       }
+      const finalImageUrl = uploadedImages[0] || null;
       const priceFCFA = form.isFree ? 0 : parseInt(form.priceFCFA, 10) || 0;
       const payload = {
         title: form.titleFr.trim(),
@@ -210,11 +226,13 @@ export default function CreateEventScreen() {
         category: form.category,
         city: form.city,
         venue: form.venue,
+        venueId: form.venueId || null,
         date: form.date.trim(),
         time: form.time.trim(),
         price: priceFCFA,
         currency: "FCFA",
-        imageUrl: finalImageUrl || null,
+        imageUrl: finalImageUrl,
+        images: uploadedImages,
         partnerId: user?.id || null,
       };
       const url = isEdit ? `${API_BASE}/events/${editId}` : `${API_BASE}/events`;
@@ -245,7 +263,7 @@ export default function CreateEventScreen() {
           priceFCFA,
           isFree: form.isFree,
           isSponsored: form.isSponsored,
-          imageUrl: finalImageUrl,
+          imageUrl: finalImageUrl || undefined,
           status: "pending",
         });
       } else {
@@ -263,7 +281,7 @@ export default function CreateEventScreen() {
           priceFCFA,
           isFree: form.isFree,
           isSponsored: form.isSponsored,
-          imageUrl: finalImageUrl,
+          imageUrl: finalImageUrl || "",
         });
       }
       setSubmitted(true);
@@ -384,61 +402,60 @@ export default function CreateEventScreen() {
           </ScrollView>
         </Field>
 
-        <Field label={t("selectVenue")}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
-            {(() => {
-              const norm = (s: string) =>
-                (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-              const formCityN = norm(form.city);
-              const combined: Array<{ id: string; name: string; city: string; isPartner: boolean; cityMatch: boolean }> = [
-                ...apiVenues.map((v) => ({
-                  id: `api_${v.id}`,
-                  name: v.name,
-                  city: v.city || "",
-                  isPartner: true,
-                  cityMatch: !formCityN || norm(v.city || "") === formCityN,
-                })),
-                ...MOCK_VENUES
-                  .filter((v) => !apiVenues.find((av) => norm(av.name || "") === norm(v.name)))
+        <Field label={t("selectVenue")} required error={errors.venue}>
+          {apiVenues.length === 0 ? (
+            <View style={{ padding: 14, borderRadius: 12, backgroundColor: C.card, borderWidth: 1, borderColor: C.border }}>
+              <Text style={{ color: C.textMuted, fontSize: 13, lineHeight: 18 }}>
+                {lang === "fr"
+                  ? "Aucun lieu disponible. Créez d'abord vos lieux dans l'onglet « Mes lieux » du tableau de bord partenaire."
+                  : "No venues available yet. Create your venues first in the partner dashboard's \"My venues\" tab."}
+              </Text>
+            </View>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
+              {(() => {
+                const norm = (s: string) =>
+                  (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                const formCityN = norm(form.city);
+                const myPid = user?.id ? String(user.id) : null;
+                const combined = apiVenues
                   .map((v) => ({
                     id: v.id,
                     name: v.name,
-                    city: (v as any).city || "",
-                    isPartner: false,
-                    cityMatch: !formCityN || norm((v as any).city || "") === formCityN,
-                  })),
-              ].sort((a, b) => {
-                if (a.cityMatch !== b.cityMatch) return a.cityMatch ? -1 : 1;
-                if (a.isPartner !== b.isPartner) return a.isPartner ? -1 : 1;
-                return a.name.localeCompare(b.name);
-              });
-              return combined.map((v) => {
-                const active = form.venue === v.name;
-                return (
-                  <TouchableOpacity
-                    key={v.id}
-                    style={[styles.pill, active && styles.pillActive, !v.cityMatch && { opacity: 0.55 }]}
-                    onPress={() => setField("venue", v.name)}
-                  >
-                    <Ionicons
-                      name={v.isPartner ? "star" : "business-outline"}
-                      size={13}
-                      color={active ? C.lavender : v.isPartner ? C.gold : C.textMuted}
-                    />
-                    <Text style={[styles.pillText, active && styles.pillTextActive]}>{v.name}</Text>
-                    {v.city ? <Text style={styles.pillCountry}>{v.city}</Text> : null}
-                  </TouchableOpacity>
-                );
-              });
-            })()}
-          </ScrollView>
-          <TextInput
-            style={[styles.input, { marginTop: 8 }]}
-            placeholder={lang === "fr" ? "Ou saisissez un nom de lieu" : "Or type a venue name"}
-            placeholderTextColor={C.textMuted}
-            value={form.venue}
-            onChangeText={(v) => setField("venue", v)}
-          />
+                    city: v.city || "",
+                    isMine: !!(myPid && v.partnerId === myPid),
+                    cityMatch: !formCityN || norm(v.city || "") === formCityN,
+                  }))
+                  .sort((a, b) => {
+                    if (a.isMine !== b.isMine) return a.isMine ? -1 : 1;
+                    if (a.cityMatch !== b.cityMatch) return a.cityMatch ? -1 : 1;
+                    return a.name.localeCompare(b.name);
+                  });
+                return combined.map((v) => {
+                  const active = form.venueId === v.id;
+                  return (
+                    <TouchableOpacity
+                      key={v.id}
+                      style={[styles.pill, active && styles.pillActive, !v.cityMatch && { opacity: 0.55 }]}
+                      onPress={() => {
+                        setField("venueId", v.id);
+                        setField("venue", v.name);
+                        if (v.city && !form.city) setField("city", v.city);
+                      }}
+                    >
+                      <Ionicons
+                        name={v.isMine ? "star" : "business-outline"}
+                        size={13}
+                        color={active ? C.lavender : v.isMine ? C.gold : C.textMuted}
+                      />
+                      <Text style={[styles.pillText, active && styles.pillTextActive]}>{v.name}</Text>
+                      {v.city ? <Text style={styles.pillCountry}>{v.city}</Text> : null}
+                    </TouchableOpacity>
+                  );
+                });
+              })()}
+            </ScrollView>
+          )}
         </Field>
 
         {/* Date & time row */}
@@ -552,75 +569,92 @@ export default function CreateEventScreen() {
         {/* Section 3 — Médias */}
         <SectionHeader icon="image" label={t("formSectionMedia")} />
 
-        <Field label={t("imageUrl")}>
-          {form.imageUrl ? (
-            <View style={{ borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: C.border }}>
-              <Image source={{ uri: form.imageUrl }} style={{ width: "100%", height: 180, borderRadius: 12 }} resizeMode="cover" />
-              <TouchableOpacity
-                style={{
-                  position: "absolute", top: 8, right: 8, backgroundColor: C.error,
-                  borderRadius: 16, width: 32, height: 32, alignItems: "center", justifyContent: "center",
-                }}
-                onPress={() => setField("imageUrl", "")}
-              >
-                <Ionicons name="close" size={18} color="#fff" />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={{ flexDirection: "row", gap: 10 }}>
-              <TouchableOpacity
-                style={{
-                  flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-                  backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: 12,
-                  paddingVertical: 32,
-                }}
-                onPress={async () => {
-                  const result = await ImagePicker.launchImageLibraryAsync({
-                    mediaTypes: ["images"],
-                    allowsEditing: true,
-                    aspect: [16, 9],
-                    quality: 0.8,
-                  });
-                  if (!result.canceled && result.assets[0]) {
-                    setField("imageUrl", result.assets[0].uri);
-                  }
-                }}
-              >
-                <Ionicons name="images-outline" size={22} color={C.lavender} />
-                <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: C.lavender }}>
-                  {lang === "fr" ? "Choisir une photo" : "Choose a photo"}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={{
-                  flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-                  backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: 12,
-                  paddingVertical: 32,
-                }}
-                onPress={async () => {
-                  const perm = await ImagePicker.requestCameraPermissionsAsync();
-                  if (!perm.granted) {
-                    Alert.alert(lang === "fr" ? "Permission requise" : "Permission required",
-                      lang === "fr" ? "Autorisez l'accès à la caméra." : "Allow camera access.");
-                    return;
-                  }
-                  const result = await ImagePicker.launchCameraAsync({
-                    allowsEditing: true,
-                    aspect: [16, 9],
-                    quality: 0.8,
-                  });
-                  if (!result.canceled && result.assets[0]) {
-                    setField("imageUrl", result.assets[0].uri);
-                  }
-                }}
-              >
-                <Ionicons name="camera-outline" size={22} color={C.gold} />
-                <Text style={{ fontSize: 14, fontFamily: "Inter_500Medium", color: C.gold }}>
-                  {lang === "fr" ? "Prendre une photo" : "Take a photo"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
+        <Field label={lang === "fr" ? `Photos (max ${MAX_EVENT_IMAGES})` : `Photos (max ${MAX_EVENT_IMAGES})`}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {form.images.map((uri, idx) => (
+              <View key={`${idx}-${uri}`} style={{ position: "relative", width: "48%", aspectRatio: 16 / 9, borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: C.border }}>
+                <Image source={{ uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                <TouchableOpacity
+                  style={{
+                    position: "absolute", top: 6, right: 6, backgroundColor: C.error,
+                    borderRadius: 14, width: 28, height: 28, alignItems: "center", justifyContent: "center",
+                  }}
+                  onPress={() => setField("images", form.images.filter((_, i) => i !== idx))}
+                >
+                  <Ionicons name="close" size={16} color="#fff" />
+                </TouchableOpacity>
+                {idx === 0 ? (
+                  <View style={{ position: "absolute", bottom: 6, left: 6, backgroundColor: C.lavender + "ee", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 }}>
+                    <Text style={{ color: C.bg, fontSize: 10, fontFamily: "Inter_600SemiBold" }}>
+                      {lang === "fr" ? "Couverture" : "Cover"}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ))}
+            {form.images.length < MAX_EVENT_IMAGES ? (
+              <View style={{ width: "48%", aspectRatio: 16 / 9, flexDirection: "row", gap: 6 }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1, alignItems: "center", justifyContent: "center", gap: 4,
+                    backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: 12,
+                  }}
+                  onPress={async () => {
+                    const result = await ImagePicker.launchImageLibraryAsync({
+                      mediaTypes: ["images"],
+                      allowsMultipleSelection: true,
+                      selectionLimit: MAX_EVENT_IMAGES - form.images.length,
+                      quality: 0.8,
+                    });
+                    if (!result.canceled && result.assets?.length) {
+                      const next = [...form.images, ...result.assets.map((a) => a.uri)].slice(0, MAX_EVENT_IMAGES);
+                      setField("images", next);
+                    }
+                  }}
+                >
+                  <Ionicons name="images-outline" size={22} color={C.lavender} />
+                  <Text style={{ fontSize: 11, fontFamily: "Inter_500Medium", color: C.lavender }}>
+                    {lang === "fr" ? "Galerie" : "Gallery"}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{
+                    flex: 1, alignItems: "center", justifyContent: "center", gap: 4,
+                    backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: 12,
+                  }}
+                  onPress={async () => {
+                    const perm = await ImagePicker.requestCameraPermissionsAsync();
+                    if (!perm.granted) {
+                      Alert.alert(
+                        lang === "fr" ? "Permission requise" : "Permission required",
+                        lang === "fr" ? "Autorisez l'accès à la caméra." : "Allow camera access."
+                      );
+                      return;
+                    }
+                    const result = await ImagePicker.launchCameraAsync({
+                      allowsEditing: true,
+                      aspect: [16, 9],
+                      quality: 0.8,
+                    });
+                    if (!result.canceled && result.assets[0]) {
+                      const next = [...form.images, result.assets[0].uri].slice(0, MAX_EVENT_IMAGES);
+                      setField("images", next);
+                    }
+                  }}
+                >
+                  <Ionicons name="camera-outline" size={22} color={C.gold} />
+                  <Text style={{ fontSize: 11, fontFamily: "Inter_500Medium", color: C.gold }}>
+                    {lang === "fr" ? "Caméra" : "Camera"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : null}
+          </View>
+          <Text style={{ marginTop: 6, fontSize: 11, color: C.textMuted }}>
+            {lang === "fr"
+              ? `${form.images.length}/${MAX_EVENT_IMAGES} photos. La 1ère sert de couverture.`
+              : `${form.images.length}/${MAX_EVENT_IMAGES} photos. First one is the cover.`}
+          </Text>
         </Field>
 
         {/* Error summary */}

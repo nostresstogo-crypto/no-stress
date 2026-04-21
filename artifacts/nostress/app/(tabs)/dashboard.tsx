@@ -32,8 +32,30 @@ interface MyVenue {
   address: string;
   description: string;
   imageUrl?: string;
+  images?: string[];
   createdAt: string;
   isVerified?: boolean;
+}
+
+const MAX_VENUE_IMAGES = 4;
+
+async function uploadVenueImage(uri: string, apiBase: string): Promise<string> {
+  const lowerUri = uri.toLowerCase();
+  const contentType = lowerUri.endsWith(".png") ? "image/png" : lowerUri.endsWith(".webp") ? "image/webp" : "image/jpeg";
+  const name = uri.split("/").pop() || "upload.jpg";
+  const fileResp = await fetch(uri);
+  const blob = await fileResp.blob();
+  const size = (blob as any).size || 0;
+  const presignResp = await fetch(`${apiBase}/storage/uploads/request-url`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, size, contentType }),
+  });
+  if (!presignResp.ok) throw new Error("upload prep failed");
+  const { uploadURL, objectPath } = await presignResp.json();
+  const putResp = await fetch(uploadURL, { method: "PUT", headers: { "Content-Type": contentType }, body: blob });
+  if (!putResp.ok) throw new Error("upload failed");
+  return `${apiBase}/storage${objectPath}`;
 }
 
 const VENUE_TYPES_FR = ["Boîte de nuit", "Bar", "Restaurant", "Salle de concert", "Plage", "Stade", "Salle culturelle", "Autre"];
@@ -68,7 +90,8 @@ export default function DashboardScreen() {
   const [venueCity, setVenueCity] = useState("");
   const [venueAddress, setVenueAddress] = useState("");
   const [venueDesc, setVenueDesc] = useState("");
-  const [venueImageUrl, setVenueImageUrl] = useState("");
+  const [venueImages, setVenueImages] = useState<string[]>([]);
+  const [savingVenue, setSavingVenue] = useState(false);
 
   const loadMyVenues = useCallback(async () => {
     // Local cache for instant display
@@ -90,6 +113,7 @@ export default function DashboardScreen() {
         address: v.address || "",
         description: v.description || "",
         imageUrl: v.imageUrl || undefined,
+        images: Array.isArray(v.images) ? v.images : (v.imageUrl ? [v.imageUrl] : []),
         createdAt: v.createdAt || new Date().toISOString(),
         isVerified: !!v.isVerified,
       }));
@@ -102,7 +126,7 @@ export default function DashboardScreen() {
 
   const openVenueModal = () => {
     setEditingVenueId(null);
-    setVenueName(""); setVenueType(""); setVenueCity(""); setVenueAddress(""); setVenueDesc(""); setVenueImageUrl("");
+    setVenueName(""); setVenueType(""); setVenueCity(""); setVenueAddress(""); setVenueDesc(""); setVenueImages([]);
     setShowVenueModal(true);
   };
 
@@ -113,7 +137,7 @@ export default function DashboardScreen() {
     setVenueCity(v.city || "");
     setVenueAddress(v.address || "");
     setVenueDesc(v.description || "");
-    setVenueImageUrl(v.imageUrl || "");
+    setVenueImages(Array.isArray(v.images) && v.images.length > 0 ? v.images.slice(0, MAX_VENUE_IMAGES) : (v.imageUrl ? [v.imageUrl] : []));
     setShowVenueModal(true);
   };
 
@@ -126,7 +150,17 @@ export default function DashboardScreen() {
       Alert.alert(lang === "fr" ? "Ville requise" : "City required", lang === "fr" ? "Veuillez sélectionner une ville." : "Please select a city.");
       return;
     }
+    setSavingVenue(true);
     try {
+      const uploaded: string[] = [];
+      for (const uri of venueImages.slice(0, MAX_VENUE_IMAGES)) {
+        if (!uri) continue;
+        if (uri.startsWith("file:") || uri.startsWith("content:") || uri.startsWith("ph:") || uri.startsWith("/")) {
+          try { uploaded.push(await uploadVenueImage(uri, API_BASE)); } catch (e: any) { console.warn("venue upload failed", e?.message); }
+        } else {
+          uploaded.push(uri);
+        }
+      }
       const isEdit = !!editingVenueId;
       const url = isEdit ? `${API_BASE}/venues/${editingVenueId}` : `${API_BASE}/venues`;
       const r = await fetch(url, {
@@ -138,7 +172,9 @@ export default function DashboardScreen() {
           city: venueCity.trim(),
           address: venueAddress.trim(),
           description: venueDesc.trim(),
-          imageUrl: venueImageUrl || null,
+          images: uploaded,
+          imageUrl: uploaded[0] || null,
+          partnerId: user?.id || null,
         }),
       });
       if (!r.ok) throw new Error("save failed");
@@ -151,6 +187,7 @@ export default function DashboardScreen() {
         address: saved.address || "",
         description: saved.description || "",
         imageUrl: saved.imageUrl || undefined,
+        images: Array.isArray(saved.images) ? saved.images : (saved.imageUrl ? [saved.imageUrl] : []),
         createdAt: saved.createdAt || new Date().toISOString(),
         isVerified: !!saved.isVerified,
       };
@@ -168,6 +205,8 @@ export default function DashboardScreen() {
         lang === "fr" ? "Erreur" : "Error",
         lang === "fr" ? "Impossible d'enregistrer le lieu. Vérifiez votre connexion." : "Unable to save venue. Check your connection.",
       );
+    } finally {
+      setSavingVenue(false);
     }
   };
 
@@ -856,76 +895,63 @@ export default function DashboardScreen() {
                 />
 
                 <Text style={[styles.modalLabel, { color: C.textMuted }]}>
-                  {lang === "fr" ? "Photo du lieu" : "Venue photo"}
+                  {lang === "fr" ? `Photos du lieu (max ${MAX_VENUE_IMAGES})` : `Venue photos (max ${MAX_VENUE_IMAGES})`}
                 </Text>
-                {venueImageUrl ? (
-                  <View style={{ borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: C.border, marginBottom: 12 }}>
-                    <Image source={{ uri: venueImageUrl }} style={{ width: "100%", height: 140, borderRadius: 12 }} resizeMode="cover" />
-                    <TouchableOpacity
-                      style={{
-                        position: "absolute", top: 6, right: 6, backgroundColor: C.error,
-                        borderRadius: 14, width: 28, height: 28, alignItems: "center", justifyContent: "center",
-                      }}
-                      onPress={() => setVenueImageUrl("")}
-                    >
-                      <Ionicons name="close" size={16} color="#fff" />
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
-                    <TouchableOpacity
-                      style={{
-                        flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-                        backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, borderRadius: 10,
-                        paddingVertical: 20,
-                      }}
-                      onPress={async () => {
-                        const result = await ImagePicker.launchImageLibraryAsync({
-                          mediaTypes: ["images"],
-                          allowsEditing: true,
-                          aspect: [16, 9],
-                          quality: 0.8,
-                        });
-                        if (!result.canceled && result.assets[0]) {
-                          setVenueImageUrl(result.assets[0].uri);
-                        }
-                      }}
-                    >
-                      <Ionicons name="images-outline" size={18} color={C.lavender} />
-                      <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: C.lavender }}>
-                        {lang === "fr" ? "Galerie" : "Gallery"}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={{
-                        flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-                        backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, borderRadius: 10,
-                        paddingVertical: 20,
-                      }}
-                      onPress={async () => {
-                        const perm = await ImagePicker.requestCameraPermissionsAsync();
-                        if (!perm.granted) {
-                          Alert.alert(lang === "fr" ? "Permission requise" : "Permission required",
-                            lang === "fr" ? "Autorisez l'accès à la caméra." : "Allow camera access.");
-                          return;
-                        }
-                        const result = await ImagePicker.launchCameraAsync({
-                          allowsEditing: true,
-                          aspect: [16, 9],
-                          quality: 0.8,
-                        });
-                        if (!result.canceled && result.assets[0]) {
-                          setVenueImageUrl(result.assets[0].uri);
-                        }
-                      }}
-                    >
-                      <Ionicons name="camera-outline" size={18} color={C.gold} />
-                      <Text style={{ fontSize: 12, fontFamily: "Inter_500Medium", color: C.gold }}>
-                        {lang === "fr" ? "Caméra" : "Camera"}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+                  {venueImages.map((uri, idx) => (
+                    <View key={`${idx}-${uri}`} style={{ position: "relative", width: "48%", aspectRatio: 16 / 9, borderRadius: 10, overflow: "hidden", borderWidth: 1, borderColor: C.border }}>
+                      <Image source={{ uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                      <TouchableOpacity
+                        style={{ position: "absolute", top: 4, right: 4, backgroundColor: C.error, borderRadius: 12, width: 24, height: 24, alignItems: "center", justifyContent: "center" }}
+                        onPress={() => setVenueImages((prev) => prev.filter((_, i) => i !== idx))}
+                      >
+                        <Ionicons name="close" size={14} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  {venueImages.length < MAX_VENUE_IMAGES ? (
+                    <View style={{ width: "48%", aspectRatio: 16 / 9, flexDirection: "row", gap: 6 }}>
+                      <TouchableOpacity
+                        style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 4, backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, borderRadius: 10 }}
+                        onPress={async () => {
+                          const result = await ImagePicker.launchImageLibraryAsync({
+                            mediaTypes: ["images"],
+                            allowsMultipleSelection: true,
+                            selectionLimit: MAX_VENUE_IMAGES - venueImages.length,
+                            quality: 0.8,
+                          });
+                          if (!result.canceled && result.assets?.length) {
+                            setVenueImages((prev) => [...prev, ...result.assets.map((a) => a.uri)].slice(0, MAX_VENUE_IMAGES));
+                          }
+                        }}
+                      >
+                        <Ionicons name="images-outline" size={20} color={C.lavender} />
+                        <Text style={{ fontSize: 10, fontFamily: "Inter_500Medium", color: C.lavender }}>
+                          {lang === "fr" ? "Galerie" : "Gallery"}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 4, backgroundColor: C.bg, borderWidth: 1, borderColor: C.border, borderRadius: 10 }}
+                        onPress={async () => {
+                          const perm = await ImagePicker.requestCameraPermissionsAsync();
+                          if (!perm.granted) {
+                            Alert.alert(lang === "fr" ? "Permission requise" : "Permission required", lang === "fr" ? "Autorisez l'accès à la caméra." : "Allow camera access.");
+                            return;
+                          }
+                          const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [16, 9], quality: 0.8 });
+                          if (!result.canceled && result.assets[0]) {
+                            setVenueImages((prev) => [...prev, result.assets[0].uri].slice(0, MAX_VENUE_IMAGES));
+                          }
+                        }}
+                      >
+                        <Ionicons name="camera-outline" size={20} color={C.gold} />
+                        <Text style={{ fontSize: 10, fontFamily: "Inter_500Medium", color: C.gold }}>
+                          {lang === "fr" ? "Caméra" : "Camera"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+                </View>
               </ScrollView>
 
               <TouchableOpacity style={[styles.createBtn, { marginTop: 16 }]} onPress={saveVenue}>
