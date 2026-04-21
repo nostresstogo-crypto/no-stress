@@ -24,6 +24,12 @@ uri = "file://artifacts/nostress/assets/images/concert-crowd.png"
 type = "image"
 title = "concert crowd night"
 
+[[generated]]
+id = "ENefxhrhLT-SnaAS4IJ7O"
+uri = "file://attached_assets/generated_images/generated_image.png"
+type = "image"
+title = "generated_image"
+
 [[outputs]]
 id = "ORx_I0KJ_RamuDVU5oFbE"
 uri = "file://screenshots/ios/01-home-1242x2688.jpg"
