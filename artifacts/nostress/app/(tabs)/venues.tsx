@@ -14,7 +14,7 @@ import { router } from "expo-router";
 
 import { C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
-import { MOCK_VENUES, VENUE_TYPES, MOCK_CITIES } from "@/constants/data";
+import { VENUE_TYPES, MOCK_CITIES } from "@/constants/data";
 import { VenueCard } from "@/components/VenueCard";
 import { CitySelector } from "@/components/CitySelector";
 
@@ -43,19 +43,16 @@ export default function VenuesScreen() {
   useEffect(() => { loadVenues(); }, [loadVenues]);
 
   const allVenues = useMemo(() => {
-    const fromApi = apiVenues.map((v: any) => ({
+    return apiVenues.map((v: any) => ({
       id: `api_${v.id}`,
       name: v.name || "",
       type: v.type || "",
       city: v.city || "",
       address: v.address || "",
       description: v.description || "",
-      imageUrl: v.imageUrl || undefined,
+      imageUrl: v.imageUrl || (Array.isArray(v.images) && v.images[0]) || undefined,
+      images: Array.isArray(v.images) ? v.images : [],
     }));
-    const mocks = MOCK_VENUES.filter(
-      (m) => !fromApi.find((a) => a.name.toLowerCase() === m.name.toLowerCase()),
-    );
-    return [...fromApi, ...mocks];
   }, [apiVenues]);
 
   const filteredVenues = useMemo(() => {
