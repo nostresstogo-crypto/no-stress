@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import {
   FlatList,
   Modal,
@@ -15,11 +15,25 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
-import { MOCK_VENUES, VENUE_TYPES, MOCK_CITIES } from "@/constants/data";
+import { VENUE_TYPES, MOCK_CITIES } from "@/constants/data";
 import { MapWebView } from "@/components/MapWebView";
 import { router } from "expo-router";
 
-type Venue = (typeof MOCK_VENUES)[0];
+const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
+  : "/api";
+
+type Venue = {
+  id: string;
+  name: string;
+  type: string;
+  city: string;
+  address: string;
+  description?: string;
+  latitude: number | null;
+  longitude: number | null;
+  isVerified?: boolean;
+};
 
 function buildLeafletHtml(venues: Venue[], selectedVenueId: string): string {
   const venueData = JSON.stringify(
@@ -331,10 +345,37 @@ export default function MapScreen() {
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [mapKey, setMapKey] = useState(0);
   const [cityModalOpen, setCityModalOpen] = useState(false);
+  const [apiVenues, setApiVenues] = useState<Venue[]>([]);
   const iframeRef = React.useRef<any>(null);
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch(`${API_BASE}/venues`);
+        if (!r.ok) return;
+        const data = await r.json();
+        const list: Venue[] = (Array.isArray(data?.venues) ? data.venues : [])
+          .map((v: any) => ({
+            id: `api_${v.id}`,
+            name: v.name || "",
+            type: v.type || "",
+            city: v.city || "",
+            address: v.address || "",
+            description: v.description || "",
+            latitude: typeof v.latitude === "number" ? v.latitude : v.latitude ? Number(v.latitude) : null,
+            longitude: typeof v.longitude === "number" ? v.longitude : v.longitude ? Number(v.longitude) : null,
+            isVerified: !!v.isVerified,
+          }))
+          .filter((v: Venue) => v.latitude != null && v.longitude != null && !isNaN(v.latitude) && !isNaN(v.longitude));
+        if (!cancelled) setApiVenues(list);
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const filteredVenues = useMemo(() => {
-    return MOCK_VENUES.filter((v) => {
+    return apiVenues.filter((v) => {
       const cityObj = MOCK_CITIES.find((c) => c.id === selectedCity);
       const matchCity =
         !selectedCity ||
@@ -343,7 +384,7 @@ export default function MapScreen() {
       const matchType = !selectedType || v.type === selectedType;
       return matchCity && matchType;
     });
-  }, [selectedCity, selectedType]);
+  }, [apiVenues, selectedCity, selectedType]);
 
   const htmlContent = useMemo(() => {
     return buildLeafletHtml(filteredVenues, selectedVenue?.id ?? "");
@@ -353,10 +394,10 @@ export default function MapScreen() {
     let parsed: any;
     try { parsed = typeof data === "string" ? JSON.parse(data) : data; } catch { return; }
     if (parsed?.type === "venueSelected") {
-      const v = MOCK_VENUES.find((x) => x.id === parsed.venueId);
+      const v = apiVenues.find((x) => x.id === parsed.venueId);
       if (v) setSelectedVenue(v);
     }
-  }, []);
+  }, [apiVenues]);
 
   const flyTo = (venue: Venue) => setSelectedVenue(venue);
 

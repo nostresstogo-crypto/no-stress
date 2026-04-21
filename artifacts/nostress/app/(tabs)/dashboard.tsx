@@ -275,6 +275,10 @@ export default function DashboardScreen() {
       checkPartnerStatus();
       syncMyEventsStatus();
       syncMyEventsFromBackend();
+      const interval = setInterval(() => {
+        syncMyEventsStatus();
+      }, 15000);
+      return () => clearInterval(interval);
     }, [checkPartnerStatus, syncMyEventsStatus, syncMyEventsFromBackend])
   );
 
