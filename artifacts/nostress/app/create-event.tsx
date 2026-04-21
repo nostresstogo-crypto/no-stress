@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   Alert,
   Image,
@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 
 import { C } from "@/constants/colors";
@@ -147,20 +147,23 @@ export default function CreateEventScreen() {
     return () => { cancelled = true; };
   }, [isEdit, editId, lang]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const r = await fetch(`${API_BASE}/venues`);
-        if (!r.ok) return;
-        const data = await r.json();
-        if (cancelled) return;
-        const list = Array.isArray(data?.venues) ? data.venues : [];
-        setApiVenues(list.map((v: any) => ({ id: String(v.id), name: v.name || "", city: v.city || null })));
-      } catch {}
-    })();
-    return () => { cancelled = true; };
+  const fetchVenues = useCallback(async () => {
+    try {
+      const r = await fetch(`${API_BASE}/venues`);
+      if (!r.ok) return;
+      const data = await r.json();
+      const list = Array.isArray(data?.venues) ? data.venues : [];
+      setApiVenues(list.map((v: any) => ({ id: String(v.id), name: v.name || "", city: v.city || null })));
+    } catch {}
   }, []);
+
+  useEffect(() => { fetchVenues(); }, [fetchVenues]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchVenues();
+    }, [fetchVenues])
+  );
 
   function setField<K extends keyof FormData>(key: K, value: FormData[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -383,26 +386,51 @@ export default function CreateEventScreen() {
 
         <Field label={t("selectVenue")}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
-            {[
-              ...apiVenues
-                .filter((v) => !form.city || (v.city || "").toLowerCase() === form.city.toLowerCase())
-                .map((v) => ({ id: `api_${v.id}`, name: v.name })),
-              ...MOCK_VENUES
-                .filter((v) => !apiVenues.find((av) => (av.name || "").toLowerCase() === v.name.toLowerCase()))
-                .map((v) => ({ id: v.id, name: v.name })),
-            ].map((v) => {
-              const active = form.venue === v.name;
-              return (
-                <TouchableOpacity
-                  key={v.id}
-                  style={[styles.pill, active && styles.pillActive]}
-                  onPress={() => setField("venue", v.name)}
-                >
-                  <Ionicons name="business-outline" size={13} color={active ? C.lavender : C.textMuted} />
-                  <Text style={[styles.pillText, active && styles.pillTextActive]}>{v.name}</Text>
-                </TouchableOpacity>
-              );
-            })}
+            {(() => {
+              const norm = (s: string) =>
+                (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+              const formCityN = norm(form.city);
+              const combined: Array<{ id: string; name: string; city: string; isPartner: boolean; cityMatch: boolean }> = [
+                ...apiVenues.map((v) => ({
+                  id: `api_${v.id}`,
+                  name: v.name,
+                  city: v.city || "",
+                  isPartner: true,
+                  cityMatch: !formCityN || norm(v.city || "") === formCityN,
+                })),
+                ...MOCK_VENUES
+                  .filter((v) => !apiVenues.find((av) => norm(av.name || "") === norm(v.name)))
+                  .map((v) => ({
+                    id: v.id,
+                    name: v.name,
+                    city: (v as any).city || "",
+                    isPartner: false,
+                    cityMatch: !formCityN || norm((v as any).city || "") === formCityN,
+                  })),
+              ].sort((a, b) => {
+                if (a.cityMatch !== b.cityMatch) return a.cityMatch ? -1 : 1;
+                if (a.isPartner !== b.isPartner) return a.isPartner ? -1 : 1;
+                return a.name.localeCompare(b.name);
+              });
+              return combined.map((v) => {
+                const active = form.venue === v.name;
+                return (
+                  <TouchableOpacity
+                    key={v.id}
+                    style={[styles.pill, active && styles.pillActive, !v.cityMatch && { opacity: 0.55 }]}
+                    onPress={() => setField("venue", v.name)}
+                  >
+                    <Ionicons
+                      name={v.isPartner ? "star" : "business-outline"}
+                      size={13}
+                      color={active ? C.lavender : v.isPartner ? C.gold : C.textMuted}
+                    />
+                    <Text style={[styles.pillText, active && styles.pillTextActive]}>{v.name}</Text>
+                    {v.city ? <Text style={styles.pillCountry}>{v.city}</Text> : null}
+                  </TouchableOpacity>
+                );
+              });
+            })()}
           </ScrollView>
           <TextInput
             style={[styles.input, { marginTop: 8 }]}
