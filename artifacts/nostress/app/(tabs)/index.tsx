@@ -16,6 +16,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
+import { safePush } from "@/lib/navigation";
 
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { ColorPalette } from "@/constants/colors";
@@ -384,7 +385,7 @@ export default function HomeScreen() {
                 <EventCard
                   event={item}
                   horizontal
-                  onPress={() => router.push(`/event/${item.id}`)}
+                  onPress={() => safePush(`/event/${item.id}`)}
                 />
               )}
             />
@@ -405,7 +406,7 @@ export default function HomeScreen() {
               <EventCard
                 key={event.id}
                 event={event}
-                onPress={() => router.push(`/event/${event.id}`)}
+                onPress={() => safePush(`/event/${event.id}`)}
               />
             ))}
           </View>
@@ -637,7 +638,7 @@ export default function HomeScreen() {
 
               <TouchableOpacity
                 style={{ backgroundColor: C.lavender, borderRadius: 14, paddingVertical: 14, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8, marginTop: 8 }}
-                onPress={() => { setVenueModal(null); router.push("/(tabs)/map"); }}
+                onPress={() => { setVenueModal(null); safePush("/(tabs)/map"); }}
               >
                 <Ionicons name="map" size={18} color={C.bg} />
                 <Text style={{ color: C.bg, fontSize: 15, fontFamily: "Inter_600SemiBold" }}>

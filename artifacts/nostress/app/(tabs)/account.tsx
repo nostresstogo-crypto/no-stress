@@ -14,6 +14,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { safePush } from "@/lib/navigation";
 
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { EventCard } from "@/components/EventCard";
@@ -270,10 +271,10 @@ export default function AccountScreen() {
           <Ionicons name="person-circle-outline" size={80} color={C.border} />
           <Text style={styles.authTitle}>{t("loginRequired")}</Text>
           <Text style={styles.authSub}>{t("noAccount")}</Text>
-          <TouchableOpacity style={styles.loginBtn} onPress={() => router.push("/auth")}>
+          <TouchableOpacity style={styles.loginBtn} onPress={() => safePush("/auth")}>
             <Text style={styles.loginBtnText}>{t("login")}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.registerBtn} onPress={() => router.push("/auth")}>
+          <TouchableOpacity style={styles.registerBtn} onPress={() => safePush("/auth")}>
             <Text style={styles.registerBtnText}>{t("register")}</Text>
           </TouchableOpacity>
         </View>
@@ -306,7 +307,7 @@ export default function AccountScreen() {
 
       {user.role === "user" && user.emailVerified === false ? (
         <TouchableOpacity
-          onPress={() => router.push("/verify-email")}
+          onPress={() => safePush("/verify-email")}
           style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, backgroundColor: "#3a2a18", borderRadius: 12, marginBottom: 16, borderLeftWidth: 4, borderLeftColor: "#f0a830" }}
         >
           <Ionicons name="mail-unread" size={22} color="#f0a830" />
@@ -504,7 +505,7 @@ export default function AccountScreen() {
       {tab === "favorites" ? (
         favoriteEvents.length > 0 ? (
           favoriteEvents.map((e) => (
-            <EventCard key={e.id} event={e} onPress={() => router.push(`/event/${e.id}`)} />
+            <EventCard key={e.id} event={e} onPress={() => safePush(`/event/${e.id}`)} />
           ))
         ) : (
           <View style={styles.empty}>

@@ -13,6 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { safeReplace } from "@/lib/navigation";
 
 import { C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
@@ -195,7 +196,7 @@ export default function AuthScreen() {
           bodyFr: "Nous avons envoyé un code à 6 chiffres dans votre boîte mail. Saisissez-le pour activer votre compte.",
         });
         setLoading(false);
-        router.replace("/verify-email");
+        safeReplace("/verify-email");
         return;
       }
     } catch (e) {

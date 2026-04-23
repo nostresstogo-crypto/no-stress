@@ -17,6 +17,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
+import { safePush } from "@/lib/navigation";
 import * as ImagePicker from "expo-image-picker";
 
 import { C } from "@/constants/colors";
@@ -296,7 +297,7 @@ export default function DashboardScreen() {
               ? "Connectez-vous pour accéder à votre espace."
               : "Sign in to access your space."}
           </Text>
-          <TouchableOpacity style={styles.gateBtn} onPress={() => router.push("/auth")}>
+          <TouchableOpacity style={styles.gateBtn} onPress={() => safePush("/auth")}>
             <Ionicons name="log-in-outline" size={18} color={C.bg} />
             <Text style={styles.gateBtnText}>{t("login")}</Text>
           </TouchableOpacity>
@@ -318,7 +319,7 @@ export default function DashboardScreen() {
 
           <TouchableOpacity
             style={[styles.gateBtn, { backgroundColor: C.gold }]}
-            onPress={() => router.push("/auth")}
+            onPress={() => safePush("/auth")}
           >
             <Ionicons name="add-circle-outline" size={18} color={C.bg} />
             <Text style={styles.gateBtnText}>{t("partnerOnlyCreate")}</Text>
@@ -326,7 +327,7 @@ export default function DashboardScreen() {
 
           <TouchableOpacity
             style={styles.gateBtnSecondary}
-            onPress={() => router.push("/auth")}
+            onPress={() => safePush("/auth")}
           >
             <Text style={styles.gateBtnSecondaryText}>{t("partnerOnlyLogin")}</Text>
           </TouchableOpacity>
@@ -408,7 +409,7 @@ export default function DashboardScreen() {
             ) : null}
             <TouchableOpacity
               style={[styles.gateBtn, { backgroundColor: C.textMuted, marginTop: 20 }]}
-              onPress={() => router.push("/auth")}
+              onPress={() => safePush("/auth")}
             >
               <Ionicons name="mail-outline" size={18} color={C.bg} />
               <Text style={styles.gateBtnText}>
@@ -489,7 +490,7 @@ export default function DashboardScreen() {
           <>
             <TouchableOpacity
               style={styles.createBtn}
-              onPress={() => router.push("/create-event")}
+              onPress={() => safePush("/create-event")}
             >
               <Ionicons name="add-circle" size={20} color={C.bg} />
               <Text style={styles.createBtnText}>{t("createEvent")}</Text>
@@ -626,7 +627,7 @@ export default function DashboardScreen() {
                     );
                     return;
                   }
-                  router.push(`/create-event?editId=${event.apiId}&localId=${event.id}` as any);
+                  safePush(`/create-event?editId=${event.apiId}&localId=${event.id}` as any);
                 };
                 return (
                   <View key={event.id} style={styles.eventRow}>
@@ -734,7 +735,7 @@ export default function DashboardScreen() {
                     ) : null}
                   </View>
                   <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
-                    <TouchableOpacity onPress={() => router.push(`/venue/api_${venue.id}` as any)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <TouchableOpacity onPress={() => safePush(`/venue/api_${venue.id}` as any)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                       <Ionicons name="eye-outline" size={18} color={C.lavender} />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => openEditVenueModal(venue)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>

@@ -11,6 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { safePush } from "@/lib/navigation";
 
 import { C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
@@ -119,7 +120,7 @@ export default function VenuesScreen() {
         renderItem={({ item }) => (
           <VenueCard
             venue={item}
-            onPress={() => router.push(`/venue/${item.id}` as any)}
+            onPress={() => safePush(`/venue/${item.id}` as any)}
           />
         )}
       />

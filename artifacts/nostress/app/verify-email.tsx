@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingVi
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { safeReplace } from "@/lib/navigation";
 
 import { useApp, useColors } from "@/context/AppContext";
 
@@ -48,7 +49,7 @@ export default function VerifyEmailScreen() {
       } else {
         if (data.user) await setUser(data.user);
         setInfo(fr ? "Email vérifié !" : "Email verified!");
-        setTimeout(() => router.replace("/(tabs)"), 800);
+        setTimeout(() => safeReplace("/(tabs)"), 800);
       }
     } catch {
       setError(fr ? "Erreur réseau." : "Network error.");
@@ -123,7 +124,7 @@ export default function VerifyEmailScreen() {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.linkBtn} onPress={() => router.replace("/(tabs)")}>
+        <TouchableOpacity style={styles.linkBtn} onPress={() => safeReplace("/(tabs)")}>
           <Text style={[styles.linkText, { color: C.textMuted }]}>
             {fr ? "Plus tard" : "Later"}
           </Text>

@@ -18,6 +18,7 @@ import { useT, useApp, useColors } from "@/context/AppContext";
 import { VENUE_TYPES, MOCK_CITIES } from "@/constants/data";
 import { MapWebView } from "@/components/MapWebView";
 import { router } from "expo-router";
+import { safePush } from "@/lib/navigation";
 
 const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
   ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
@@ -554,7 +555,7 @@ export default function MapScreen() {
 
             <TouchableOpacity
               style={[styles.detailsBtn, { backgroundColor: C.lavender }]}
-              onPress={() => router.push(`/venue/${selectedVenue.id}` as any)}
+              onPress={() => safePush(`/venue/${selectedVenue.id}` as any)}
               activeOpacity={0.85}
             >
               <Text style={[styles.detailsBtnText, { color: C.bg }]}>

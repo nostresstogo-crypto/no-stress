@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { safeReplace } from "@/lib/navigation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useApp } from "@/context/AppContext";
@@ -97,7 +98,7 @@ export default function OnboardingScreen() {
 
   async function finish() {
     await setHasOnboarded();
-    router.replace("/(tabs)");
+    safeReplace("/(tabs)");
   }
 
   async function skip() {
