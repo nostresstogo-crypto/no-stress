@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, router } from "expo-router";
+import { safePush } from "@/lib/navigation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useT, useApp, useColors } from "@/context/AppContext";
@@ -262,7 +263,7 @@ export default function PartnerPublicPage() {
                 price: e.price ?? 0,
                 isSponsored: e.isSponsored,
               }}
-              onPress={() => router.push(`/event/${e.id}`)}
+              onPress={() => safePush(`/event/${e.id}`)}
             />
           ))
         )}

@@ -17,6 +17,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
+import { safePush } from "@/lib/navigation";
 
 import { C as DARK_C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
@@ -517,7 +518,7 @@ export default function EventDetailScreen() {
         </View>
         <TouchableOpacity
           style={[s.buyBtn, { backgroundColor: C.lavender }]}
-          onPress={() => router.push(`/ticket/${event.id}`)}
+          onPress={() => safePush(`/ticket/${event.id}`)}
         >
           <Text style={[s.buyBtnText, { color: C.bg }]}>{t("buyTicket")}</Text>
           <Ionicons name="arrow-forward" size={16} color={C.bg} />

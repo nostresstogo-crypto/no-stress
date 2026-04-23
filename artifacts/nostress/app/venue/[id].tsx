@@ -13,6 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
+import { safePush } from "@/lib/navigation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { C } from "@/constants/colors";
@@ -278,7 +279,7 @@ export default function VenueDetailScreen() {
                   <TouchableOpacity
                     key={event.id}
                     style={styles.eventRow}
-                    onPress={() => router.push(`/event/${event.id}` as any)}
+                    onPress={() => safePush(`/event/${event.id}`)}
                     activeOpacity={0.8}
                   >
                     <View style={styles.eventDateBox}>
