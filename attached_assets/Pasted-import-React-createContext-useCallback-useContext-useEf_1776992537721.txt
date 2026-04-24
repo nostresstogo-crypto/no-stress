@@ -1,0 +1,419 @@
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  ReactNode,
+} from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Alert, useColorScheme } from "react-native";
+import { Lang } from "@/constants/i18n";
+import { getThemeColors, ColorPalette } from "@/constants/colors";
+import UserService from "@/app/services/user.service"; 
+import PlaceService from "@/app/services/place.service";
+import { router } from "expo-router";
+
+type UserRole = "user" | "structure" | "admin";
+type ThemeMode = "dark" | "light" | "system";
+
+export interface MyEvent {
+  id: string;
+  titleFr: string;
+  titleEn: string;
+  category: string;
+  city: string;
+  venue: string;
+  date: string;
+  time: string;
+  descriptionFr: string;
+  descriptionEn: string;
+  priceFCFA: number;
+  isFree: boolean;
+  isSponsored: boolean;
+  imageUrl: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+}
+
+interface User {
+  id: string;
+  email: string;
+  name: string;
+  phone?: string;
+  role: UserRole;
+  avatarUrl?: string;
+  favorites: string[];
+}
+
+interface Notification {
+  id: string;
+  title: string;
+  titleFr: string;
+  body: string;
+  bodyFr: string;
+  read: boolean;
+  createdAt: string;
+}
+
+interface AppContextValue {
+  lang: Lang;
+  setLang: (lang: Lang) => void;
+  user: any | null;
+  eventCardFavChanged: boolean;
+  setEventCardFavChanged: () => void;
+  getUser: () => void;
+  getIsFav: () => boolean;
+  setUser: (user: any | null) => void;
+  token: string | null;
+  setToken: (token: string | null) => void;
+  favorites: string[];
+  toggleFavoriteLoading: boolean;
+  isFav: boolean;
+  toggleFavorite: (eventId: string) => void;
+  getEventIsFavorite: (eventId: string) => void;
+  isFavorite: (eventId: string) => boolean;
+  notifications: Notification[];
+  addNotification: (n: Omit<Notification, "id" | "read" | "createdAt">) => void;
+  markAllRead: () => void;
+  unreadCount: number;
+  selectedCity: string;
+  setSelectedCity: (city: string) => void;
+  selectedCategory: string;
+  setSelectedCategory: (cat: string) => void;
+  logout: () => void;
+  hasOnboarded: boolean;
+  setHasOnboarded: () => void;
+  appReady: boolean;
+  myEvents: MyEvent[];
+  addMyEvent: (event: Omit<MyEvent, "id" | "status" | "createdAt">) => void;
+  themeMode: ThemeMode;
+  setThemeMode: (mode: ThemeMode) => void;
+  isDark: boolean;
+  colors: ColorPalette;
+}
+
+const AppContext = createContext<AppContextValue | null>(null);
+
+const KEYS = {
+  lang: "ns_lang",
+  user: "ns_user",
+  token: "ns_token",
+  favorites: "ns_favorites",
+  notifications: "ns_notifications",
+  onboarded: "ns_onboarded",
+  myEvents: "ns_my_events",
+  themeMode: "ns_theme_mode",
+};
+
+export function AppProvider({ children }: { children: ReactNode }) {
+  const systemScheme = useColorScheme();
+ 
+  const userService = new UserService();
+  const placeService = new PlaceService();
+  const [lang, setLangState] = useState<Lang>("fr");
+  const [user, setUserState] = useState<User | null>(null);
+  const [token, setTokenState] = useState<string | null>(null);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [selectedCity, setSelectedCity] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [hasOnboarded, setHasOnboardedState] = useState<boolean>(false);
+  const [appReady, setAppReady] = useState<boolean>(false);
+  const [myEvents, setMyEvents] = useState<MyEvent[]>([]);
+  const [themeMode, setThemeModeState] = useState<ThemeMode>("dark");
+  const [ toggleFavoriteLoading, setToggleFavoriteLoadingState ] = useState(false);
+  const [ isFav, setIsFav ] = useState<boolean>(false);
+  const [eventCardFavChanged, setEventCardFavChangedState] = useState<boolean>(false);
+
+  const isDark = useMemo(() => {
+    if (themeMode === "system") return systemScheme !== "light";
+    return themeMode === "dark";
+  }, [themeMode, systemScheme]);
+
+  const colors = useMemo(() => getThemeColors(isDark), [isDark]);
+
+  useEffect(() => {
+    (async () => {
+      const [l, u, t, f, n, o, me, tm] = await Promise.all([
+        AsyncStorage.getItem(KEYS.lang),
+        AsyncStorage.getItem(KEYS.user),
+        AsyncStorage.getItem(KEYS.token),
+        AsyncStorage.getItem(KEYS.favorites),
+        AsyncStorage.getItem(KEYS.notifications),
+        AsyncStorage.getItem(KEYS.onboarded),
+        AsyncStorage.getItem(KEYS.myEvents),
+        AsyncStorage.getItem(KEYS.themeMode),
+      ]);
+      if (l) setLangState(l as Lang);
+      if (u) setUserState(JSON.parse(u));
+      if (t) setTokenState(t);
+      if (f) setFavorites(JSON.parse(f));
+      if (n) setNotifications(JSON.parse(n));
+      if (o === "true") setHasOnboardedState(true);
+      if (me) setMyEvents(JSON.parse(me));
+      if (tm) setThemeModeState(tm as ThemeMode);
+      setAppReady(true);
+    })();
+  }, []);
+
+  const setLang = useCallback(async (l: Lang) => {
+    setLangState(l);
+    await AsyncStorage.setItem(KEYS.lang, l);
+  }, []);
+
+  const getUser = useCallback(async ( ) => {
+    let userData: any = await AsyncStorage.getItem(KEYS.user);
+    userData = JSON.parse(userData);
+    console.log(userData);
+
+    if (userData.hasOwnProperty('galery')) {
+
+      await placeService.getPlace(userData?._id).then(
+        (res: any) => {
+          console.log(res);
+          setUser(res.data?.data);
+        }
+      ).catch(
+        (err: any) => {
+          console.log(err);
+        }
+      ); 
+
+
+    } else {
+
+      await userService.getUser(userData?._id).then(
+        (res: any) => {
+          console.log(res);
+          setUser(res.data?.data);
+        }
+      ).catch(
+        (err: any) => {
+          console.log(err);
+        }
+      );
+
+    }
+    
+  }, []);
+
+  const setUser = useCallback(async (u: any | null) => {
+    setUserState(u);
+    if (u) await AsyncStorage.setItem(KEYS.user, JSON.stringify(u));
+    else await AsyncStorage.removeItem(KEYS.user);
+  }, []);
+
+  const setEventCardFavChanged = useCallback(async () => {
+    console.log("Setting event card fav");
+    console.log(eventCardFavChanged);
+    setEventCardFavChangedState( !eventCardFavChanged ); 
+    setTimeout(()=> {}, 2000);
+    console.log(eventCardFavChanged);
+
+  }, []);
+
+  const setToken = useCallback(async (t: string | null) => {
+    setTokenState(t);
+    if (t) await AsyncStorage.setItem(KEYS.token, t);
+    else await AsyncStorage.removeItem(KEYS.token);
+  }, []);
+
+
+  const getEventIsFavorite = useCallback(async (eventId: string) => { 
+    setToggleFavoriteLoadingState(true);
+        userService.getEventFavorites(eventId).then(async (response: any) => { 
+            const fav:  boolean = response.data?.data.length > 0 ? true : false;
+            console.log(fav);
+            setIsFav( fav );
+            setToggleFavoriteLoadingState(false);
+        })
+          .catch((error: any) => {
+            console.log(error);
+            setToggleFavoriteLoadingState(false); 
+        });
+    }, []);
+
+  const toggleFavorite = useCallback(async (eventId: string) => {
+     let userData: any = await AsyncStorage.getItem(KEYS.user);
+     if (userData !== "" && userData !== null && userData !== undefined) {
+
+            userData = JSON.parse(userData);
+            console.log(userData);
+            setToggleFavoriteLoadingState(true);
+            if (userData.hasOwnProperty('galery')) {
+              userService.postPartnerFavorite({event: eventId}).then(
+                (res: any) => {
+                  console.log(res);
+                  setToggleFavoriteLoadingState(false);
+                  getEventIsFavorite(eventId);
+                }
+              ).catch(
+                (err: any) => {
+                  console.log(err);
+                  setToggleFavoriteLoadingState(false);
+                }
+              );
+            }
+            else {
+              userService.postEventFavorite({event: eventId}).then(
+                (res: any) => {
+                  console.log(res);
+                  setToggleFavoriteLoadingState(false);
+                  getEventIsFavorite(eventId);
+                }
+              ).catch(
+                (err: any) => {
+                  console.log(err);
+                  setToggleFavoriteLoadingState(false);
+                }
+              );
+            }
+
+     } else {
+      Alert.alert(
+                   "Ooopss...",
+                        lang === 'fr' ? "Vous devez obligatoirement vous connceter d'abord." :
+                        "You must log in fisrt.",
+                                  [
+                                  {
+                                      text: "ok",
+                                      onPress: () => {router.push('/auth')},
+                                      style: "cancel",
+                                  },
+                                  ],
+                                  {
+                                  cancelable: true,
+                                  onDismiss: () => {router.push('/auth')}
+                                  }
+                              );
+     }
+    
+  }, []);
+
+  const isFavorite = useCallback(
+    (eventId: string) => favorites.includes(eventId),
+    [favorites]
+  );
+
+  const addNotification = useCallback(
+    (n: Omit<Notification, "id" | "read" | "createdAt">) => {
+      setNotifications((prev) => {
+        const next = [
+          { ...n, id: Date.now().toString(), read: false, createdAt: new Date().toISOString() },
+          ...prev,
+        ];
+        AsyncStorage.setItem(KEYS.notifications, JSON.stringify(next));
+        return next;
+      });
+    },
+    []
+  );
+
+  const markAllRead = useCallback(() => {
+    setNotifications((prev) => {
+      const next = prev.map((n) => ({ ...n, read: true }));
+      AsyncStorage.setItem(KEYS.notifications, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const logout = useCallback(async () => {
+    setUserState(null);
+    setTokenState(null);
+    await AsyncStorage.multiRemove([KEYS.user, KEYS.token]);
+  }, []);
+
+  const setHasOnboarded = useCallback(async () => {
+    setHasOnboardedState(true);
+    await AsyncStorage.setItem(KEYS.onboarded, "true");
+  }, []);
+
+  const addMyEvent = useCallback(
+    (eventData: Omit<MyEvent, "id" | "status" | "createdAt">) => {
+      setMyEvents((prev) => {
+        const newEvent: MyEvent = {
+          ...eventData,
+          id: "ev_" + Date.now(),
+          status: "pending",
+          createdAt: new Date().toISOString(),
+        };
+        const next = [newEvent, ...prev];
+        AsyncStorage.setItem(KEYS.myEvents, JSON.stringify(next));
+        return next;
+      });
+    },
+    []
+  );
+
+  const setThemeMode = useCallback(async (mode: ThemeMode) => {
+    setThemeModeState(mode);
+    await AsyncStorage.setItem(KEYS.themeMode, mode);
+  }, []);
+
+  const unreadCount = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications]
+  );
+
+  const getIsFav = useCallback(() => {
+    console.log("Getting FAV");
+    return isFav;
+  }, [isFav]);
+
+  const value = useMemo<AppContextValue>(
+    () => ({
+      lang, setLang,
+      user, isFav, setUser,
+      getUser, getIsFav,
+      eventCardFavChanged,
+      setEventCardFavChanged,
+      token, setToken, getEventIsFavorite,
+      favorites, toggleFavoriteLoading, toggleFavorite, isFavorite,
+      notifications, addNotification, markAllRead, unreadCount,
+      selectedCity, setSelectedCity,
+      selectedCategory, setSelectedCategory,
+      logout,
+      hasOnboarded, setHasOnboarded,
+      appReady,
+      myEvents, addMyEvent,
+      themeMode, setThemeMode,
+      isDark, colors,
+    }),
+    [
+      lang, setLang,
+      user, setUser,
+      token, setToken,
+      favorites, toggleFavorite, isFavorite,
+      notifications, addNotification, markAllRead, unreadCount,
+      selectedCity, setSelectedCity,
+      selectedCategory, setSelectedCategory,
+      logout,
+      hasOnboarded, setHasOnboarded,
+      appReady,
+      myEvents, addMyEvent,
+      themeMode, setThemeMode,
+      isDark, colors,
+    ]
+  );
+
+  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+}
+
+export function useApp() {
+  const ctx: AppContextValue | null = useContext(AppContext);
+  if (!ctx) throw new Error("useApp must be used within AppProvider");
+  return ctx;
+}
+
+export function useColors(): ColorPalette {
+  const { colors } = useApp();
+  return colors;
+}
+
+export function useT() {
+  const { lang } = useApp();
+  const { translations } = require("@/constants/i18n");
+  return (key: keyof typeof translations.fr) => translations[lang][key] || translations.fr[key];
+}
