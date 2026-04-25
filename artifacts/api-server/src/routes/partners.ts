@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, gte, sql } from "drizzle-orm";
 import { db, partnersTable, usersTable, eventsTable, registrationLogTable } from "@workspace/db";
 import { hashPassword, signToken, rateLimit, issueRefreshToken } from "../lib/auth-utils.js";
 
@@ -197,7 +197,7 @@ router.get("/partners/:id/public", async (req, res) => {
   });
 });
 
-router.post("/admin/partners/:id/approve", async (req, res) => {
+router.post("/admin/partners/:id/approve", requireAdmin, async (req: any, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Partenaire introuvable." });
   const [partner] = await db
@@ -210,7 +210,7 @@ router.post("/admin/partners/:id/approve", async (req, res) => {
   sendPartnerApprovalEmail(partner.email, partner.contactName, partner.businessName).catch(() => {});
 });
 
-router.post("/admin/partners/:id/reject", async (req, res) => {
+router.post("/admin/partners/:id/reject", requireAdmin, async (req: any, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Partenaire introuvable." });
   const { reason } = req.body;
@@ -302,7 +302,7 @@ router.delete("/admin/partners/:id", requireAdmin, async (req: any, res) => {
   res.json({ message: `Compte partenaire supprimé. ${eventsRemoved[0]?.count ?? 0} publication(s) retirée(s). Email d'avertissement envoyé.`, deleted: serializePartner(deleted) });
 });
 
-router.get("/admin/registrations/stats", async (req, res) => {
+router.get("/admin/registrations/stats", requireAdmin, async (req: any, res) => {
   const { period } = req.query;
   const now = Date.now();
   let since: number;
