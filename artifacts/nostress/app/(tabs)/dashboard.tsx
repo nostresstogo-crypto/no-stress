@@ -79,6 +79,7 @@ export default function DashboardScreen() {
 
   const [tab, setTab] = useState<DashTab>("events");
   const [eventStatusFilter, setEventStatusFilter] = useState<EventStatusFilter>("all");
+  const [openEventActionsId, setOpenEventActionsId] = useState<string | null>(null);
   const [partnerCheck, setPartnerCheck] = useState<PartnerCheckStatus>(null);
   const [partnerRejectReason, setPartnerRejectReason] = useState<string | null>(null);
   const topInset = Platform.OS === "web" ? 67 : insets.top;
@@ -629,8 +630,25 @@ export default function DashboardScreen() {
                   }
                   safePush(`/create-event?editId=${event.apiId}&localId=${event.id}` as any);
                 };
+                const viewEvent = () => {
+                  if (event.apiId) {
+                    safePush(`/event/${event.apiId}`);
+                  } else {
+                    Alert.alert(
+                      lang === "fr" ? "Aperçu indisponible" : "Preview unavailable",
+                      lang === "fr"
+                        ? "Cet événement n'est pas encore synchronisé avec le serveur."
+                        : "This event is not synced with the server yet.",
+                    );
+                  }
+                };
+                const isOpen = openEventActionsId === event.id;
+                const toggleActions = () =>
+                  setOpenEventActionsId(isOpen ? null : event.id);
+                const canEdit = (event.status === "pending" || event.status === "rejected") && !isPast;
+                const canCancel = !isCancelled && !isPast && event.status === "approved";
                 return (
-                  <View key={event.id} style={styles.eventRow}>
+                  <View key={event.id} style={[styles.eventRow, { flexDirection: "column", alignItems: "stretch", gap: 0 }]}>
                     <View style={styles.eventInfo}>
                       <Text style={styles.eventTitle} numberOfLines={2}>
                         {lang === "fr" && event.titleFr ? event.titleFr : event.titleEn || event.titleFr}
@@ -669,33 +687,90 @@ export default function DashboardScreen() {
                         )}
                       </View>
                     </View>
-                    <View style={{ flexDirection: "column", gap: 10, alignItems: "center", marginLeft: 8 }}>
-                      {(event.status === "pending" || event.status === "rejected") && !isPast && (
-                        <TouchableOpacity
-                          onPress={editEvent}
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                          accessibilityLabel={lang === "fr" ? "Modifier" : "Edit"}
-                        >
-                          <Ionicons name="create-outline" size={22} color={C.gold} />
-                        </TouchableOpacity>
-                      )}
-                      {!isCancelled && !isPast && event.status === "approved" && (
-                        <TouchableOpacity
-                          onPress={cancelEvent}
-                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                          accessibilityLabel={lang === "fr" ? "Annuler" : "Cancel"}
-                        >
-                          <Ionicons name="close-circle-outline" size={22} color="#F59E0B" />
-                        </TouchableOpacity>
-                      )}
-                      <TouchableOpacity
-                        onPress={deleteEvent}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                        accessibilityLabel={lang === "fr" ? "Supprimer" : "Delete"}
+
+                    <TouchableOpacity
+                      onPress={toggleActions}
+                      activeOpacity={0.8}
+                      style={[
+                        styles.actionsToggle,
+                        { backgroundColor: C.bg, borderColor: C.border },
+                      ]}
+                      accessibilityLabel={lang === "fr" ? "Actions" : "Actions"}
+                    >
+                      <Ionicons name="ellipsis-horizontal" size={16} color={C.textMuted} />
+                      <Text style={[styles.actionsToggleText, { color: C.text }]}>
+                        {lang === "fr" ? "Actions" : "Actions"}
+                      </Text>
+                      <Ionicons
+                        name={isOpen ? "chevron-up" : "chevron-down"}
+                        size={14}
+                        color={C.textMuted}
+                      />
+                    </TouchableOpacity>
+
+                    {isOpen && (
+                      <View
+                        style={[
+                          styles.actionsDropdown,
+                          { backgroundColor: C.bg, borderColor: C.border },
+                        ]}
                       >
-                        <Ionicons name="trash-outline" size={20} color={C.error} />
-                      </TouchableOpacity>
-                    </View>
+                        <TouchableOpacity
+                          style={styles.actionItem}
+                          onPress={() => { setOpenEventActionsId(null); viewEvent(); }}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="eye-outline" size={18} color={C.lavender} />
+                          <Text style={[styles.actionItemText, { color: C.text }]}>
+                            {lang === "fr" ? "Voir" : "View"}
+                          </Text>
+                        </TouchableOpacity>
+
+                        {canEdit && (
+                          <>
+                            <View style={[styles.actionDivider, { backgroundColor: C.border }]} />
+                            <TouchableOpacity
+                              style={styles.actionItem}
+                              onPress={() => { setOpenEventActionsId(null); editEvent(); }}
+                              activeOpacity={0.7}
+                            >
+                              <Ionicons name="create-outline" size={18} color={C.gold} />
+                              <Text style={[styles.actionItemText, { color: C.text }]}>
+                                {lang === "fr" ? "Modifier" : "Edit"}
+                              </Text>
+                            </TouchableOpacity>
+                          </>
+                        )}
+
+                        {canCancel && (
+                          <>
+                            <View style={[styles.actionDivider, { backgroundColor: C.border }]} />
+                            <TouchableOpacity
+                              style={styles.actionItem}
+                              onPress={() => { setOpenEventActionsId(null); cancelEvent(); }}
+                              activeOpacity={0.7}
+                            >
+                              <Ionicons name="close-circle-outline" size={18} color="#F59E0B" />
+                              <Text style={[styles.actionItemText, { color: C.text }]}>
+                                {lang === "fr" ? "Annuler" : "Cancel"}
+                              </Text>
+                            </TouchableOpacity>
+                          </>
+                        )}
+
+                        <View style={[styles.actionDivider, { backgroundColor: C.border }]} />
+                        <TouchableOpacity
+                          style={styles.actionItem}
+                          onPress={() => { setOpenEventActionsId(null); deleteEvent(); }}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="trash-outline" size={18} color={C.error} />
+                          <Text style={[styles.actionItemText, { color: C.error }]}>
+                            {lang === "fr" ? "Supprimer" : "Delete"}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
                 );
               })
@@ -1212,6 +1287,42 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     textTransform: "uppercase",
     letterSpacing: 0.5,
+  },
+  actionsToggle: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 12,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  actionsToggleText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+  },
+  actionsDropdown: {
+    marginTop: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  actionItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+  },
+  actionItemText: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+  },
+  actionDivider: {
+    height: 1,
+    width: "100%",
   },
 
   /* Plans */

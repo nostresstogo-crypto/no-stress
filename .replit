@@ -36,3 +36,23 @@ JWT_SECRET = "e882b36856ea709c4c5556f78a38b0ac355e366011997b2400156e031540c1b91b
 
 [nix]
 channel = "stable-25_05"
+
+[[ports]]
+localPort = 8080
+externalPort = 8080
+
+[[ports]]
+localPort = 8081
+externalPort = 80
+
+[[ports]]
+localPort = 25147
+externalPort = 3001
+
+[[ports]]
+localPort = 25266
+externalPort = 3002
+
+[[ports]]
+localPort = 25579
+externalPort = 3000
