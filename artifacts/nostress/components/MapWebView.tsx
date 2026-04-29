@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { forwardRef, useImperativeHandle, useRef } from "react";
 import { StyleProp, ViewStyle } from "react-native";
 import { WebView, WebViewMessageEvent } from "react-native-webview";
 
@@ -8,13 +8,38 @@ interface Props {
   onMessage?: (data: string) => void;
 }
 
-export function MapWebView({ htmlContent, style, onMessage }: Props) {
+export interface MapWebViewHandle {
+  postMessage: (msg: any) => void;
+}
+
+export const MapWebView = forwardRef<MapWebViewHandle, Props>(function MapWebView(
+  { htmlContent, style, onMessage },
+  ref
+) {
   const webViewRef = useRef<WebView>(null);
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      postMessage: (msg: any) => {
+        // Convert string payloads to objects so we always inject a real JS object
+        const obj = typeof msg === "string" ? JSON.parse(msg) : msg;
+        // JSON.stringify(obj) interpolated into JS source produces a valid object literal
+        const js = `(function(){
+  try {
+    var data = ${JSON.stringify(obj)};
+    window.dispatchEvent(new MessageEvent('message', { data: data }));
+  } catch(e) {}
+  true;
+})();`;
+        webViewRef.current?.injectJavaScript(js);
+      },
+    }),
+    []
+  );
+
   const handleMessage = (event: WebViewMessageEvent) => {
-    if (onMessage) {
-      onMessage(event.nativeEvent.data);
-    }
+    if (onMessage) onMessage(event.nativeEvent.data);
   };
 
   return (
@@ -35,4 +60,4 @@ export function MapWebView({ htmlContent, style, onMessage }: Props) {
       mixedContentMode="always"
     />
   );
-}
+});

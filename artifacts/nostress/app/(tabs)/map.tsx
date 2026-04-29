@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   Modal,
   Platform,
@@ -12,11 +13,12 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Location from "expo-location";
 
 import { C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { VENUE_TYPES, MOCK_CITIES } from "@/constants/data";
-import { MapWebView } from "@/components/MapWebView";
+import { MapWebView, type MapWebViewHandle } from "@/components/MapWebView";
 import { router } from "expo-router";
 import { safePush } from "@/lib/navigation";
 
@@ -36,7 +38,38 @@ type Venue = {
   isVerified?: boolean;
 };
 
-function buildLeafletHtml(venues: Venue[], selectedVenueId: string): string {
+type UserCoords = { lat: number; lng: number; accuracy?: number | null } | null;
+
+/* ─── Haversine distance (km) ─────────────────────────────────────────────── */
+function haversineKm(
+  aLat: number,
+  aLng: number,
+  bLat: number,
+  bLng: number
+): number {
+  const R = 6371; // km
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(bLat - aLat);
+  const dLng = toRad(bLng - aLng);
+  const lat1 = toRad(aLat);
+  const lat2 = toRad(bLat);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+function formatDistance(km: number, lang: string): string {
+  if (km < 1) return `${Math.round(km * 1000)} m`;
+  if (km < 10) return `${km.toFixed(1)} km`;
+  return `${Math.round(km)} km`;
+}
+
+function buildLeafletHtml(
+  venues: Venue[],
+  selectedVenueId: string,
+  user: UserCoords
+): string {
   const venueData = JSON.stringify(
     venues.map((v) => ({
       id: v.id,
@@ -49,9 +82,13 @@ function buildLeafletHtml(venues: Venue[], selectedVenueId: string): string {
       lng: v.longitude,
     }))
   );
+  const userData = JSON.stringify(
+    user ? { lat: user.lat, lng: user.lng, accuracy: user.accuracy ?? null } : null
+  );
 
   const gold = "#D4AF37";
   const lavender = "#9B8FE8";
+  const userBlue = "#4A8BFF";
   const cardBg = "#0a0f1e";
   const textColor = "#E8E8F0";
   const textMuted = "#8891b0";
@@ -147,6 +184,43 @@ function buildLeafletHtml(venues: Venue[], selectedVenueId: string): string {
     0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0.8; }
     100% { transform: translate(-50%, -50%) scale(1.6); opacity: 0; }
   }
+
+  /* User location marker (blue dot like Google Maps) */
+  .ns-user-dot {
+    position: relative;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: ${userBlue};
+    border: 3px solid #fff;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.4), 0 0 12px ${userBlue}aa, 0 2px 6px rgba(0,0,0,0.5);
+  }
+  .ns-user-pulse {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: ${userBlue};
+    opacity: 0.4;
+    transform: translate(-50%, -50%);
+    animation: userPulse 2s ease-out infinite;
+    pointer-events: none;
+  }
+  @keyframes userPulse {
+    0%   { transform: translate(-50%, -50%) scale(0.7); opacity: 0.55; }
+    100% { transform: translate(-50%, -50%) scale(3.2); opacity: 0; }
+  }
+  /* Accuracy circle styling */
+  .ns-user-accuracy {
+    fill: ${userBlue};
+    fill-opacity: 0.10;
+    stroke: ${userBlue};
+    stroke-opacity: 0.45;
+    stroke-width: 1;
+  }
+  .leaflet-popup.user-popup .leaflet-popup-content-wrapper {
+    border-color: ${userBlue}88;
+  }
+  .leaflet-popup.user-popup .popup-category { color: ${userBlue}; }
 </style>
 </head>
 <body>
@@ -154,6 +228,18 @@ function buildLeafletHtml(venues: Venue[], selectedVenueId: string): string {
 <script>
 var venues = ${venueData};
 var selectedId = "${selectedVenueId}";
+var userLoc = ${userData};
+
+/* HTML-escape any user-supplied venue field before injecting into popup HTML */
+function esc(s) {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 var map = L.map('map', {
   zoomControl: false,
@@ -198,10 +284,10 @@ venues.forEach(function(v) {
   marker.venueId = v.id;
 
   var popupHtml = '<div class="popup-inner">'
-    + '<div class="popup-category">📍 ' + v.type + '</div>'
-    + '<div class="popup-name">' + v.name + '</div>'
+    + '<div class="popup-category">📍 ' + esc(v.type) + '</div>'
+    + '<div class="popup-name">' + esc(v.name) + '</div>'
     + '<div class="popup-divider"></div>'
-    + '<div class="popup-address">🏙️ ' + v.city + ' &nbsp;·&nbsp; ' + v.address + '</div>'
+    + '<div class="popup-address">🏙️ ' + esc(v.city) + ' &nbsp;·&nbsp; ' + esc(v.address) + '</div>'
     + (v.isVerified ? '<div class="popup-badge">✦ Vérifié NoStress</div>' : '')
     + '</div>';
 
@@ -231,9 +317,77 @@ venues.forEach(function(v) {
   }
 });
 
-if (venues.length > 0 && !selectedId) {
-  var group = L.featureGroup(Object.values(markers));
-  map.fitBounds(group.getBounds().pad(0.25));
+/* ─── User location marker ─────────────────────────────────────────────── */
+var userMarker = null;
+var userAccuracy = null;
+
+function userIcon() {
+  return L.divIcon({
+    html: '<div class="ns-user-pulse"></div><div class="ns-user-dot"></div>',
+    className: '',
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+    popupAnchor: [0, -16],
+  });
+}
+
+function setUserLocation(loc, opts) {
+  if (!loc || typeof loc.lat !== 'number' || typeof loc.lng !== 'number') return;
+  var latlng = [loc.lat, loc.lng];
+
+  if (userAccuracy) { try { map.removeLayer(userAccuracy); } catch(_){} userAccuracy = null; }
+  if (loc.accuracy && loc.accuracy > 0 && loc.accuracy < 5000) {
+    userAccuracy = L.circle(latlng, {
+      radius: loc.accuracy,
+      className: 'ns-user-accuracy',
+      interactive: false,
+    }).addTo(map);
+  }
+
+  if (!userMarker) {
+    userMarker = L.marker(latlng, { icon: userIcon(), zIndexOffset: 1000 });
+    userMarker.bindPopup(
+      '<div class="popup-inner"><div class="popup-category">📍 Vous êtes ici</div>' +
+      '<div class="popup-name" style="font-size:14px;">Votre position</div></div>',
+      { maxWidth: 220, className: 'user-popup' }
+    );
+    userMarker.addTo(map);
+  } else {
+    userMarker.setLatLng(latlng);
+  }
+
+  if (opts && opts.fly) {
+    map.flyTo(latlng, opts.zoom || 14, { animate: true, duration: 0.9 });
+  }
+}
+
+if (userLoc) setUserLocation(userLoc, { fly: false });
+
+/* ─── Initial fit ─────────────────────────────────────────────────────── */
+if (!selectedId) {
+  if (userLoc && venues.length > 0) {
+    /* Fit to user + nearby venues (sorted by distance, take top 6) */
+    function distKm(aLat, aLng, bLat, bLng) {
+      var R = 6371;
+      var toRad = function(d){ return d * Math.PI / 180; };
+      var dLat = toRad(bLat - aLat), dLng = toRad(bLng - aLng);
+      var lat1 = toRad(aLat), lat2 = toRad(bLat);
+      var h = Math.sin(dLat/2)*Math.sin(dLat/2) +
+              Math.sin(dLng/2)*Math.sin(dLng/2)*Math.cos(lat1)*Math.cos(lat2);
+      return 2 * R * Math.asin(Math.sqrt(h));
+    }
+    var nearby = venues
+      .map(function(v){ return { v: v, d: distKm(userLoc.lat, userLoc.lng, v.lat, v.lng) }; })
+      .sort(function(a, b){ return a.d - b.d; })
+      .slice(0, 6);
+    var pts = [[userLoc.lat, userLoc.lng]].concat(nearby.map(function(n){ return [n.v.lat, n.v.lng]; }));
+    map.fitBounds(L.latLngBounds(pts).pad(0.3), { animate: true, maxZoom: 13 });
+  } else if (userLoc) {
+    map.setView([userLoc.lat, userLoc.lng], 13, { animate: true });
+  } else if (venues.length > 0) {
+    var group = L.featureGroup(Object.values(markers));
+    map.fitBounds(group.getBounds().pad(0.25));
+  }
 }
 
 window.addEventListener('message', function(e) {
@@ -255,6 +409,15 @@ window.addEventListener('message', function(e) {
     });
     var group = L.featureGroup(Object.values(markers));
     if (group.getLayers().length) map.fitBounds(group.getBounds().pad(0.2), { animate: true });
+  }
+  if (e.data && e.data.type === 'flyToUser') {
+    if (userMarker) {
+      map.flyTo(userMarker.getLatLng(), 15, { animate: true, duration: 0.9 });
+      setTimeout(function() { userMarker.openPopup(); }, 950);
+    }
+  }
+  if (e.data && e.data.type === 'setUserLocation') {
+    setUserLocation(e.data.loc, { fly: !!e.data.fly, zoom: e.data.zoom });
   }
 });
 </script>
@@ -347,7 +510,11 @@ export default function MapScreen() {
   const [mapKey, setMapKey] = useState(0);
   const [cityModalOpen, setCityModalOpen] = useState(false);
   const [apiVenues, setApiVenues] = useState<Venue[]>([]);
-  const iframeRef = React.useRef<any>(null);
+  const [userLocation, setUserLocation] = useState<UserCoords>(null);
+  const [locationStatus, setLocationStatus] = useState<
+    "idle" | "requesting" | "granted" | "denied" | "error"
+  >("idle");
+  const mapRef = React.useRef<MapWebViewHandle>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -375,6 +542,37 @@ export default function MapScreen() {
     return () => { cancelled = true; };
   }, []);
 
+  /* ─── Request user location on mount ──────────────────────────────────── */
+  const requestUserLocation = useCallback(async (silent = false) => {
+    try {
+      setLocationStatus("requesting");
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        setLocationStatus("denied");
+        return null;
+      }
+      setLocationStatus("granted");
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const coords: UserCoords = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy ?? null,
+      };
+      setUserLocation(coords);
+      return coords;
+    } catch (e) {
+      if (!silent) console.warn("location error", e);
+      setLocationStatus("error");
+      return null;
+    }
+  }, []);
+
+  useEffect(() => {
+    requestUserLocation(true);
+  }, [requestUserLocation]);
+
   const filteredVenues = useMemo(() => {
     return apiVenues.filter((v) => {
       const cityObj = MOCK_CITIES.find((c) => c.id === selectedCity);
@@ -387,9 +585,31 @@ export default function MapScreen() {
     });
   }, [apiVenues, selectedCity, selectedType]);
 
+  /* ─── Compute distance + sort nearest-first when location available ─── */
+  const venuesWithDistance = useMemo(() => {
+    if (!userLocation) {
+      return filteredVenues.map((v) => ({ venue: v, distanceKm: null as number | null }));
+    }
+    return filteredVenues
+      .map((v) => ({
+        venue: v,
+        distanceKm:
+          v.latitude != null && v.longitude != null
+            ? haversineKm(userLocation.lat, userLocation.lng, v.latitude, v.longitude)
+            : null,
+      }))
+      .sort((a, b) => {
+        if (a.distanceKm == null) return 1;
+        if (b.distanceKm == null) return -1;
+        return a.distanceKm - b.distanceKm;
+      });
+  }, [filteredVenues, userLocation]);
+
   const htmlContent = useMemo(() => {
-    return buildLeafletHtml(filteredVenues, selectedVenue?.id ?? "");
-  }, [filteredVenues]);
+    return buildLeafletHtml(filteredVenues, selectedVenue?.id ?? "", userLocation);
+    // selectedVenue intentionally omitted: we drive selection via postMessage
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredVenues, userLocation]);
 
   const handleMessage = useCallback((data: any) => {
     let parsed: any;
@@ -400,7 +620,28 @@ export default function MapScreen() {
     }
   }, [apiVenues]);
 
-  const flyTo = (venue: Venue) => setSelectedVenue(venue);
+  const flyTo = (venue: Venue) => {
+    setSelectedVenue(venue);
+    mapRef.current?.postMessage({ type: "flyToVenue", venueId: venue.id });
+  };
+
+  const flyToUser = useCallback(async () => {
+    let loc = userLocation;
+    if (!loc) {
+      loc = await requestUserLocation();
+    }
+    if (loc) {
+      // Send the location AND fly in one message — works whether or not the
+      // WebView's HTML already had the user marker. Avoids race conditions
+      // because the handler will create the marker if needed before flying.
+      mapRef.current?.postMessage({
+        type: "setUserLocation",
+        loc,
+        fly: true,
+        zoom: 15,
+      });
+    }
+  }, [userLocation, requestUserLocation]);
 
   const resetFilter = () => {
     setSelectedCity("");
@@ -512,11 +753,41 @@ export default function MapScreen() {
       {/* Map */}
       <View style={styles.mapContainer}>
         <MapWebView
-          key={`${mapKey}-${filteredVenues.map((v) => v.id).join(",")}`}
+          ref={mapRef}
+          key={`${mapKey}-${filteredVenues.map((v) => v.id).join(",")}-${userLocation ? "u" : "n"}`}
           htmlContent={htmlContent}
           style={styles.map}
           onMessage={handleMessage}
         />
+
+        {/* Locate-me floating button */}
+        <TouchableOpacity
+          style={[
+            styles.locateBtn,
+            {
+              backgroundColor: C.card,
+              borderColor: userLocation ? C.lavender : C.border,
+              top: selectedVenue ? 156 : 12,
+            },
+          ]}
+          onPress={flyToUser}
+          activeOpacity={0.8}
+          accessibilityLabel={lang === "fr" ? "Me localiser" : "Locate me"}
+        >
+          {locationStatus === "requesting" ? (
+            <ActivityIndicator size="small" color={C.lavender} />
+          ) : (
+            <Ionicons
+              name={
+                locationStatus === "denied" || locationStatus === "error"
+                  ? "locate-outline"
+                  : "locate"
+              }
+              size={20}
+              color={userLocation ? C.lavender : C.gold}
+            />
+          )}
+        </TouchableOpacity>
 
         {/* Venue bottom card */}
         {selectedVenue && (
@@ -568,9 +839,10 @@ export default function MapScreen() {
 
         {/* Floating venue list */}
         <VenueList
-          venues={filteredVenues}
+          items={venuesWithDistance}
           selectedVenue={selectedVenue}
           lang={lang}
+          hasUserLocation={!!userLocation}
           onSelect={flyTo}
         />
       </View>
@@ -578,26 +850,40 @@ export default function MapScreen() {
   );
 }
 
+type VenueWithDistance = { venue: Venue; distanceKm: number | null };
+
 function VenueList({
-  venues, selectedVenue, lang, onSelect,
+  items, selectedVenue, lang, hasUserLocation, onSelect,
 }: {
-  venues: Venue[]; selectedVenue: Venue | null; lang: string; onSelect: (v: Venue) => void;
+  items: VenueWithDistance[];
+  selectedVenue: Venue | null;
+  lang: string;
+  hasUserLocation: boolean;
+  onSelect: (v: Venue) => void;
 }) {
   const [open, setOpen] = useState(false);
   const C = useColors();
 
+  const title = hasUserLocation
+    ? lang === "fr" ? "Près de vous" : "Nearby"
+    : lang === "fr" ? "Liste" : "List";
+
   return (
     <View style={[list.container, { backgroundColor: C.card, borderColor: C.border }]}>
       <TouchableOpacity style={list.toggle} onPress={() => setOpen(!open)}>
-        <Ionicons name="list" size={16} color={C.text} />
+        <Ionicons
+          name={hasUserLocation ? "navigate" : "list"}
+          size={16}
+          color={hasUserLocation ? C.lavender : C.text}
+        />
         <Text style={[list.toggleText, { color: C.text }]}>
-          {lang === "fr" ? "Liste" : "List"} ({venues.length})
+          {title} ({items.length})
         </Text>
         <Ionicons name={open ? "chevron-down" : "chevron-up"} size={14} color={C.textMuted} />
       </TouchableOpacity>
       {open && (
         <ScrollView style={list.scroll} showsVerticalScrollIndicator={false}>
-          {venues.map((v) => {
+          {items.map(({ venue: v, distanceKm }) => {
             const active = selectedVenue?.id === v.id;
             return (
               <TouchableOpacity
@@ -608,9 +894,20 @@ function VenueList({
                 <View style={[list.dot, { backgroundColor: active ? C.gold : C.lavender }]} />
                 <View style={list.itemInfo}>
                   <Text style={[list.itemName, { color: C.text }]} numberOfLines={1}>{v.name}</Text>
-                  <Text style={[list.itemSub, { color: C.textMuted }]}>{v.city} · {v.type}</Text>
+                  <Text style={[list.itemSub, { color: C.textMuted }]} numberOfLines={1}>
+                    {v.city} · {v.type}
+                  </Text>
                 </View>
-                {v.isVerified && <Ionicons name="checkmark-circle" size={14} color={C.gold} />}
+                {distanceKm != null && (
+                  <View style={[list.distBadge, { backgroundColor: C.lavender + "1f", borderColor: C.lavender + "44" }]}>
+                    <Text style={[list.distText, { color: C.lavender }]}>
+                      {formatDistance(distanceKm, lang)}
+                    </Text>
+                  </View>
+                )}
+                {v.isVerified && distanceKm == null && (
+                  <Ionicons name="checkmark-circle" size={14} color={C.gold} />
+                )}
               </TouchableOpacity>
             );
           })}
@@ -633,9 +930,17 @@ const list = StyleSheet.create({
   scroll: { maxHeight: 220 },
   item: { flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, gap: 10, borderTopWidth: 1 },
   dot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
-  itemInfo: { flex: 1, gap: 2 },
+  itemInfo: { flex: 1, gap: 2, minWidth: 0 },
   itemName: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
   itemSub: { fontSize: 10, fontFamily: "Inter_400Regular" },
+  distBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexShrink: 0,
+  },
+  distText: { fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 0.2 },
 });
 
 const styles = StyleSheet.create({
@@ -708,4 +1013,20 @@ const styles = StyleSheet.create({
     borderRadius: 12, paddingVertical: 12, marginTop: 12,
   },
   detailsBtnText: { fontSize: 14, fontFamily: "Inter_700Bold" },
+
+  locateBtn: {
+    position: "absolute",
+    right: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.45,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 8,
+  },
 });

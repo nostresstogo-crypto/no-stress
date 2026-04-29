@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { StyleProp, ViewStyle } from "react-native";
 
 interface Props {
@@ -7,8 +7,26 @@ interface Props {
   onMessage?: (data: string) => void;
 }
 
-export function MapWebView({ htmlContent, style, onMessage }: Props) {
+export interface MapWebViewHandle {
+  postMessage: (msg: any) => void;
+}
+
+export const MapWebView = forwardRef<MapWebViewHandle, Props>(function MapWebView(
+  { htmlContent, style, onMessage },
+  ref
+) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      postMessage: (msg: any) => {
+        const data = typeof msg === "string" ? JSON.parse(msg) : msg;
+        iframeRef.current?.contentWindow?.postMessage(data, "*");
+      },
+    }),
+    []
+  );
 
   useEffect(() => {
     if (!onMessage) return;
@@ -37,4 +55,4 @@ export function MapWebView({ htmlContent, style, onMessage }: Props) {
       sandbox="allow-scripts allow-same-origin"
     />
   );
-}
+});
