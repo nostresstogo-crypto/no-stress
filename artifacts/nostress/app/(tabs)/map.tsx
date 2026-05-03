@@ -425,6 +425,101 @@ window.addEventListener('message', function(e) {
 </html>`;
 }
 
+/* ─── Distance filter options (km) ──────────────────────────────────────── */
+const DISTANCE_OPTIONS: { value: number | null; labelFr: string; labelEn: string }[] = [
+  { value: null, labelFr: "Toutes distances", labelEn: "Any distance" },
+  { value: 1,  labelFr: "≤ 1 km",  labelEn: "≤ 1 km" },
+  { value: 2,  labelFr: "≤ 2 km",  labelEn: "≤ 2 km" },
+  { value: 5,  labelFr: "≤ 5 km",  labelEn: "≤ 5 km" },
+  { value: 10, labelFr: "≤ 10 km", labelEn: "≤ 10 km" },
+  { value: 20, labelFr: "≤ 20 km", labelEn: "≤ 20 km" },
+  { value: 50, labelFr: "≤ 50 km", labelEn: "≤ 50 km" },
+];
+
+/* ─── Distance picker modal ─────────────────────────────────────────────── */
+function DistancePickerModal({
+  visible,
+  selected,
+  hasLocation,
+  lang,
+  onClose,
+  onSelect,
+  onRequestLocation,
+}: {
+  visible: boolean;
+  selected: number | null;
+  hasLocation: boolean;
+  lang: "fr" | "en";
+  onClose: () => void;
+  onSelect: (km: number | null) => void;
+  onRequestLocation: () => void;
+}) {
+  const C = useColors();
+  const insets = useSafeAreaInsets();
+
+  return (
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={modal.backdrop} onPress={onClose} />
+      <View style={[modal.sheet, { paddingBottom: insets.bottom + 16, backgroundColor: C.card }]}>
+        <View style={[modal.handle, { backgroundColor: C.border }]} />
+        <Text style={[modal.title, { color: C.text }]}>
+          {lang === "fr" ? "Distance maximale" : "Maximum distance"}
+        </Text>
+        {!hasLocation && (
+          <View style={{ paddingHorizontal: 20, paddingBottom: 12 }}>
+            <Text style={{ color: C.textMuted, fontSize: 12, fontFamily: "Inter_400Regular", marginBottom: 8 }}>
+              {lang === "fr"
+                ? "Active la géolocalisation pour filtrer par distance."
+                : "Enable location to filter by distance."}
+            </Text>
+            <TouchableOpacity
+              onPress={() => { onRequestLocation(); }}
+              style={{
+                alignSelf: "flex-start",
+                flexDirection: "row", alignItems: "center", gap: 6,
+                backgroundColor: C.lavender + "22",
+                borderColor: C.lavender, borderWidth: 1,
+                paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12,
+              }}
+            >
+              <Ionicons name="locate" size={14} color={C.lavender} />
+              <Text style={{ color: C.lavender, fontSize: 12, fontFamily: "Inter_600SemiBold" }}>
+                {lang === "fr" ? "Activer ma position" : "Enable my location"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        <FlatList
+          data={DISTANCE_OPTIONS}
+          keyExtractor={(o) => String(o.value ?? "any")}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => {
+            const active = item.value === selected;
+            const disabled = !hasLocation && item.value !== null;
+            return (
+              <TouchableOpacity
+                disabled={disabled}
+                style={[
+                  modal.item,
+                  active && { backgroundColor: C.lavender + "18" },
+                  { borderBottomColor: C.border, opacity: disabled ? 0.4 : 1 },
+                ]}
+                onPress={() => { onSelect(item.value); onClose(); }}
+              >
+                <Text style={modal.emoji}>{item.value == null ? "🌐" : "📏"}</Text>
+                <Text style={[modal.cityName, { color: active ? C.lavender : C.text }]}>
+                  {lang === "fr" ? item.labelFr : item.labelEn}
+                </Text>
+                {active && <Ionicons name="checkmark-circle" size={18} color={C.lavender} />}
+              </TouchableOpacity>
+            );
+          }}
+        />
+      </View>
+    </Modal>
+  );
+}
+
 /* ─── City picker modal ─────────────────────────────────────────────────── */
 function CityPickerModal({
   visible,
@@ -509,6 +604,8 @@ export default function MapScreen() {
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [mapKey, setMapKey] = useState(0);
   const [cityModalOpen, setCityModalOpen] = useState(false);
+  const [distanceModalOpen, setDistanceModalOpen] = useState(false);
+  const [maxDistanceKm, setMaxDistanceKm] = useState<number | null>(null);
   const [apiVenues, setApiVenues] = useState<Venue[]>([]);
   const [userLocation, setUserLocation] = useState<UserCoords>(null);
   const [locationStatus, setLocationStatus] = useState<
@@ -581,9 +678,15 @@ export default function MapScreen() {
         v.city.toLowerCase() === selectedCity.toLowerCase() ||
         (cityObj?.name && v.city === cityObj.name);
       const matchType = !selectedType || v.type === selectedType;
-      return matchCity && matchType;
+      // Distance filter: only applied when location is available AND a max is set
+      let matchDistance = true;
+      if (maxDistanceKm != null && userLocation && v.latitude != null && v.longitude != null) {
+        const d = haversineKm(userLocation.lat, userLocation.lng, v.latitude, v.longitude);
+        matchDistance = d <= maxDistanceKm;
+      }
+      return matchCity && matchType && matchDistance;
     });
-  }, [apiVenues, selectedCity, selectedType]);
+  }, [apiVenues, selectedCity, selectedType, maxDistanceKm, userLocation]);
 
   /* ─── Compute distance + sort nearest-first when location available ─── */
   const venuesWithDistance = useMemo(() => {
@@ -646,9 +749,15 @@ export default function MapScreen() {
   const resetFilter = () => {
     setSelectedCity("");
     setSelectedType("");
+    setMaxDistanceKm(null);
     setSelectedVenue(null);
     setMapKey((k) => k + 1);
   };
+
+  const distanceLabel = useMemo(() => {
+    if (maxDistanceKm == null) return null;
+    return `≤ ${maxDistanceKm} km`;
+  }, [maxDistanceKm]);
 
   const selectedCityLabel = useMemo(() => {
     if (!selectedCity) return null;
@@ -672,7 +781,7 @@ export default function MapScreen() {
               {selectedCityLabel ? ` · ${selectedCityLabel}` : ""}
             </Text>
           </View>
-          {(selectedCity || selectedType) && (
+          {(selectedCity || selectedType || maxDistanceKm != null) && (
             <TouchableOpacity
               style={[styles.resetBtn, { backgroundColor: C.lavender + "18", borderColor: C.lavender + "44" }]}
               onPress={resetFilter}
@@ -707,6 +816,32 @@ export default function MapScreen() {
               name="chevron-down"
               size={12}
               color={selectedCity ? C.bg : C.textMuted}
+            />
+          </TouchableOpacity>
+
+          {/* Distance button — always visible (max 50 km) */}
+          <TouchableOpacity
+            style={[
+              styles.villesBtn,
+              {
+                backgroundColor: maxDistanceKm != null ? C.lavender : C.card,
+                borderColor: maxDistanceKm != null ? C.lavender : C.border,
+              },
+            ]}
+            onPress={() => setDistanceModalOpen(true)}
+          >
+            <Ionicons
+              name="resize"
+              size={14}
+              color={maxDistanceKm != null ? C.bg : C.gold}
+            />
+            <Text style={[styles.villesBtnText, { color: maxDistanceKm != null ? C.bg : C.text }]}>
+              {distanceLabel ?? (lang === "fr" ? "Distance" : "Distance")}
+            </Text>
+            <Ionicons
+              name="chevron-down"
+              size={12}
+              color={maxDistanceKm != null ? C.bg : C.textMuted}
             />
           </TouchableOpacity>
 
@@ -748,6 +883,17 @@ export default function MapScreen() {
         selected={selectedCity}
         onClose={() => setCityModalOpen(false)}
         onSelect={setSelectedCity}
+      />
+
+      {/* Distance picker modal */}
+      <DistancePickerModal
+        visible={distanceModalOpen}
+        selected={maxDistanceKm}
+        hasLocation={!!userLocation}
+        lang={lang}
+        onClose={() => setDistanceModalOpen(false)}
+        onSelect={setMaxDistanceKm}
+        onRequestLocation={() => requestUserLocation()}
       />
 
       {/* Map */}
