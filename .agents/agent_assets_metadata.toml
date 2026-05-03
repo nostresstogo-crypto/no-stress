@@ -101,3 +101,15 @@ id = "JoYMa1_Cp6UwzNbN4nkkv"
 uri = "file://screenshots/ios/06-event-1284x2778.jpg"
 type = "image"
 title = "Détail événement – iPhone 6.7\" (1284×2778)"
+
+[[outputs]]
+id = "MrDyUjvv_MSwxUHBNNjG6"
+uri = "file://attached_assets/map.merged.txt"
+type = "text"
+title = "map.tsx fusionné (renomme en .tsx après téléchargement)"
+
+[[outputs]]
+id = "Wgg_D2WKqxHwWh6uGJvEN"
+uri = "file://attached_assets/map.merged.tar.gz"
+type = "unspecified"
+title = "map.merged.tar.gz (archive)"
