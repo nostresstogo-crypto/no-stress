@@ -89,7 +89,7 @@ export default function TicketScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.root}
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       {/* Header */}
       <View style={[styles.header, { paddingTop: topInset + 12 }]}>
