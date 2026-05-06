@@ -132,6 +132,13 @@ export const api = {
     stats: (period: "day" | "week" | "month" | "year") =>
       request<RegistrationStats>(`/admin/registrations/stats?period=${period}`),
   },
+  venues: {
+    list: (status?: string) =>
+      request<{ venues: Venue[]; total: number }>(`/admin/venues${status ? `?status=${status}` : ""}`),
+    approve: (id: string) => request<Venue>(`/admin/venues/${id}/approve`, { method: "POST" }),
+    reject: (id: string, reason: string) =>
+      request<Venue>(`/admin/venues/${id}/reject`, { method: "POST", body: JSON.stringify({ reason }) }),
+  },
   deletionRequests: {
     list: (status?: string) =>
       request<DeletionRequest[]>(`/admin/deletion-requests${status ? `?status=${status}` : ""}`),
@@ -173,6 +180,26 @@ export interface PartnerEvent {
   status: "pending" | "approved" | "rejected" | "archived";
   isArchived?: boolean;
   createdAt: string;
+}
+
+export interface Venue {
+  id: string;
+  partnerId: string | null;
+  name: string;
+  type: string | null;
+  city: string | null;
+  address: string | null;
+  description: string | null;
+  phone: string | null;
+  websiteUrl: string | null;
+  imageUrl: string | null;
+  images: string[];
+  latitude: number | null;
+  longitude: number | null;
+  status: "pending" | "approved" | "rejected";
+  rejectionReason: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface DeletionRequest {

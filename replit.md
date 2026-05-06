@@ -142,6 +142,13 @@ Flow client (mobile) : pick image → POST `/api/storage/uploads/request-url` `{
 | POST | `/api/admin/venues/:id/approve` | Bearer admin | Valider un lieu |
 | POST | `/api/admin/venues/:id/reject` | Bearer admin | Rejeter un lieu (rejectionReason) |
 | POST | `/api/admin/partners/:id/resend-credentials` | Bearer | Régénère password + email + révoque sessions |
+| PATCH | `/api/users/me` | Bearer (u_) | Édition profil utilisateur (name, phone, profileImage) |
+| POST | `/api/users/me/change-password` | Bearer (u_) | Change password utilisateur (révoque toutes les sessions) |
+| PATCH | `/api/partners/me` | Bearer (p_) | Édition profil partenaire (contactName, businessName, phone, city, profileImage) |
+| POST | `/api/partners/me/change-password` | Bearer (p_) | Change password partenaire (révoque toutes les sessions) |
+| GET | `/api/me/favorites` | Bearer (u_) | Liste favoris (events + venues) |
+| POST | `/api/me/favorites` | Bearer (u_) | Ajouter favori `{itemType:event\|venue,itemId}` (cible doit être approved) |
+| DELETE | `/api/me/favorites/:itemType/:itemId` | Bearer (u_) | Retirer favori |
 
 ## Données mock
 
@@ -175,6 +182,7 @@ Toutes les données sont en mémoire (pas de DB). Les tableaux `partners`, `part
 - Suppression de comptes partenaires (avec motif + email d'avertissement automatique)
 - Suppression de publications (avec motif + email d'avertissement automatique)
 - Statistiques d'inscriptions : barres Recharts par jour/semaine/mois/année
+- Validation des lieux (`/lieux`) : liste filtrable (En attente / Approuvés / Rejetés), Approuver/Rejeter avec motif, GPS Google Maps, photo, partenaire
 
 ### Site public (nostress-web)
 - Landing page marketing NoStress (sans section villes)
@@ -207,7 +215,14 @@ Toutes les données sont en mémoire (pas de DB). Les tableaux `partners`, `part
 - **Modération admin** : page `Publications.tsx` avec filtres par statut + boutons Approuver / Rejeter / Supprimer.
 - **Multilingue** : 4 langues exposées (FR, EN, Eʋegbe, Taqbaylit). Ewé/Kabye contiennent quelques traductions de base ; le reste retombe automatiquement sur le français via `translations[lang][key] || translations.fr[key]`. À enrichir progressivement dans `constants/i18n.ts` (objets `ewe`, `kab`).
 
-### À faire (Phase 2)
+## Phase 3 — Profil + Favoris (mai 2026)
+- **Profil éditable mobile** : `app/edit-profile.tsx` (modal) — avatar via expo-image-picker → `/storage/uploads/request-url` → PATCH `/users|partners/me`. Bouton dans `(tabs)/account.tsx` (header cliquable + bouton dédié).
+- **Change password** : section dans edit-profile (current+new) → POST `/users|partners/me/change-password` → toutes sessions révoquées (revokeAllForSubject) → re-login forcé.
+- **Favoris backend** : table `favorites(userId,itemType:event|venue,itemId)` — POST/DELETE/GET `/me/favorites`. Cible vérifiée approved. Idempotent.
+- **AppContext sync** : `syncFavoritesFromBackend()` GET au montage si role=user, `persistFavorites()` POST/DELETE à chaque toggle. `favoriteVenues` + `toggleFavoriteVenue/isFavoriteVenue` exposés. Logout clear listes+keys.
+- **Account UI favoris** : section "Favoris" affiche événements (cards) + lieux favoris (lien vers `/venue/:id`).
+
+### À faire (Phase 4)
 - Avis & notes événements (table `reviews` + UI)
 - Galerie photos/vidéos par événement (champ JSON dans `events` + composant carrousel)
 - Notifications push (Expo push tokens + service)

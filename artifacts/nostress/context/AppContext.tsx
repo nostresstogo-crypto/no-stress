@@ -16,7 +16,7 @@ import { MOCK_CITIES, MOCK_EVENTS } from "@/constants/data";
 import { registerPushPreferences } from "@/lib/pushNotifications";
 
 const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
-  ? `${process.env.EXPO_PUBLIC_DOMAIN}/api`
+  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
   : "http://localhost:8080/api";
 
 export interface ApiEvent {
@@ -95,6 +95,10 @@ interface AppContextValue {
   favorites: string[];
   toggleFavorite: (eventId: string) => void;
   isFavorite: (eventId: string) => boolean;
+  favoriteVenues: string[];
+  toggleFavoriteVenue: (venueId: string) => void;
+  isFavoriteVenue: (venueId: string) => boolean;
+  syncFavoritesFromBackend: () => Promise<void>;
   notifications: Notification[];
   addNotification: (n: Omit<Notification, "id" | "read" | "createdAt">) => void;
   markAllRead: () => void;
@@ -133,6 +137,7 @@ const KEYS = {
   token: "ns_token",
   refreshToken: "ns_refresh_token",
   favorites: "ns_favorites",
+  favoriteVenues: "ns_favorite_venues",
   notifications: "ns_notifications",
   onboarded: "ns_onboarded",
   myEvents: "ns_my_events",
@@ -151,6 +156,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const refreshRef = useRef<string | null>(null);
   const refreshInflight = useRef<Promise<string | null> | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [favoriteVenues, setFavoriteVenues] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [selectedCity, setSelectedCity] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
@@ -189,7 +195,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     (async () => {
       try {
-        const [l, u, t, f, n, o, me, tm, ln, lnc, rt] = await Promise.all([
+        const [l, u, t, f, n, o, me, tm, ln, lnc, rt, fv] = await Promise.all([
           safeGet(KEYS.lang),
           safeGet(KEYS.user),
           safeGet(KEYS.token),
@@ -201,6 +207,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           safeGet(KEYS.locationNotif),
           safeGet(KEYS.lastNotifCity),
           safeGet(KEYS.refreshToken),
+          safeGet(KEYS.favoriteVenues),
         ]);
         if (cancelled) return;
         if (l) {
@@ -216,6 +223,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (rt) { setRefreshTokenState(rt); refreshRef.current = rt; }
         const fav = safeParse<string[]>(f);
         if (fav && Array.isArray(fav)) setFavorites(fav);
+        const favV = safeParse<string[]>(fv);
+        if (favV && Array.isArray(favV)) setFavoriteVenues(favV);
         const notifs = safeParse<Notification[]>(n);
         if (notifs) setNotifications(notifs);
         if (o === "true") setHasOnboardedState(true);
@@ -312,20 +321,82 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return res;
   }, [refreshAccessToken]);
 
+  const persistFavorites = useCallback(async (
+    type: "event" | "venue",
+    itemId: string,
+    nextHasIt: boolean,
+  ) => {
+    if (!user || user.role !== "user" || !tokenRef.current) return;
+    try {
+      if (nextHasIt) {
+        await authFetch(`${API_BASE}/me/favorites`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ itemType: type, itemId }),
+        });
+      } else {
+        await authFetch(`${API_BASE}/me/favorites?itemType=${type}&itemId=${encodeURIComponent(itemId)}`, {
+          method: "DELETE",
+        });
+      }
+    } catch {}
+  }, [user, authFetch]);
+
   const toggleFavorite = useCallback(async (eventId: string) => {
+    let nextHasIt = false;
     setFavorites((prev) => {
-      const next = prev.includes(eventId)
-        ? prev.filter((id) => id !== eventId)
-        : [...prev, eventId];
+      const has = prev.includes(eventId);
+      nextHasIt = !has;
+      const next = has ? prev.filter((id) => id !== eventId) : [...prev, eventId];
       AsyncStorage.setItem(KEYS.favorites, JSON.stringify(next));
       return next;
     });
-  }, []);
+    persistFavorites("event", eventId, nextHasIt);
+  }, [persistFavorites]);
 
   const isFavorite = useCallback(
     (eventId: string) => favorites.includes(eventId),
     [favorites]
   );
+
+  const toggleFavoriteVenue = useCallback(async (venueId: string) => {
+    let nextHasIt = false;
+    setFavoriteVenues((prev) => {
+      const has = prev.includes(venueId);
+      nextHasIt = !has;
+      const next = has ? prev.filter((id) => id !== venueId) : [...prev, venueId];
+      AsyncStorage.setItem(KEYS.favoriteVenues, JSON.stringify(next));
+      return next;
+    });
+    persistFavorites("venue", venueId, nextHasIt);
+  }, [persistFavorites]);
+
+  const isFavoriteVenue = useCallback(
+    (venueId: string) => favoriteVenues.includes(venueId),
+    [favoriteVenues]
+  );
+
+  const syncFavoritesFromBackend = useCallback(async () => {
+    if (!user || user.role !== "user" || !tokenRef.current) return;
+    try {
+      const r = await authFetch(`${API_BASE}/me/favorites`);
+      if (!r.ok) return;
+      const data = await r.json();
+      const events: string[] = Array.isArray(data?.events) ? data.events.map(String) : [];
+      const venues: string[] = Array.isArray(data?.venues) ? data.venues.map(String) : [];
+      setFavorites(events);
+      setFavoriteVenues(venues);
+      AsyncStorage.setItem(KEYS.favorites, JSON.stringify(events)).catch(() => {});
+      AsyncStorage.setItem(KEYS.favoriteVenues, JSON.stringify(venues)).catch(() => {});
+    } catch {}
+  }, [user, authFetch]);
+
+  useEffect(() => {
+    if (!appReady) return;
+    if (user?.role === "user" && tokenRef.current) {
+      syncFavoritesFromBackend();
+    }
+  }, [appReady, user?.id, user?.role, syncFavoritesFromBackend]);
 
   const addNotification = useCallback(
     (n: Omit<Notification, "id" | "read" | "createdAt">) => {
@@ -363,7 +434,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setRefreshTokenState(null);
     tokenRef.current = null;
     refreshRef.current = null;
-    await AsyncStorage.multiRemove([KEYS.user, KEYS.token, KEYS.refreshToken]);
+    setFavorites([]);
+    setFavoriteVenues([]);
+    await AsyncStorage.multiRemove([KEYS.user, KEYS.token, KEYS.refreshToken, KEYS.favorites, KEYS.favoriteVenues]);
   }, []);
 
   const setHasOnboarded = useCallback(async () => {
@@ -596,6 +669,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       token, setToken,
       refreshToken, setRefreshToken, setSession, authFetch,
       favorites, toggleFavorite, isFavorite,
+      favoriteVenues, toggleFavoriteVenue, isFavoriteVenue, syncFavoritesFromBackend,
       notifications, addNotification, markAllRead, removeNotification, unreadCount,
       selectedCity, setSelectedCity,
       selectedCategory, setSelectedCategory,
@@ -615,6 +689,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       token, setToken,
       refreshToken, setRefreshToken, setSession, authFetch,
       favorites, toggleFavorite, isFavorite,
+      favoriteVenues, toggleFavoriteVenue, isFavoriteVenue, syncFavoritesFromBackend,
       notifications, addNotification, markAllRead, removeNotification, unreadCount,
       selectedCity, setSelectedCity,
       selectedCategory, setSelectedCategory,

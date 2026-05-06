@@ -13,11 +13,13 @@ import {
   FileText,
   BarChart2,
   Menu,
+  MapPin,
 } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { href: "/partenaires", label: "Partenaires", icon: Users },
+  { href: "/lieux", label: "Lieux", icon: MapPin },
   { href: "/publications", label: "Publications", icon: FileText },
   { href: "/suppressions", label: "Suppressions de compte", icon: Trash2 },
   { href: "/statistiques", label: "Statistiques", icon: BarChart2 },

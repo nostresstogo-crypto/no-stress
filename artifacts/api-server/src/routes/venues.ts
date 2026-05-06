@@ -196,7 +196,10 @@ router.post("/admin/venues/:id/approve", requireAdmin, async (req: any, res) => 
 router.post("/admin/venues/:id/reject", requireAdmin, async (req: any, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Lieu introuvable." });
-  const reason = String(req.body?.reason || "").trim() || null;
+  const reason = String(req.body?.reason || "").trim();
+  if (reason.length < 3) {
+    return res.status(400).json({ error: "Un motif d'au moins 3 caractères est requis." });
+  }
   const [v] = await db
     .update(venuesTable)
     .set({ status: "rejected", rejectionReason: reason })

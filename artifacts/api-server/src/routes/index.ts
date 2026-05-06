@@ -12,6 +12,7 @@ import deletionRequestsRouter from "./deletionRequests";
 import contactRouter from "./contact";
 import storageRouter from "./storage.js";
 import pushRouter from "./push.js";
+import meRouter from "./me";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(deletionRequestsRouter);
 router.use(contactRouter);
 router.use(storageRouter);
 router.use(pushRouter);
+router.use(meRouter);
 
 export default router;

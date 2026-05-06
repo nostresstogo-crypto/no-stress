@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import {
   Alert,
+  Image,
   Linking,
   Modal,
   Platform,
@@ -202,7 +203,7 @@ function makeStyles(C: ColorPalette) {
 export default function AccountScreen() {
   const t = useT();
   const C = useColors();
-  const { user, lang, setLang, logout, favorites, notifications, markAllRead, removeNotification, unreadCount, isDark, themeMode, setThemeMode, locationNotificationsEnabled, setLocationNotificationsEnabled, selectedCity, nearbyEventsCount, apiEvents } = useApp();
+  const { user, lang, setLang, logout, favorites, favoriteVenues, notifications, markAllRead, removeNotification, unreadCount, isDark, themeMode, setThemeMode, locationNotificationsEnabled, setLocationNotificationsEnabled, selectedCity, nearbyEventsCount, apiEvents } = useApp();
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>("favorites");
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -292,9 +293,13 @@ export default function AccountScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Profile header */}
-      <View style={styles.profile}>
+      <TouchableOpacity style={styles.profile} onPress={() => safePush("/edit-profile")} activeOpacity={0.85}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{user.name.charAt(0).toUpperCase()}</Text>
+          {(user as any).avatarUrl ? (
+            <Image source={{ uri: (user as any).avatarUrl }} style={{ width: 60, height: 60 }} />
+          ) : (
+            <Text style={styles.avatarText}>{user.name.charAt(0).toUpperCase()}</Text>
+          )}
         </View>
         <View style={styles.profileInfo}>
           <Text style={styles.profileName}>{user.name}</Text>
@@ -303,7 +308,15 @@ export default function AccountScreen() {
             <Text style={styles.roleText}>{user.role}</Text>
           </View>
         </View>
-      </View>
+        <Ionicons name="chevron-forward" size={22} color={C.textMuted} />
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: C.lavender }}
+        onPress={() => safePush("/edit-profile")}
+      >
+        <Ionicons name="create-outline" size={18} color={C.lavender} />
+        <Text style={{ color: C.lavender, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{t("editProfile")}</Text>
+      </TouchableOpacity>
 
       {user.role === "user" && user.emailVerified === false ? (
         <TouchableOpacity
@@ -503,10 +516,30 @@ export default function AccountScreen() {
 
       {/* Tab content */}
       {tab === "favorites" ? (
-        favoriteEvents.length > 0 ? (
-          favoriteEvents.map((e) => (
-            <EventCard key={e.id} event={e} onPress={() => safePush(`/event/${e.id}`)} />
-          ))
+        favoriteEvents.length > 0 || favoriteVenues.length > 0 ? (
+          <>
+            {favoriteEvents.map((e) => (
+              <EventCard key={e.id} event={e} onPress={() => safePush(`/event/${e.id}`)} />
+            ))}
+            {favoriteVenues.length > 0 && (
+              <>
+                <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: C.text, marginTop: 8 }}>
+                  {t("favoriteVenues")}
+                </Text>
+                {favoriteVenues.map((vid) => (
+                  <TouchableOpacity
+                    key={`fv_${vid}`}
+                    style={[styles.notifCard, { alignItems: "center" }]}
+                    onPress={() => safePush(`/venue/${vid}`)}
+                  >
+                    <Ionicons name="location" size={20} color={C.lavender} />
+                    <Text style={[styles.notifTitle, { flex: 1 }]}>#{vid}</Text>
+                    <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+          </>
         ) : (
           <View style={styles.empty}>
             <Ionicons name="heart-outline" size={48} color={C.border} />

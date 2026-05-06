@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, doublePrecision, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, doublePrecision, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -155,7 +155,9 @@ export const favoritesTable = pgTable("favorites", {
   itemType: text("item_type").notNull(),
   itemId: integer("item_id").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (t) => ({
+  uniqUserItem: uniqueIndex("favorites_user_item_unique").on(t.userId, t.itemType, t.itemId),
+}));
 
 export type Favorite = typeof favoritesTable.$inferSelect;
 export type InsertFavorite = typeof favoritesTable.$inferInsert;

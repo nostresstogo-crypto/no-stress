@@ -9,6 +9,7 @@ import Dashboard from "@/pages/Dashboard";
 import Partners from "@/pages/Partners";
 import DeletionRequests from "@/pages/DeletionRequests";
 import Publications from "@/pages/Publications";
+import Venues from "@/pages/Venues";
 import Statistics from "@/pages/Statistics";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,9 @@ function Router() {
       </Route>
       <Route path="/publications">
         <ProtectedRoute component={Publications} />
+      </Route>
+      <Route path="/lieux">
+        <ProtectedRoute component={Venues} />
       </Route>
       <Route path="/suppressions">
         <ProtectedRoute component={DeletionRequests} />
