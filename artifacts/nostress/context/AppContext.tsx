@@ -444,10 +444,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const syncMyEventsFromBackend = useCallback(async () => {
-    const partnerId = user?.id;
-    if (!partnerId) return;
+    if (!user || user.role !== "structure" || !tokenRef.current) return;
     try {
-      const r = await fetch(`${API_BASE}/events?partnerId=${encodeURIComponent(partnerId)}`);
+      const r = await authFetch(`${API_BASE}/partners/me/events`);
       if (!r.ok) return;
       const data = await r.json();
       const remote: any[] = Array.isArray(data?.events) ? data.events : [];

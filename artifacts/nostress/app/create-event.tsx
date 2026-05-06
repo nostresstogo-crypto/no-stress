@@ -101,7 +101,7 @@ const INITIAL_FORM: FormData = {
 
 export default function CreateEventScreen() {
   const t = useT();
-  const { lang, addMyEvent, updateMyEvent, user } = useApp();
+  const { lang, addMyEvent, updateMyEvent, user, authFetch, token } = useApp();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ editId?: string; localId?: string }>();
   const editId = typeof params.editId === "string" ? params.editId : undefined;
@@ -156,14 +156,15 @@ export default function CreateEventScreen() {
   }, [isEdit, editId, lang]);
 
   const fetchVenues = useCallback(async () => {
+    if (!token) return;
     try {
-      const r = await fetch(`${API_BASE}/venues`);
+      const r = await authFetch(`${API_BASE}/partners/me/venues?status=approved`);
       if (!r.ok) return;
       const data = await r.json();
       const list = Array.isArray(data?.venues) ? data.venues : [];
       setApiVenues(list.map((v: any) => ({ id: String(v.id), name: v.name || "", city: v.city || null, partnerId: v.partnerId != null ? String(v.partnerId) : null })));
     } catch {}
-  }, []);
+  }, [authFetch, token]);
 
   useEffect(() => { fetchVenues(); }, [fetchVenues]);
 
@@ -183,7 +184,7 @@ export default function CreateEventScreen() {
     if (!form.titleFr.trim()) newErrors.titleFr = t("requiredField");
     if (!form.category) newErrors.category = t("requiredField");
     if (!form.city) newErrors.city = t("requiredField");
-    if (!form.venueId && !form.venue.trim()) newErrors.venue = t("requiredField");
+    if (!form.venueId) newErrors.venue = t("requiredField");
     if (!form.date.trim()) newErrors.date = t("requiredField");
     if (!form.time.trim()) newErrors.time = t("requiredField");
     if (!form.isFree && !form.priceFCFA.trim()) newErrors.priceFCFA = t("requiredField");
@@ -235,10 +236,10 @@ export default function CreateEventScreen() {
         images: uploadedImages,
         partnerId: user?.id || null,
       };
-      const url = isEdit ? `${API_BASE}/events/${editId}` : `${API_BASE}/events`;
+      const url = isEdit ? `${API_BASE}/partners/me/events/${editId}` : `${API_BASE}/partners/me/events`;
       const method = isEdit ? "PATCH" : "POST";
       const editPayload = isEdit ? { ...payload, status: "pending" } : payload;
-      const res = await fetch(url, {
+      const res = await authFetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editPayload),

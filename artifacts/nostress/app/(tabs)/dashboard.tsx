@@ -35,7 +35,10 @@ interface MyVenue {
   imageUrl?: string;
   images?: string[];
   createdAt: string;
-  isVerified?: boolean;
+  status?: "pending" | "approved" | "rejected";
+  rejectionReason?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 const MAX_VENUE_IMAGES = 4;
@@ -73,7 +76,7 @@ const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
 
 export default function DashboardScreen() {
   const t = useT();
-  const { user, lang, myEvents, setUser, addNotification, updateMyEvent, removeMyEvent, syncMyEventsStatus, syncMyEventsFromBackend, refreshApiEvents } = useApp();
+  const { user, lang, myEvents, setUser, addNotification, updateMyEvent, removeMyEvent, syncMyEventsStatus, syncMyEventsFromBackend, refreshApiEvents, authFetch, token } = useApp();
   const insets = useSafeAreaInsets();
   const C = useColors();
 
@@ -97,14 +100,13 @@ export default function DashboardScreen() {
   const [savingVenue, setSavingVenue] = useState(false);
 
   const loadMyVenues = useCallback(async () => {
-    // Local cache for instant display
     try {
       const cached = await AsyncStorage.getItem(NS_MY_VENUES_KEY);
       if (cached) setMyVenues(JSON.parse(cached));
     } catch {}
-    // Then fetch fresh from API (filter to this partner's email later if needed)
+    if (!token) return;
     try {
-      const r = await fetch(`${API_BASE}/venues`);
+      const r = await authFetch(`${API_BASE}/partners/me/venues`);
       if (!r.ok) return;
       const data = await r.json();
       const list = Array.isArray(data?.venues) ? data.venues : [];
@@ -118,14 +120,18 @@ export default function DashboardScreen() {
         imageUrl: v.imageUrl || undefined,
         images: Array.isArray(v.images) ? v.images : (v.imageUrl ? [v.imageUrl] : []),
         createdAt: v.createdAt || new Date().toISOString(),
-        isVerified: !!v.isVerified,
+        status: (v.status as any) || "pending",
+        rejectionReason: v.rejectionReason ?? null,
+        latitude: v.latitude ?? null,
+        longitude: v.longitude ?? null,
       }));
       setMyVenues(mapped);
       AsyncStorage.setItem(NS_MY_VENUES_KEY, JSON.stringify(mapped)).catch(() => {});
     } catch {}
-  }, []);
+  }, [authFetch, token]);
 
   useEffect(() => { loadMyVenues(); }, [loadMyVenues]);
+  useFocusEffect(useCallback(() => { loadMyVenues(); }, [loadMyVenues]));
 
   const openVenueModal = () => {
     setEditingVenueId(null);
@@ -165,8 +171,8 @@ export default function DashboardScreen() {
         }
       }
       const isEdit = !!editingVenueId;
-      const url = isEdit ? `${API_BASE}/venues/${editingVenueId}` : `${API_BASE}/venues`;
-      const r = await fetch(url, {
+      const url = isEdit ? `${API_BASE}/partners/me/venues/${editingVenueId}` : `${API_BASE}/partners/me/venues`;
+      const r = await authFetch(url, {
         method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -177,10 +183,12 @@ export default function DashboardScreen() {
           description: venueDesc.trim(),
           images: uploaded,
           imageUrl: uploaded[0] || null,
-          partnerId: user?.id || null,
         }),
       });
-      if (!r.ok) throw new Error("save failed");
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || "save failed");
+      }
       const saved = await r.json();
       const savedVenue: MyVenue = {
         id: String(saved.id),
@@ -192,7 +200,10 @@ export default function DashboardScreen() {
         imageUrl: saved.imageUrl || undefined,
         images: Array.isArray(saved.images) ? saved.images : (saved.imageUrl ? [saved.imageUrl] : []),
         createdAt: saved.createdAt || new Date().toISOString(),
-        isVerified: !!saved.isVerified,
+        status: (saved.status as any) || "pending",
+        rejectionReason: saved.rejectionReason ?? null,
+        latitude: saved.latitude ?? null,
+        longitude: saved.longitude ?? null,
       };
       setMyVenues((prev) => {
         const next = isEdit
@@ -203,10 +214,16 @@ export default function DashboardScreen() {
       });
       setShowVenueModal(false);
       setEditingVenueId(null);
-    } catch {
+      addNotification({
+        title: isEdit ? "Venue updated" : "Venue submitted",
+        titleFr: isEdit ? "Lieu mis à jour" : "Lieu envoyé",
+        body: "Pending administrator review.",
+        bodyFr: "En attente de validation par l'administrateur.",
+      });
+    } catch (e: any) {
       Alert.alert(
         lang === "fr" ? "Erreur" : "Error",
-        lang === "fr" ? "Impossible d'enregistrer le lieu. Vérifiez votre connexion." : "Unable to save venue. Check your connection.",
+        e?.message || (lang === "fr" ? "Impossible d'enregistrer le lieu. Vérifiez votre connexion." : "Unable to save venue. Check your connection."),
       );
     } finally {
       setSavingVenue(false);
@@ -224,8 +241,22 @@ export default function DashboardScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              await fetch(`${API_BASE}/venues/${id}`, { method: "DELETE" });
-            } catch {}
+              const r = await authFetch(`${API_BASE}/partners/me/venues/${id}`, { method: "DELETE" });
+              if (!r.ok) {
+                const err = await r.json().catch(() => ({}));
+                Alert.alert(
+                  lang === "fr" ? "Suppression impossible" : "Cannot delete",
+                  err?.error || (lang === "fr" ? "Impossible de supprimer ce lieu." : "Unable to delete this venue."),
+                );
+                return;
+              }
+            } catch {
+              Alert.alert(
+                lang === "fr" ? "Erreur réseau" : "Network error",
+                lang === "fr" ? "Vérifiez votre connexion." : "Check your connection.",
+              );
+              return;
+            }
             setMyVenues((prev) => {
               const next = prev.filter((v) => v.id !== id);
               AsyncStorage.setItem(NS_MY_VENUES_KEY, JSON.stringify(next));
@@ -235,6 +266,10 @@ export default function DashboardScreen() {
         },
       ]
     );
+  };
+
+  const setVenueLocation = (v: MyVenue) => {
+    safePush(`/set-venue-location?venueId=${v.id}&name=${encodeURIComponent(v.name)}` as any);
   };
 
   const checkPartnerStatus = useCallback(() => {
@@ -609,16 +644,30 @@ export default function DashboardScreen() {
                       {
                         text: lang === "fr" ? "Annuler l'événement" : "Cancel event",
                         style: "destructive",
-                        onPress: () => {
-                          updateMyEvent(event.id, { status: "cancelled" });
-                          if (event.apiId) {
-                            fetch(`${API_BASE}/events/${event.apiId}`, {
+                        onPress: async () => {
+                          if (!event.apiId) {
+                            updateMyEvent(event.id, { status: "cancelled" });
+                            return;
+                          }
+                          try {
+                            const r = await authFetch(`${API_BASE}/partners/me/events/${event.apiId}`, {
                               method: "PATCH",
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({ status: "cancelled" }),
-                            })
-                              .catch(() => {})
-                              .finally(() => { refreshApiEvents().catch(() => {}); });
+                            });
+                            if (!r.ok) {
+                              const err = await r.json().catch(() => ({}));
+                              Alert.alert(
+                                lang === "fr" ? "Action impossible" : "Action failed",
+                                err?.error || (lang === "fr" ? "Impossible d'annuler cet événement." : "Unable to cancel this event."),
+                              );
+                              return;
+                            }
+                            updateMyEvent(event.id, { status: "cancelled" });
+                          } catch {
+                            Alert.alert(lang === "fr" ? "Erreur réseau" : "Network error", "");
+                          } finally {
+                            refreshApiEvents().catch(() => {});
                           }
                         },
                       },
@@ -634,12 +683,26 @@ export default function DashboardScreen() {
                       {
                         text: lang === "fr" ? "Supprimer" : "Delete",
                         style: "destructive",
-                        onPress: () => {
-                          removeMyEvent(event.id);
-                          if (event.apiId) {
-                            fetch(`${API_BASE}/events/${event.apiId}`, { method: "DELETE" })
-                              .catch(() => {})
-                              .finally(() => { refreshApiEvents().catch(() => {}); });
+                        onPress: async () => {
+                          if (!event.apiId) {
+                            removeMyEvent(event.id);
+                            return;
+                          }
+                          try {
+                            const r = await authFetch(`${API_BASE}/partners/me/events/${event.apiId}`, { method: "DELETE" });
+                            if (!r.ok) {
+                              const err = await r.json().catch(() => ({}));
+                              Alert.alert(
+                                lang === "fr" ? "Suppression impossible" : "Cannot delete",
+                                err?.error || (lang === "fr" ? "Impossible de supprimer cet événement." : "Unable to delete this event."),
+                              );
+                              return;
+                            }
+                            removeMyEvent(event.id);
+                          } catch {
+                            Alert.alert(lang === "fr" ? "Erreur réseau" : "Network error", "");
+                          } finally {
+                            refreshApiEvents().catch(() => {});
                           }
                         },
                       },
@@ -825,31 +888,78 @@ export default function DashboardScreen() {
                 </Text>
               </View>
             ) : (
-              myVenues.map((venue) => (
-                <View key={venue.id} style={styles.venueRow}>
-                  <View style={[styles.venueIconBox, { backgroundColor: C.gold + "22" }]}>
-                    <Ionicons name="business" size={20} color={C.gold} />
+              myVenues.map((venue) => {
+                const vStatus = venue.status || "pending";
+                const statusColor = vStatus === "approved" ? C.success : vStatus === "rejected" ? C.error : C.gold;
+                const statusLabel = vStatus === "approved"
+                  ? (lang === "fr" ? "Approuvé" : "Approved")
+                  : vStatus === "rejected"
+                  ? (lang === "fr" ? "Rejeté" : "Rejected")
+                  : (lang === "fr" ? "En attente" : "Pending");
+                const hasLocation = typeof venue.latitude === "number" && typeof venue.longitude === "number";
+                return (
+                  <View key={venue.id} style={[styles.venueRow, { flexDirection: "column", alignItems: "stretch", gap: 8 }]}>
+                    <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
+                      <View style={[styles.venueIconBox, { backgroundColor: C.gold + "22" }]}>
+                        <Ionicons name="business" size={20} color={C.gold} />
+                      </View>
+                      <View style={styles.eventInfo}>
+                        <Text style={styles.eventTitle}>{venue.name}</Text>
+                        <Text style={styles.eventMeta}>{venue.type} · {venue.city}</Text>
+                        {venue.address ? (
+                          <Text style={styles.eventMeta}>{venue.address}</Text>
+                        ) : null}
+                        <View style={{ flexDirection: "row", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
+                          <View style={[styles.statusBadge, { backgroundColor: statusColor + "22", borderColor: statusColor }]}>
+                            <Text style={[styles.statusText, { color: statusColor }]}>{statusLabel}</Text>
+                          </View>
+                          {!hasLocation && (
+                            <View style={[styles.statusBadge, { backgroundColor: C.textMuted + "22", borderColor: C.textMuted }]}>
+                              <Text style={[styles.statusText, { color: C.textMuted }]}>
+                                {lang === "fr" ? "GPS manquant" : "GPS missing"}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
+                        {vStatus === "rejected" && venue.rejectionReason ? (
+                          <Text style={[styles.eventMeta, { color: C.error, marginTop: 4 }]} numberOfLines={3}>
+                            {venue.rejectionReason}
+                          </Text>
+                        ) : null}
+                      </View>
+                    </View>
+                    <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+                      <TouchableOpacity
+                        onPress={() => setVenueLocation(venue)}
+                        style={[styles.venueActionBtn, { borderColor: C.lavender }]}
+                      >
+                        <Ionicons name="navigate" size={14} color={C.lavender} />
+                        <Text style={[styles.venueActionText, { color: C.lavender }]}>
+                          {hasLocation ? (lang === "fr" ? "Modifier GPS" : "Update GPS") : (lang === "fr" ? "Définir GPS" : "Set GPS")}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => openEditVenueModal(venue)}
+                        style={[styles.venueActionBtn, { borderColor: C.gold }]}
+                      >
+                        <Ionicons name="create-outline" size={14} color={C.gold} />
+                        <Text style={[styles.venueActionText, { color: C.gold }]}>
+                          {lang === "fr" ? "Modifier" : "Edit"}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => deleteVenue(venue.id)}
+                        style={[styles.venueActionBtn, { borderColor: C.error }]}
+                      >
+                        <Ionicons name="trash-outline" size={14} color={C.error} />
+                        <Text style={[styles.venueActionText, { color: C.error }]}>
+                          {lang === "fr" ? "Supprimer" : "Delete"}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                  <View style={styles.eventInfo}>
-                    <Text style={styles.eventTitle}>{venue.name}</Text>
-                    <Text style={styles.eventMeta}>{venue.type} · {venue.city}</Text>
-                    {venue.address ? (
-                      <Text style={styles.eventMeta}>{venue.address}</Text>
-                    ) : null}
-                  </View>
-                  <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
-                    <TouchableOpacity onPress={() => safePush(`/venue/api_${venue.id}` as any)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <Ionicons name="eye-outline" size={18} color={C.lavender} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => openEditVenueModal(venue)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <Ionicons name="create-outline" size={18} color={C.gold} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => deleteVenue(venue.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                      <Ionicons name="trash-outline" size={18} color={C.error} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ))
+                );
+              })
             )}
           </>
         )}
@@ -1456,6 +1566,19 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
+  },
+  venueActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  venueActionText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
   },
 
   modalOverlay: {

@@ -131,6 +131,16 @@ Flow client (mobile) : pick image → POST `/api/storage/uploads/request-url` `{
 | GET | `/api/partners/status?email=` | — | Vérifier statut partenaire |
 | POST | `/api/partners/register` | — | Inscription partenaire (sans password ni GPS) |
 | PATCH | `/api/partners/me/location` | Bearer (p_) | Partenaire approuvé définit ses coords GPS |
+| GET | `/api/partners/me/venues` | Bearer (p_) | Liste mes lieux (filtre `?status=`) |
+| POST | `/api/partners/me/venues` | Bearer (p_) | Créer un lieu (status=pending) |
+| PATCH | `/api/partners/me/venues/:id` | Bearer (p_) | MAJ infos lieu (reset→pending sauf location) |
+| PATCH | `/api/partners/me/venues/:id/location` | Bearer (p_) | MAJ coords GPS du lieu |
+| DELETE | `/api/partners/me/venues/:id` | Bearer (p_) | Supprimer lieu (409 si event futur lié) |
+| POST | `/api/partners/me/events` | Bearer (p_) | Créer event (venueId requis + own + approved) |
+| PATCH | `/api/partners/me/events/:id` | Bearer (p_) | MAJ event (refus si date < aujourd'hui) |
+| DELETE | `/api/partners/me/events/:id` | Bearer (p_) | Supprimer event (refus si date < aujourd'hui) |
+| POST | `/api/admin/venues/:id/approve` | Bearer admin | Valider un lieu |
+| POST | `/api/admin/venues/:id/reject` | Bearer admin | Rejeter un lieu (rejectionReason) |
 | POST | `/api/admin/partners/:id/resend-credentials` | Bearer | Régénère password + email + révoque sessions |
 
 ## Données mock
