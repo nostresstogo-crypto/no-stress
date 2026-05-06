@@ -85,7 +85,7 @@ router.patch("/venues/:id", async (req, res) => {
   }
   const [v] = await db.update(venuesTable).set(allowed).where(eq(venuesTable.id, id)).returning();
   if (!v) return res.status(404).json({ error: "Venue not found" });
-  res.json(serialize(v));
+  return res.json(serialize(v));
 });
 
 router.delete("/venues/:id", async (req, res) => {
@@ -93,7 +93,7 @@ router.delete("/venues/:id", async (req, res) => {
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Venue not found" });
   const [v] = await db.delete(venuesTable).where(eq(venuesTable.id, id)).returning();
   if (!v) return res.status(404).json({ error: "Venue not found" });
-  res.json({ success: true });
+  return res.json({ success: true });
 });
 
 router.post("/admin/venues/:id/verify", async (req, res) => {
@@ -101,7 +101,7 @@ router.post("/admin/venues/:id/verify", async (req, res) => {
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Venue not found" });
   const [v] = await db.update(venuesTable).set({ isVerified: "true" }).where(eq(venuesTable.id, id)).returning();
   if (!v) return res.status(404).json({ error: "Venue not found" });
-  res.json(serialize(v));
+  return res.json(serialize(v));
 });
 
 export default router;
