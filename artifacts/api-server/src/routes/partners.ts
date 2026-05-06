@@ -1,7 +1,14 @@
 import { Router, type IRouter } from "express";
-import { eq, and, gte, sql } from "drizzle-orm";
-import { db, partnersTable, usersTable, eventsTable, registrationLogTable } from "@workspace/db";
-import { hashPassword, signToken, rateLimit, issueRefreshToken } from "../lib/auth-utils.js";
+import crypto from "node:crypto";
+import { eq, and, gte, sql, isNull } from "drizzle-orm";
+import { db, partnersTable, usersTable, eventsTable, registrationLogTable, refreshTokensTable } from "@workspace/db";
+import { hashPassword, signToken, rateLimit, issueRefreshToken, requireAuth } from "../lib/auth-utils.js";
+
+function generateRandomPassword(): string {
+  // 12 characters, easy-to-read base64url (no ambiguous chars), strong entropy
+  const buf = crypto.randomBytes(9);
+  return buf.toString("base64").replace(/[+/=]/g, "").slice(0, 12);
+}
 
 const partnerRegisterLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, key: "partner-register" });
 import {
@@ -51,6 +58,8 @@ router.get("/partners/status", async (req, res) => {
     rejectionReason: partner.rejectionReason ?? null,
     businessName: partner.businessName,
     partnerId: String(partner.id),
+    latitude: partner.latitude,
+    longitude: partner.longitude,
   });
 });
 
@@ -79,13 +88,12 @@ router.get("/partners/approved-map", async (_req, res) => {
 router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
   const email = normEmail(req.body?.email);
   const phone = normPhone(req.body?.phone);
-  const { password, contactName, businessName, businessType, city, description, websiteUrl, latitude, longitude, country } = req.body || {};
+  const { contactName, businessName, businessType, city, description, websiteUrl, country } = req.body || {};
   if (!email || !contactName || !businessName || !businessType || !phone || !city) {
     return res.status(400).json({ error: "Tous les champs obligatoires doivent être remplis." });
   }
-  if (typeof password !== "string" || password.length < 8) {
-    return res.status(400).json({ error: "Le mot de passe doit faire au moins 8 caractères." });
-  }
+  // Password is auto-generated and emailed only upon admin approval.
+  const tempPassword = generateRandomPassword();
   // Cross-check: same email should not exist as a regular user
   const [existingUser] = await db
     .select({ id: usersTable.id })
@@ -115,7 +123,7 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
       return res.status(409).json({ error: "Ce numéro de téléphone est déjà utilisé par un autre partenaire." });
     }
   }
-  const passwordHash = await hashPassword(password);
+  const passwordHash = await hashPassword(tempPassword);
   const [partner] = await db
     .insert(partnersTable)
     .values({
@@ -126,8 +134,8 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
       businessType,
       phone,
       city: country ? `${city}, ${country}` : city,
-      latitude: latitude ? parseFloat(latitude) : null,
-      longitude: longitude ? parseFloat(longitude) : null,
+      latitude: null,
+      longitude: null,
       description: description || null,
       websiteUrl: websiteUrl || null,
     })
@@ -144,6 +152,33 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
   });
   sendPartnerRegistrationEmailToPartner(email, contactName, businessName).catch(() => {});
   sendPartnerRegistrationEmailToAdmin(email, contactName, businessName, businessType, city, phone).catch(() => {});
+});
+
+// Authenticated partner sets their own GPS location (replaces lat/lng at register time).
+// Only approved partners may set their location (pending/rejected accounts cannot appear on the map).
+router.patch("/partners/me/location", requireAuth, async (req: any, res) => {
+  const sub: string = req.auth?.sub || "";
+  if (!sub.startsWith("p_")) {
+    return res.status(403).json({ error: "Réservé aux comptes partenaires." });
+  }
+  const id = parseInt(sub.slice(2), 10);
+  if (!Number.isFinite(id)) return res.status(400).json({ error: "Identifiant invalide." });
+  const lat = parseFloat(req.body?.latitude);
+  const lng = parseFloat(req.body?.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return res.status(400).json({ error: "Coordonnées invalides." });
+  }
+  const [existing] = await db.select().from(partnersTable).where(eq(partnersTable.id, id));
+  if (!existing) return res.status(404).json({ error: "Partenaire introuvable." });
+  if (existing.status !== "approved") {
+    return res.status(403).json({ error: "Votre compte doit être approuvé avant de définir une position." });
+  }
+  const [partner] = await db
+    .update(partnersTable)
+    .set({ latitude: lat, longitude: lng, updatedAt: new Date() })
+    .where(eq(partnersTable.id, id))
+    .returning();
+  res.json({ message: "Position enregistrée.", partner: serializePartner(partner) });
 });
 
 router.get("/partners/:id", async (req, res) => {
@@ -200,14 +235,70 @@ router.get("/partners/:id/public", async (req, res) => {
 router.post("/admin/partners/:id/approve", requireAdmin, async (req: any, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Partenaire introuvable." });
+  // Generate a fresh password (sent by email — only delivery channel) and rotate the hash.
+  const newPassword = generateRandomPassword();
+  const newHash = await hashPassword(newPassword);
   const [partner] = await db
     .update(partnersTable)
-    .set({ status: "approved", rejectionReason: null, updatedAt: new Date() })
+    .set({ status: "approved", rejectionReason: null, passwordHash: newHash, updatedAt: new Date() })
     .where(eq(partnersTable.id, id))
     .returning();
   if (!partner) return res.status(404).json({ error: "Partenaire introuvable." });
-  res.json({ message: "Partenaire approuvé avec succès.", partner: serializePartner(partner) });
-  sendPartnerApprovalEmail(partner.email, partner.contactName, partner.businessName).catch(() => {});
+  // Explicitly revoke any active refresh tokens issued before approval (the auto-issued
+  // session at registration). The new emailed password is the only valid credential going forward.
+  const sub = `p_${partner.id}`;
+  await db
+    .update(refreshTokensTable)
+    .set({ revokedAt: new Date() })
+    .where(and(eq(refreshTokensTable.subject, sub), isNull(refreshTokensTable.revokedAt)));
+  // Await email synchronously so the admin sees a clear failure if SMTP is down,
+  // and can use /admin/partners/:id/resend-credentials to retry rather than leaving
+  // the partner locked out silently.
+  try {
+    await sendPartnerApprovalEmail(partner.email, partner.contactName, partner.businessName, newPassword);
+    res.json({ message: "Partenaire approuvé avec succès.", partner: serializePartner(partner) });
+  } catch (err: any) {
+    console.error("[partners.approve] email send failed:", err?.message || err);
+    res.status(207).json({
+      message: "Partenaire approuvé, mais l'envoi de l'email d'identifiants a échoué. Utilisez 'Renvoyer les identifiants' pour relancer.",
+      emailError: true,
+      partner: serializePartner(partner),
+    });
+  }
+});
+
+// Admin can regenerate + resend credentials if the original approval email failed
+// (e.g. SMTP outage) or the partner lost their password.
+router.post("/admin/partners/:id/resend-credentials", requireAdmin, async (req: any, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(404).json({ error: "Partenaire introuvable." });
+  // Check existence + status BEFORE mutating credentials — avoid unintended side effects on
+  // pending/rejected accounts.
+  const [existing] = await db.select().from(partnersTable).where(eq(partnersTable.id, id));
+  if (!existing) return res.status(404).json({ error: "Partenaire introuvable." });
+  if (existing.status !== "approved") {
+    return res.status(400).json({ error: "Le partenaire doit d'abord être approuvé." });
+  }
+  const newPassword = generateRandomPassword();
+  const newHash = await hashPassword(newPassword);
+  const [partner] = await db
+    .update(partnersTable)
+    .set({ passwordHash: newHash, updatedAt: new Date() })
+    .where(eq(partnersTable.id, id))
+    .returning();
+  // Invalidate sessions tied to the old password.
+  const sub = `p_${partner.id}`;
+  await db
+    .update(refreshTokensTable)
+    .set({ revokedAt: new Date() })
+    .where(and(eq(refreshTokensTable.subject, sub), isNull(refreshTokensTable.revokedAt)));
+  try {
+    await sendPartnerApprovalEmail(partner.email, partner.contactName, partner.businessName, newPassword);
+    res.json({ message: "Nouveaux identifiants envoyés par email." });
+  } catch (err: any) {
+    console.error("[partners.resend-credentials] email send failed:", err?.message || err);
+    res.status(502).json({ error: "Échec de l'envoi de l'email. Vérifiez la configuration SMTP." });
+  }
 });
 
 router.post("/admin/partners/:id/reject", requireAdmin, async (req: any, res) => {

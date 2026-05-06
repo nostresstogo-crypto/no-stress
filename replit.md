@@ -85,6 +85,7 @@ artifacts/
   - Backend Redis si `REDIS_URL` est défini (multi-instance safe), sinon repli mémoire.
   - INCR + EXPIRE NX atomique côté Redis ; fallback mémoire si Redis tombe (fail-open).
 - **Email verification** : code 6 chiffres, expiration 24h, welcome email envoyé après vérification.
+- **Inscription partenaire (mai 2026)** : pas de mot de passe demandé au formulaire. Backend génère un password random au register (hash stocké). À l'approbation admin, un NOUVEAU password est régénéré, hashé, et envoyé par email (sendMailOrThrow). Les refresh_tokens du sub `p_<id>` sont révoqués pour invalider la session auto émise au register. Si l'email échoue → réponse 207 + flag `emailError:true` ; admin peut cliquer "Renvoyer les identifiants" → POST `/admin/partners/:id/resend-credentials`.
 - **Clients** : `authFetch` (mobile, dans AppContext) et le helper `request` (admin web `lib/api.ts`) interceptent les 401 et rejouent automatiquement après refresh.
 
 ## Upload d'images
@@ -116,7 +117,9 @@ Flow client (mobile) : pick image → POST `/api/storage/uploads/request-url` `{
 | POST | `/api/contact` | — | Formulaire de contact (envoie email à l'admin + accusé de réception) |
 | GET | `/api/partners/approved-map` | — | Partenaires approuvés avec coordonnées |
 | GET | `/api/partners/status?email=` | — | Vérifier statut partenaire |
-| POST | `/api/partners/register` | — | Inscription partenaire |
+| POST | `/api/partners/register` | — | Inscription partenaire (sans password ni GPS) |
+| PATCH | `/api/partners/me/location` | Bearer (p_) | Partenaire approuvé définit ses coords GPS |
+| POST | `/api/admin/partners/:id/resend-credentials` | Bearer | Régénère password + email + révoque sessions |
 
 ## Données mock
 

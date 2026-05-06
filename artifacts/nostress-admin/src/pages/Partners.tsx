@@ -27,6 +27,7 @@ import {
   Calendar,
   AlertTriangle,
   Trash2,
+  KeyRound,
 } from "lucide-react";
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
@@ -117,10 +118,30 @@ export default function Partners() {
   const handleApprove = async (partner: Partner) => {
     setActionLoading(true);
     try {
-      await api.partners.approve(partner.id);
-      showToast(`${partner.businessName} a été approuvé avec succès.`);
+      const result = await api.partners.approve(partner.id);
+      if (result?.emailError) {
+        showToast(
+          `${partner.businessName} approuvé, mais l'email d'identifiants n'a pas pu être envoyé. Cliquez sur "Renvoyer les identifiants".`,
+          "error",
+        );
+      } else {
+        showToast(`${partner.businessName} a été approuvé. Email d'identifiants envoyé.`);
+      }
       loadPartners();
       setDetailOpen(false);
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleResendCredentials = async (partner: Partner) => {
+    if (!confirm(`Régénérer un nouveau mot de passe pour ${partner.businessName} et l'envoyer par email ? Cela invalidera les anciens accès.`)) return;
+    setActionLoading(true);
+    try {
+      await api.partners.resendCredentials(partner.id);
+      showToast(`Nouveaux identifiants envoyés à ${partner.email}.`);
     } catch (err: any) {
       showToast(err.message, "error");
     } finally {
@@ -401,6 +422,19 @@ export default function Partners() {
               >
                 <CheckCircle className="w-4 h-4 mr-1" />
                 Approuver
+              </Button>
+            </DialogFooter>
+          )}
+
+          {selected?.status === "approved" && (
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => selected && handleResendCredentials(selected)}
+                disabled={actionLoading}
+              >
+                <KeyRound className="w-4 h-4 mr-1" />
+                Renvoyer les identifiants
               </Button>
             </DialogFooter>
           )}

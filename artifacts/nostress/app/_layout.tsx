@@ -333,6 +333,7 @@ function RootLayoutNav() {
         <Stack.Screen name="venue/[id]" options={{ headerShown: false, presentation: "card" }} />
         <Stack.Screen name="legal/terms" options={{ headerShown: false, presentation: "card" }} />
         <Stack.Screen name="legal/privacy" options={{ headerShown: false, presentation: "card" }} />
+        <Stack.Screen name="set-location" options={{ headerShown: false, presentation: "modal" }} />
       </Stack>
 
       {showSplash && (

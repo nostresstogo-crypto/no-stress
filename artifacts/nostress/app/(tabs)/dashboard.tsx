@@ -81,6 +81,7 @@ export default function DashboardScreen() {
   const [eventStatusFilter, setEventStatusFilter] = useState<EventStatusFilter>("all");
   const [openEventActionsId, setOpenEventActionsId] = useState<string | null>(null);
   const [partnerCheck, setPartnerCheck] = useState<PartnerCheckStatus>(null);
+  const [partnerHasLocation, setPartnerHasLocation] = useState<boolean | null>(null);
   const [partnerRejectReason, setPartnerRejectReason] = useState<string | null>(null);
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
@@ -248,7 +249,10 @@ export default function DashboardScreen() {
         const status: PartnerCheckStatus = data.status ?? "pending";
         setPartnerCheck(status);
         setPartnerRejectReason(data.rejectionReason ?? null);
-        if (status !== user.partnerStatus) {
+        setPartnerHasLocation(
+          typeof data.latitude === "number" && typeof data.longitude === "number",
+        );
+        if (status !== user.partnerStatus && (status === "pending" || status === "approved" || status === "rejected")) {
           setUser({ ...user, partnerStatus: status });
           if (status === "approved" && user.partnerStatus !== "approved") {
             addNotification({
@@ -486,6 +490,30 @@ export default function DashboardScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+        {/* ── Location prompt for approved partners without GPS ── */}
+        {user.role === "structure" && partnerCheck === "approved" && partnerHasLocation === false && (
+          <TouchableOpacity
+            style={styles.locationPromptCard}
+            onPress={() => safePush("/set-location")}
+            activeOpacity={0.85}
+          >
+            <View style={styles.locationPromptIcon}>
+              <Ionicons name="location" size={22} color={C.gold} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.locationPromptTitle}>
+                {lang === "fr" ? "Activez votre position GPS" : "Enable your GPS position"}
+              </Text>
+              <Text style={styles.locationPromptDesc}>
+                {lang === "fr"
+                  ? "Votre lieu n'apparaît pas encore sur la carte. Définissez sa position en quelques secondes."
+                  : "Your venue doesn't appear on the map yet. Set its position in seconds."}
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={C.gold} />
+          </TouchableOpacity>
+        )}
+
         {/* ── Events tab ── */}
         {tab === "events" && (
           <>
@@ -1219,6 +1247,38 @@ const styles = StyleSheet.create({
   },
   content: { padding: 20, gap: 12 },
 
+  locationPromptCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: C.gold + "12",
+    borderWidth: 1,
+    borderColor: C.gold + "55",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginBottom: 14,
+  },
+  locationPromptIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: C.gold + "22",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  locationPromptTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: C.text,
+    marginBottom: 2,
+  },
+  locationPromptDesc: {
+    fontSize: 12,
+    color: C.textMuted,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 17,
+  },
   createBtn: {
     flexDirection: "row",
     alignItems: "center",

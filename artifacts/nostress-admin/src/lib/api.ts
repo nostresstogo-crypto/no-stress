@@ -102,7 +102,9 @@ export const api = {
       request<Partner[]>(`/partners${status ? `?status=${status}` : ""}`),
     get: (id: string) => request<Partner>(`/partners/${id}`),
     approve: (id: string) =>
-      request<{ message: string; partner: Partner }>(`/admin/partners/${id}/approve`, { method: "POST" }),
+      request<{ message: string; partner: Partner; emailError?: boolean }>(`/admin/partners/${id}/approve`, { method: "POST" }),
+    resendCredentials: (id: string) =>
+      request<{ message: string }>(`/admin/partners/${id}/resend-credentials`, { method: "POST" }),
     reject: (id: string, reason: string) =>
       request<{ message: string; partner: Partner }>(`/admin/partners/${id}/reject`, {
         method: "POST",

@@ -75,7 +75,8 @@ export default function AuthScreen() {
     : "/api";
 
   const handleSubmit = async () => {
-    if (!email || !password) {
+    const isPartnerRegister = mode === "register" && registerRole === "structure";
+    if (!email || (!isPartnerRegister && !password)) {
       setError(t("error"));
       return;
     }
@@ -99,15 +100,12 @@ export default function AuthScreen() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: cleanEmail,
-            password,
             contactName: name,
             businessName: name,
             businessType,
             phone,
             city,
             country,
-            latitude,
-            longitude,
             description: description || null,
           }),
         });
@@ -372,28 +370,41 @@ export default function AuthScreen() {
             </View>
           </View>
 
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>{t("password")}</Text>
-            <View style={styles.inputRow}>
-              <Ionicons name="lock-closed-outline" size={18} color={C.textMuted} />
-              <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="••••••••"
-                placeholderTextColor={C.textMuted}
-                style={styles.input}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                <Ionicons
-                  name={showPassword ? "eye-off-outline" : "eye-outline"}
-                  size={18}
-                  color={C.textMuted}
+          {!(mode === "register" && registerRole === "structure") && (
+            <View style={styles.field}>
+              <Text style={styles.fieldLabel}>{t("password")}</Text>
+              <View style={styles.inputRow}>
+                <Ionicons name="lock-closed-outline" size={18} color={C.textMuted} />
+                <TextInput
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="••••••••"
+                  placeholderTextColor={C.textMuted}
+                  style={styles.input}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
                 />
-              </TouchableOpacity>
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                  <Ionicons
+                    name={showPassword ? "eye-off-outline" : "eye-outline"}
+                    size={18}
+                    color={C.textMuted}
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
+          )}
+
+          {mode === "register" && registerRole === "structure" && (
+            <View style={styles.passwordInfoCard}>
+              <Ionicons name="mail-open-outline" size={18} color={C.gold} />
+              <Text style={styles.passwordInfoText}>
+                {lang === "fr"
+                  ? "Un mot de passe sécurisé vous sera envoyé par email après validation de votre demande par notre équipe."
+                  : "A secure password will be sent to your email once our team validates your request."}
+              </Text>
+            </View>
+          )}
 
           {mode === "register" && (
             <View style={styles.field}>
@@ -457,45 +468,14 @@ export default function AuthScreen() {
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.coordRow}>
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.fieldLabel}>Latitude</Text>
-                  <View style={styles.inputRow}>
-                    <Ionicons name="navigate-outline" size={16} color={C.textMuted} />
-                    <TextInput
-                      value={latitude}
-                      onChangeText={setLatitude}
-                      placeholder="6.1374"
-                      placeholderTextColor={C.textMuted}
-                      style={styles.input}
-                      keyboardType="decimal-pad"
-                    />
-                  </View>
-                </View>
-                <View style={[styles.field, { flex: 1 }]}>
-                  <Text style={styles.fieldLabel}>Longitude</Text>
-                  <View style={styles.inputRow}>
-                    <Ionicons name="navigate-outline" size={16} color={C.textMuted} />
-                    <TextInput
-                      value={longitude}
-                      onChangeText={setLongitude}
-                      placeholder="1.2123"
-                      placeholderTextColor={C.textMuted}
-                      style={styles.input}
-                      keyboardType="decimal-pad"
-                    />
-                  </View>
-                </View>
+              <View style={styles.coordHint}>
+                <Ionicons name="information-circle-outline" size={14} color={C.gold} />
+                <Text style={[styles.hintLabel, { color: C.gold, fontSize: 12, flex: 1, lineHeight: 17 }]}>
+                  {lang === "fr"
+                    ? "Vous définirez la position GPS exacte de votre lieu après votre première connexion (depuis le tableau de bord)."
+                    : "You will set the exact GPS position of your venue after your first login (from the dashboard)."}
+                </Text>
               </View>
-
-              {city && latitude && longitude && (
-                <View style={styles.coordHint}>
-                  <Ionicons name="checkmark-circle" size={14} color={C.success} />
-                  <Text style={[styles.hintLabel, { color: C.success, fontSize: 12 }]}>
-                    Position enregistrée · {parseFloat(latitude).toFixed(4)}, {parseFloat(longitude).toFixed(4)}
-                  </Text>
-                </View>
-              )}
 
               <View style={styles.sectionDivider}>
                 <Ionicons name="business" size={14} color={C.gold} />
@@ -1010,6 +990,24 @@ const styles = StyleSheet.create({
   hintLink: {
     color: C.lavender,
     fontFamily: "Inter_600SemiBold",
+  },
+  passwordInfoCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    backgroundColor: C.gold + "12",
+    borderWidth: 1,
+    borderColor: C.gold + "44",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  passwordInfoText: {
+    flex: 1,
+    color: C.text,
+    fontSize: 13,
+    lineHeight: 19,
+    fontFamily: "Inter_400Regular",
   },
   termsRow: {
     flexDirection: "row",

@@ -204,8 +204,12 @@ export async function sendPartnerRegistrationEmailToAdmin(partnerEmail: string, 
   });
 }
 
-export async function sendPartnerApprovalEmail(to: string, contactName: string, businessName: string) {
-  await sendMail({
+export async function sendPartnerApprovalEmail(to: string, contactName: string, businessName: string, password: string) {
+  const safeEmail = escapeHtml(to);
+  const safePassword = escapeHtml(password);
+  // Use the throwing variant: this email is the SOLE delivery channel for the partner's
+  // password, so SMTP failures must propagate to the admin route handler (not be swallowed).
+  await sendMailOrThrow({
     to,
     subject: "🎊 Votre inscription partenaire est approuvée – NoStress",
     html: `
@@ -214,13 +218,32 @@ export async function sendPartnerApprovalEmail(to: string, contactName: string, 
         <p style="color: #b0b2cc; line-height: 1.7; margin: 0 0 16px;">
           Votre demande d'inscription pour <strong style="color: #e8e8f0;">${businessName}</strong> a été <strong style="color: #4caf8a;">approuvée</strong> par notre équipe.
         </p>
+
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #7c6af7;">
+          <p style="margin: 0 0 12px; font-size: 13px; color: #6b6d8a; text-transform: uppercase; letter-spacing: 0.5px;">Vos identifiants</p>
+          <p style="margin: 0 0 8px; font-size: 14px; color: #b0b2cc;">
+            <strong style="color: #e8e8f0;">Email :</strong> ${safeEmail}
+          </p>
+          <p style="margin: 0 0 12px; font-size: 14px; color: #b0b2cc;">
+            <strong style="color: #e8e8f0;">Mot de passe :</strong>
+            <span style="display: inline-block; font-family: 'Courier New', monospace; font-size: 16px; background: #0f1020; color: #f0c040; padding: 6px 12px; border-radius: 6px; letter-spacing: 1px; margin-left: 6px;">${safePassword}</span>
+          </p>
+          <p style="margin: 0; font-size: 12px; color: #8a8caa; line-height: 1.5;">
+            🔒 Conservez précieusement ce mot de passe. Vous pourrez le modifier après votre première connexion. Pour des raisons de sécurité, ne le partagez jamais.
+          </p>
+        </div>
+
         <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #4caf8a;">
-          <p style="margin: 0; font-size: 14px; color: #b0b2cc; line-height: 1.6;">
+          <p style="margin: 0 0 8px; font-size: 14px; color: #b0b2cc; line-height: 1.6;">
             🚀 Vous pouvez maintenant publier vos événements sur NoStress<br>
             📍 Référencer vos lieux<br>
             📊 Suivre vos publications depuis votre tableau de bord
           </p>
+          <p style="margin: 12px 0 0; font-size: 13px; color: #f0c040; line-height: 1.6;">
+            ⚠️ <strong>Étape importante :</strong> connectez-vous puis activez votre géolocalisation depuis l'application pour que votre lieu apparaisse sur la carte.
+          </p>
         </div>
+
         <p style="color: #b0b2cc; line-height: 1.7; margin: 16px 0 0;">
           Bienvenue dans la famille NoStress !<br><br>
           <strong style="color: #e8e8f0;">L'équipe NoStress</strong>
