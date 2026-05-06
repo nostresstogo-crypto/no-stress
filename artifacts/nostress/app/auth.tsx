@@ -61,6 +61,7 @@ export default function AuthScreen() {
   const [description, setDescription] = useState("");
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState("");
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const handleSelectCity = (c: typeof MOCK_CITIES[0]) => {
     setCity(c.name);
@@ -76,6 +77,10 @@ export default function AuthScreen() {
   const handleSubmit = async () => {
     if (!email || !password) {
       setError(t("error"));
+      return;
+    }
+    if (mode === "register" && !acceptedTerms) {
+      setError(t("mustAcceptTerms"));
       return;
     }
     setError("");
@@ -536,6 +541,35 @@ export default function AuthScreen() {
             </>
           )}
 
+          {mode === "register" && (
+            <TouchableOpacity
+              style={styles.termsRow}
+              activeOpacity={0.7}
+              onPress={() => setAcceptedTerms((v) => !v)}
+            >
+              <View style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>
+                {acceptedTerms && <Ionicons name="checkmark" size={16} color={C.bg} />}
+              </View>
+              <Text style={styles.termsText}>
+                {t("acceptTermsLabel")}{" "}
+                <Text
+                  style={styles.termsLink}
+                  onPress={(e) => { e.stopPropagation?.(); router.push("/legal/terms"); }}
+                >
+                  {t("acceptTermsCgu")}
+                </Text>
+                {" "}{t("acceptTermsAnd")}{" "}
+                <Text
+                  style={styles.termsLink}
+                  onPress={(e) => { e.stopPropagation?.(); router.push("/legal/privacy"); }}
+                >
+                  {t("acceptTermsPrivacy")}
+                </Text>
+                .
+              </Text>
+            </TouchableOpacity>
+          )}
+
           {!!error && (
             <View style={styles.errorRow}>
               <Ionicons name="alert-circle" size={16} color={C.error} />
@@ -547,10 +581,11 @@ export default function AuthScreen() {
             style={[
               styles.submitBtn,
               loading && { opacity: 0.7 },
+              mode === "register" && !acceptedTerms && { opacity: 0.5 },
               mode === "register" && registerRole === "structure" && styles.submitBtnPartner,
             ]}
             onPress={handleSubmit}
-            disabled={loading}
+            disabled={loading || (mode === "register" && !acceptedTerms)}
           >
             {loading ? (
               <Text style={styles.submitBtnText}>{t("processing")}</Text>
@@ -975,5 +1010,38 @@ const styles = StyleSheet.create({
   hintLink: {
     color: C.lavender,
     fontFamily: "Inter_600SemiBold",
+  },
+  termsRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: C.lavender,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+  },
+  checkboxChecked: {
+    backgroundColor: C.lavender,
+    borderColor: C.lavender,
+  },
+  termsText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 19,
+    color: C.textMuted,
+    fontFamily: "Inter_400Regular",
+  },
+  termsLink: {
+    color: C.lavender,
+    fontFamily: "Inter_600SemiBold",
+    textDecorationLine: "underline",
   },
 });

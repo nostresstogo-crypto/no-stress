@@ -69,10 +69,9 @@ artifacts/
 
 ## Pages légales (App Store / Google Play)
 
-- **Politique de confidentialité** : `/nostress-web/politique-confidentialite`
-- **CGU** : `/nostress-web/conditions-utilisation`
-- **Suppression de compte** : `/nostress-web/suppression-compte`
-- Liens accessibles depuis l'onglet Compte de l'app mobile (ouvrent le navigateur).
+- **Site web** : `/politique-confidentialite`, `/conditions-utilisation`, `/suppression-compte` (via `nostress-web/src/pages/{Privacy,TermsOfUse,AccountDeletion}.tsx`).
+- **App mobile** : pages standalone in-app `app/legal/terms.tsx` + `app/legal/privacy.tsx` (route `/legal/terms`, `/legal/privacy`). Contenu localisé FR/EN.
+- **Checkbox obligatoire** sur les 2 formulaires d'inscription mobile (user + structure) dans `auth.tsx` — bloque le submit tant que non cochée. Liens "CGU" et "Politique" tappables avant acceptation (router.push).
 - Contact officiel : nostresstogo@gmail.com / WhatsApp +1 319 777 4884.
 
 ## Authentification

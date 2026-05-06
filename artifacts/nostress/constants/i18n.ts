@@ -78,6 +78,11 @@ const baseTranslations = {
     orContinueWith: "Ou continuer avec",
     logout: "Se déconnecter",
     loginRequired: "Connexion requise",
+    acceptTermsLabel: "J'accepte les",
+    acceptTermsCgu: "Conditions Générales d'Utilisation",
+    acceptTermsAnd: "et la",
+    acceptTermsPrivacy: "Politique de Confidentialité",
+    mustAcceptTerms: "Vous devez accepter les CGU et la Politique de Confidentialité pour créer un compte.",
 
     // Account
     myAccount: "Mon Compte",
@@ -278,6 +283,11 @@ const baseTranslations = {
     orContinueWith: "Or continue with",
     logout: "Logout",
     loginRequired: "Login Required",
+    acceptTermsLabel: "I accept the",
+    acceptTermsCgu: "Terms of Use",
+    acceptTermsAnd: "and the",
+    acceptTermsPrivacy: "Privacy Policy",
+    mustAcceptTerms: "You must accept the Terms of Use and Privacy Policy to create an account.",
 
     // Account
     myAccount: "My Account",

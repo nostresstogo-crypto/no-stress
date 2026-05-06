@@ -331,6 +331,8 @@ function RootLayoutNav() {
         <Stack.Screen name="auth" options={{ headerShown: false, presentation: "modal" }} />
         <Stack.Screen name="create-event" options={{ headerShown: false, presentation: "modal" }} />
         <Stack.Screen name="venue/[id]" options={{ headerShown: false, presentation: "card" }} />
+        <Stack.Screen name="legal/terms" options={{ headerShown: false, presentation: "card" }} />
+        <Stack.Screen name="legal/privacy" options={{ headerShown: false, presentation: "card" }} />
       </Stack>
 
       {showSplash && (
