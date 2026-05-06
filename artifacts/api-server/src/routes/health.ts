@@ -7,10 +7,12 @@ const router: IRouter = Router();
 
 // Liveness — process is up. Cheap, no external deps. Use this for orchestrator
 // liveness probes (Replit deployments, k8s, etc.).
-router.get("/healthz", (_req, res) => {
+const liveness = (_req: any, res: any) => {
   const data = HealthCheckResponse.parse({ status: "ok" });
   res.json(data);
-});
+};
+router.get("/healthz", liveness);
+router.get("/health", liveness);
 
 // Readiness — server is up AND can talk to its dependencies (DB).
 // Use this for load-balancer health checks where you want bad instances out.
