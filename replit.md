@@ -4,6 +4,31 @@
 
 Monorepo pnpm TypeScript pour une plateforme de découverte d'événements et billetterie mobile au Togo.
 
+## Déploiement production
+
+VPS unique OVH `vps117164` (Ubuntu Noble), user `nostress`, secrets GitHub Actions partagés : `VPS_HOST`, `VPS_USER=nostress`, `VPS_PORT=22`, `VPS_SSH_KEY` (ed25519).
+
+### API — `https://api.no-stress.net/api/*`
+
+- **Workflow** : `.github/workflows/deploy-api.yml` (paths : `artifacts/api-server/**`, `lib/db/**`, `lib/api-zod/**`, `deploy/**`)
+- **Process** : systemd `nostress-api.service`, port `8080`, derrière nginx HTTPS Let's Encrypt.
+- **Layout** : `/var/www/nostress-api/{releases/<sha>/, shared/.env, shared/logs/, current}`.
+- **Scripts** : `deploy/server-setup.sh` (bootstrap one-shot), `deploy/release.sh` (par deploy : drizzle push, swap symlink, restart).
+- **Gotcha drizzle catalog** : `release.sh` réécrit `drizzle/package.json` pour remplacer `catalog:` par les versions explicites (le VPS n'a pas de `pnpm-workspace.yaml`). Si le root catalog change, mettre à jour le mapping dans `release.sh`.
+
+### Admin — `https://admin.no-stress.net`
+
+- **Workflow** : `.github/workflows/deploy-admin.yml` (paths : `artifacts/nostress-admin/**`, `lib/api-zod/**`, `deploy/admin/**`)
+- **Type** : SPA Vite statique, servie directement par nginx — pas de service systemd.
+- **Layout** : `/var/www/nostress-admin/{releases/<sha>/, current}`.
+- **Scripts** : `deploy/admin/setup.sh` (bootstrap one-shot : nginx vhost, sudoers reload nginx), `deploy/admin/release.sh` (par deploy : swap symlink + reload nginx).
+- **Routage nginx** : `/api/*` et `/storage/*` proxiés vers `127.0.0.1:8080` (le service API local) → pas de CORS, même origine. Tout le reste sert `index.html` (SPA fallback).
+- **Build** : `BASE_PATH=/` (vs `/nostress-admin` en dev Replit) — `lib/api.ts` calcule `API_BASE = "/api"` automatiquement.
+
+### Limitation Replit Git
+
+Le token OAuth GitHub de Replit n'a pas le scope `workflow` → impossible de pusher des modifs dans `.github/workflows/*` depuis Replit. Workaround : éditer ces fichiers directement via l'UI GitHub. Le contenu du workflow admin est versionné dans `deploy/admin/deploy-admin.yml.template` pour copier-coller.
+
 ## Stack technique
 
 - **Monorepo** : pnpm workspaces
