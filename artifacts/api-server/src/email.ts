@@ -13,8 +13,8 @@ const SMTP_HOST = process.env.SMTP_HOST || "smtp-relay.brevo.com";
 const SMTP_PORT = parseInt(process.env.SMTP_PORT || "587", 10);
 const SMTP_USER = process.env.SMTP_USER || "";
 const SMTP_PASS = process.env.SMTP_PASS;
-const FROM_EMAIL = "nostresstogo@gmail.com";
-const ADMIN_EMAIL = "nostresstogo@gmail.com";
+const FROM_EMAIL = process.env.SMTP_FROM || process.env.SMTP_USER || "nostresstogo@gmail.com";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "nostresstogo@gmail.com";
 const ADMIN_BASE_URL = (process.env.ADMIN_BASE_URL || "https://admin.no-stress.net").replace(/\/+$/, "");
 
 function createTransporter() {
