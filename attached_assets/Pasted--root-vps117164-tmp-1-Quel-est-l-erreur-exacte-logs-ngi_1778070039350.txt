@@ -1,0 +1,92 @@
+
+root@vps117164:/tmp# # 1) Quel est l'erreur exacte ? (logs nginx en temps réel)
+sudo tail -30 /var/log/nginx/error.log
+
+# 2) Le symlink current pointe-t-il vers un release ?
+ls -la /var/www/nostress-admin/current
+ls /var/www/nostress-admin/current/ 2>&1 | head
+
+# 3) nginx peut-il lire les fichiers ? (souvent souci de perms)
+sudo -u www-data cat /var/www/nostress-admin/current/index.html 2>&1 | head -5
+
+# 4) Test direct avec curl
+curl -v https://admin.no-stress.net/ 2>&1 | tail -30
+
+# 5) Test du proxy /api
+curl -i https://admin.no-stress.net/api/health
+2026/05/06 05:03:41 [notice] 718244#718244: using inherited sockets from "5;6;7;"
+2026/05/06 05:46:13 [error] 723902#723902: *211 connect() failed (111: Connection refused) while connecting to upstream, client: 91.231.89.19, server: api.no-stress.net, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:8080/", host: "api.no-stress.net"
+2026/05/06 05:47:45 [error] 724938#724938: *214 connect() failed (111: Connection refused) while connecting to upstream, client: 91.231.89.18, server: api.no-stress.net, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:8080/", host: "api.no-stress.net"
+2026/05/06 05:49:50 [error] 724940#724940: *218 connect() failed (111: Connection refused) while connecting to upstream, client: 91.231.89.99, server: api.no-stress.net, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:8080/", host: "api.no-stress.net"
+2026/05/06 05:52:41 [error] 724938#724938: *221 connect() failed (111: Connection refused) while connecting to upstream, client: 45.148.10.120, server: api.no-stress.net, request: "GET /.git/config HTTP/1.1", upstream: "http://127.0.0.1:8080/.git/config", host: "api.no-stress.net"
+2026/05/06 05:56:18 [error] 724938#724938: *223 connect() failed (111: Connection refused) while connecting to upstream, client: 103.4.250.110, server: api.no-stress.net, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:8080/", host: "api.no-stress.net"
+2026/05/06 05:56:19 [error] 724938#724938: *224 connect() failed (111: Connection refused) while connecting to upstream, client: 104.164.126.29, server: api.no-stress.net, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:8080/", host: "api.no-stress.net"
+2026/05/06 05:56:25 [error] 724938#724938: *227 connect() failed (111: Connection refused) while connecting to upstream, client: 104.252.191.202, server: api.no-stress.net, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:8080/", host: "api.no-stress.net"
+2026/05/06 06:05:58 [error] 724938#724938: *234 connect() failed (111: Connection refused) while connecting to upstream, client: 3.214.234.248, server: api.no-stress.net, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:8080/", host: "api.no-stress.net"
+2026/05/06 06:21:15 [error] 724941#724941: *246 connect() failed (111: Connection refused) while connecting to upstream, client: 74.7.228.29, server: api.no-stress.net, request: "GET /robots.txt HTTP/2.0", upstream: "http://127.0.0.1:8080/robots.txt", host: "api.no-stress.net"
+2026/05/06 06:22:37 [error] 724941#724941: *248 connect() failed (111: Connection refused) while connecting to upstream, client: 104.252.191.86, server: api.no-stress.net, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:8080/", host: "api.no-stress.net"
+2026/05/06 06:22:37 [error] 724941#724941: *249 connect() failed (111: Connection refused) while connecting to upstream, client: 103.4.250.82, server: api.no-stress.net, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:8080/", host: "api.no-stress.net"
+2026/05/06 07:33:14 [error] 724940#724940: *357 connect() failed (111: Connection refused) while connecting to upstream, client: 34.21.159.211, server: api.no-stress.net, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:8080/", host: "api.no-stress.net"
+2026/05/06 07:33:15 [error] 724940#724940: *357 connect() failed (111: Connection refused) while connecting to upstream, client: 34.21.159.211, server: api.no-stress.net, request: "GET /wordpress/ HTTP/1.1", upstream: "http://127.0.0.1:8080/wordpress/", host: "api.no-stress.net"
+2026/05/06 07:51:45 [error] 724940#724940: *366 connect() failed (111: Connection refused) while connecting to upstream, client: 104.164.126.229, server: api.no-stress.net, request: "GET / HTTP/1.1", upstream: "http://127.0.0.1:8080/", host: "api.no-stress.net"
+2026/05/06 11:53:21 [error] 724941#724941: *585 connect() failed (111: Connection refused) while connecting to upstream, client: 102.64.219.243, server: api.no-stress.net, request: "GET /health HTTP/2.0", upstream: "http://127.0.0.1:8080/health", host: "api.no-stress.net"
+2026/05/06 11:53:22 [error] 724941#724941: *585 connect() failed (111: Connection refused) while connecting to upstream, client: 102.64.219.243, server: api.no-stress.net, request: "GET /favicon.ico HTTP/2.0", upstream: "http://127.0.0.1:8080/favicon.ico", host: "api.no-stress.net", referrer: "https://api.no-stress.net/health"
+2026/05/06 12:59:34 [error] 724940#724940: *628 connect() failed (111: Connection refused) while connecting to upstream, client: 45.148.10.120, server: api.no-stress.net, request: "GET /wp-json/gravitysmtp/v1/tests/mock-data?page=gravitysmtp-settings HTTP/1.1", upstream: "http://127.0.0.1:8080/wp-json/gravitysmtp/v1/tests/mock-data?page=gravitysmtp-settings", host: "api.no-stress.net"
+2026/05/06 14:18:56 [error] 757514#757514: *679 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 102.64.219.243, server: admin.no-stress.net, request: "GET / HTTP/2.0", host: "admin.no-stress.net"
+2026/05/06 14:18:56 [error] 757514#757514: *679 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 102.64.219.243, server: admin.no-stress.net, request: "GET /favicon.ico HTTP/2.0", host: "admin.no-stress.net", referrer: "https://admin.no-stress.net/"
+2026/05/06 14:19:14 [error] 757514#757514: *679 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 102.64.219.243, server: admin.no-stress.net, request: "GET / HTTP/2.0", host: "admin.no-stress.net"
+2026/05/06 14:19:14 [error] 757514#757514: *679 rewrite or internal redirection cycle while internally redirecting to "/index.html", client: 102.64.219.243, server: admin.no-stress.net, request: "GET /favicon.ico HTTP/2.0", host: "admin.no-stress.net", referrer: "https://admin.no-stress.net/"
+ls: cannot access '/var/www/nostress-admin/current': No such file or directory
+ls: cannot access '/var/www/nostress-admin/current/': No such file or directory
+cat: /var/www/nostress-admin/current/index.html: No such file or directory
+} [5 bytes data]
+> GET / HTTP/2
+> Host: admin.no-stress.net
+> User-Agent: curl/8.5.0
+> Accept: */*
+>
+{ [5 bytes data]
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+{ [57 bytes data]
+* TLSv1.3 (IN), TLS handshake, Newsession Ticket (4):
+{ [57 bytes data]
+* old SSL session ID is stale, removing
+{ [5 bytes data]
+< HTTP/2 500
+< server: nginx/1.24.0 (Ubuntu)
+< date: Wed, 06 May 2026 12:20:19 GMT
+< content-type: text/html
+< content-length: 186
+< cache-control: no-store, must-revalidate
+<
+{ [186 bytes data]
+100   186  100   186    0     0   1902      0 --:--:-- --:--:-- --:--:--  1917
+* Connection #0 to host admin.no-stress.net left intact
+<html>
+<head><title>500 Internal Server Error</title></head>
+<body>
+<center><h1>500 Internal Server Error</h1></center>
+<hr><center>nginx/1.24.0 (Ubuntu)</center>
+</body>
+</html>
+HTTP/2 200
+server: nginx/1.24.0 (Ubuntu)
+date: Wed, 06 May 2026 12:20:19 GMT
+content-type: application/json; charset=utf-8
+content-length: 15
+cross-origin-opener-policy: same-origin
+cross-origin-resource-policy: cross-origin
+origin-agent-cluster: ?1
+referrer-policy: no-referrer
+strict-transport-security: max-age=15552000; includeSubDomains
+x-content-type-options: nosniff
+x-dns-prefetch-control: off
+x-download-options: noopen
+x-frame-options: SAMEORIGIN
+x-permitted-cross-domain-policies: none
+x-xss-protection: 0
+access-control-allow-origin: *
+etag: W/"f-VaSQ4oDUiZblZNAEkkN+sX+q3Sg"
+x-frame-options: SAMEORIGIN
+x-content-type-options: nosniff
+referrer-policy: strict-origin-when-cross-origin
