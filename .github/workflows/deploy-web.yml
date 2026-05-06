@@ -1,0 +1,100 @@
+# ────────────────────────────────────────────────────────────────────────────
+# CANONICAL SOURCE for .github/workflows/deploy-web.yml
+#
+# Why this template lives here:
+#   The Replit Git OAuth scope does NOT include `workflow`, so we cannot push
+#   directly to .github/workflows/*. Edit on GitHub UI:
+#     https://github.com/nostresstogo-crypto/no-stress/edit/main/.github/workflows/deploy-web.yml
+#   then keep this file in sync by hand.
+# ────────────────────────────────────────────────────────────────────────────
+name: Deploy Web to VPS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "artifacts/nostress-web/**"
+      - "lib/api-zod/**"
+      - "lib/api-client-react/**"
+      - "deploy/web/**"
+      - ".github/workflows/deploy-web.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build nostress-web
+        env:
+          NODE_ENV: production
+          PUBLIC_URL: ""
+          SKIP_PREFLIGHT_CHECK: "true"
+          DISABLE_ESLINT_PLUGIN: "true"
+          TSC_COMPILE_ON_ERROR: "true"
+          GENERATE_SOURCEMAP: "false"
+          CI: "false"
+        run: pnpm --filter @workspace/nostress-web run build
+
+      - name: Stage release artifact
+        run: |
+          set -e
+          STAGE="$RUNNER_TEMP/release"
+          mkdir -p "$STAGE"
+          cp -r artifacts/nostress-web/build/. "$STAGE/"
+          test -f "$STAGE/index.html"
+          ls -la "$STAGE" | head -20
+
+      - name: Configure SSH
+        run: |
+          set -e
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p ${{ secrets.VPS_PORT }} -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Upload release to VPS
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          set -e
+          REMOTE_DIR="/var/www/nostress-web/releases/$SHA"
+          ssh -p ${{ secrets.VPS_PORT }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "mkdir -p $REMOTE_DIR"
+          rsync -az --delete -e "ssh -p ${{ secrets.VPS_PORT }}" \
+            "$RUNNER_TEMP/release/" \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:$REMOTE_DIR/"
+          rsync -az -e "ssh -p ${{ secrets.VPS_PORT }}" \
+            deploy/web/release.sh \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/nostress-web/release.sh"
+
+      - name: Activate release on VPS
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          ssh -p ${{ secrets.VPS_PORT }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "bash /var/www/nostress-web/release.sh $SHA"
+
+      - name: Smoke test
+        run: |
+          sleep 3
+          curl -fsS "https://no-stress.net/" -o /dev/null \
+            && echo "✅ no-stress.net responds" \
+            || (echo "❌ Web smoke test failed"; exit 1)
