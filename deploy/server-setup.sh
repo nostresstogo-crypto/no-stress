@@ -37,9 +37,9 @@ if ! command -v node >/dev/null || [[ "$(node -v)" != v${NODE_VERSION}* ]]; then
   apt-get install -y nodejs
 fi
 
-# ─── 3. pnpm + PM2 ─────────────────────────────────────────────────────────
-log "Installing pnpm + PM2 globally"
-npm install -g pnpm@9 pm2
+# ─── 3. pnpm ───────────────────────────────────────────────────────────────
+log "Installing pnpm globally"
+npm install -g pnpm@9
 
 # ─── 4. App user ───────────────────────────────────────────────────────────
 if ! id -u "$APP_USER" >/dev/null 2>&1; then
@@ -205,10 +205,50 @@ ufw --force enable >/dev/null 2>&1 || true
 ufw allow OpenSSH >/dev/null 2>&1 || true
 ufw allow "Nginx Full" >/dev/null 2>&1 || true
 
-# ─── 11. PM2 startup at boot ───────────────────────────────────────────────
-log "Setting PM2 to start at boot"
-sudo -u "$APP_USER" bash -c "pm2 startup systemd -u $APP_USER --hp /home/$APP_USER" || true
-env PATH=$PATH:/usr/bin pm2 startup systemd -u "$APP_USER" --hp "/home/$APP_USER" >/dev/null || true
+# ─── 11. systemd unit for the API ──────────────────────────────────────────
+log "Installing systemd unit nostress-api.service"
+cat > /etc/systemd/system/nostress-api.service <<UNIT
+[Unit]
+Description=NoStress API server
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=${APP_USER}
+Group=${APP_USER}
+WorkingDirectory=${APP_DIR}/current
+EnvironmentFile=${APP_DIR}/shared/.env
+ExecStart=/usr/bin/node --enable-source-maps ${APP_DIR}/current/dist/index.mjs
+Restart=on-failure
+RestartSec=3
+StandardOutput=append:${APP_DIR}/shared/logs/out.log
+StandardError=append:${APP_DIR}/shared/logs/err.log
+KillSignal=SIGTERM
+TimeoutStopSec=15
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=${APP_DIR}/shared
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+systemctl daemon-reload
+systemctl enable nostress-api.service >/dev/null 2>&1 || true
+# Don't start yet — release.sh will start it after first deploy copies the bundle.
+
+# Allow ${APP_USER} to restart/reload/status the service without a password
+# (release.sh runs as ${APP_USER} via SSH from GitHub Actions).
+cat > /etc/sudoers.d/nostress-api <<SUDOERS
+${APP_USER} ALL=(root) NOPASSWD: /bin/systemctl restart nostress-api.service, /bin/systemctl reload nostress-api.service, /bin/systemctl status nostress-api.service, /usr/bin/systemctl restart nostress-api.service, /usr/bin/systemctl reload nostress-api.service, /usr/bin/systemctl status nostress-api.service
+SUDOERS
+chmod 0440 /etc/sudoers.d/nostress-api
+visudo -c -f /etc/sudoers.d/nostress-api
 
 # ─── 12. Summary ───────────────────────────────────────────────────────────
 log "✅ Bootstrap complete"

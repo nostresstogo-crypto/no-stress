@@ -31,13 +31,10 @@ set -a; source "$SHARED_ENV"; set +a
 echo "▶ Switching 'current' symlink"
 ln -sfn "$RELEASE_DIR" "$APP_DIR/current"
 
-echo "▶ Reloading PM2"
-if pm2 describe nostress-api >/dev/null 2>&1; then
-  pm2 reload nostress-api --update-env
-else
-  pm2 start "$APP_DIR/current/ecosystem.config.cjs" --env production
-fi
-pm2 save
+echo "▶ Restarting nostress-api via systemd"
+sudo systemctl restart nostress-api.service
+sleep 2
+sudo systemctl --no-pager --lines=0 status nostress-api.service || true
 
 echo "▶ Pruning old releases (keep last $KEEP_RELEASES)"
 cd "$APP_DIR/releases"

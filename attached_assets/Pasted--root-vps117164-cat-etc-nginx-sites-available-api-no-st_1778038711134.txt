@@ -1,0 +1,93 @@
+
+root@vps117164:~# cat /etc/nginx/sites-available/api.no-stress.net
+server {
+    server_name api.no-stress.net www.api.no-stress.net;
+    root /var/www/api.no-stress.net;
+    index index.html index.htm index.nginx-debian.html;
+
+     location / {
+        proxy_pass http://localhost:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/api.no-stress.net/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/api.no-stress.net/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+
+
+
+
+
+
+}server {
+    if ($host = api.no-stress.net) {
+        return 301 https://$host$request_uri;
+    } # managed by Certbot
+
+
+    listen 80;
+    server_name api.no-stress.net www.api.no-stress.net;
+    return 404; # managed by Certbot
+
+
+}root@vps117164:~#mv /etc/nginx/sites-available/api.no-stress.net /etc/nginx/sites-available/api.no-stress.net.OLD-BACKUPP
+rm -f /etc/nginx/sites-enabled/api.no-stress.net
+root@vps117164:~# sudo -u nostress pm2 kill 2>/dev/null || true
+rm -rf /home/nostress/.pm2
+sudo -u nostress mkdir -p /home/nostress/.pm2
+sudo -u nostress pm2 list
+[PM2] Spawning PM2 daemon with pm2_home=/home/nostress/.pm2
+[PM2] Spawning PM2 daemon with pm2_home=/home/nostress/.pm2
+[PM2] [v] All Applications Stopped
+[PM2] Spawning PM2 daemon with pm2_home=/home/nostress/.pm2
+[PM2] Spawning PM2 daemon with pm2_home=/home/nostress/.pm2
+
+                        -------------
+
+__/\\\\\\\\\\\\\____/\\\\____________/\\\\____/\\\\\\\\\_____
+ _\/\\\/////////\\\_\/\\\\\\________/\\\\\\__/\\\///////\\\___
+  _\/\\\_______\/\\\_\/\\\//\\\____/\\\//\\\_\///______\//\\\__
+   _\/\\\\\\\\\\\\\/__\/\\\\///\\\/\\\/_\/\\\___________/\\\/___
+    _\/\\\/////////____\/\\\__\///\\\/___\/\\\________/\\\//_____
+     _\/\\\_____________\/\\\____\///_____\/\\\_____/\\\//________
+      _\/\\\_____________\/\\\_____________\/\\\___/\\\/___________
+       _\/\\\_____________\/\\\_____________\/\\\__/\\\\\\\\\\\\\\\_
+        _\///______________\///______________\///__\///////////////__
+
+
+                          Runtime Edition
+
+        PM2 is a Production Process Manager for Node.js applications
+                     with a built-in Load Balancer.
+
+                Start and Daemonize any application:
+                $ pm2 start app.js
+
+                Load Balance 4 instances of api.js:
+                $ pm2 start api.js -i 4
+
+                Monitor in production:
+                $ pm2 monitor
+
+                Make pm2 auto-boot at server restart:
+                $ pm2 startup
+
+                To go further checkout:
+                http://pm2.io/
+
+
+                        -------------
+
+[PM2] Spawning PM2 daemon with pm2_home=/home/nostress/.pm2
+spawn /usr/bin/node EACCES
+spawn /usr/bin/node EACCES
+[PM2] Spawning PM2 daemon with pm2_home=/home/nostress/.pm2
+spawn /usr/bin/node EACCES
+spawn /usr/bin/node EACCES
+spawn /usr/bin/node EACCES
