@@ -392,3 +392,71 @@ export async function sendPartnerRejectionEmail(to: string, contactName: string,
     `,
   });
 }
+export async function sendDeletionRequestAdminNotification(
+  requesterEmail: string,
+  requesterName: string,
+  accountType: string,
+  reason: string | null,
+  matchedAccount: { kind: "user" | "partner"; id: number } | null,
+) {
+  const safeEmail = escapeHtml(requesterEmail);
+  const safeName = escapeHtml(requesterName);
+  const safeReason = escapeHtml(reason || "Non précisé");
+  const accountLabel = accountType === "partner" ? "Partenaire / Structure" : "Utilisateur";
+  const matchHtml = matchedAccount
+    ? `<p style="margin: 0; font-size: 13px; color: #4caf8a;">✓ Compte ${matchedAccount.kind === "partner" ? "partenaire" : "utilisateur"} #${matchedAccount.id} identifié.</p>`
+    : `<p style="margin: 0; font-size: 13px; color: #f0c040;">⚠️ Aucun compte trouvé pour cet email. Vérifier manuellement.</p>`;
+  await sendMail({
+    to: ADMIN_EMAIL,
+    subject: `🗑️ Nouvelle demande de suppression de compte – ${requesterName}`,
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml("Nouvelle demande de suppression")}
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 0 0 16px;">
+          Un utilisateur vient de soumettre une demande de suppression de compte depuis no-stress.net.
+        </p>
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px; width: 40%;">Nom</td><td style="padding: 6px 0; color: #e8e8f0; font-weight: 600;">${safeName}</td></tr>
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Email</td><td style="padding: 6px 0;"><a href="mailto:${safeEmail}" style="color: #7c6af7;">${safeEmail}</a></td></tr>
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Type</td><td style="padding: 6px 0; color: #e8e8f0;">${accountLabel}</td></tr>
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px; vertical-align: top;">Raison</td><td style="padding: 6px 0; color: #e8e8f0;">${safeReason}</td></tr>
+          </table>
+        </div>
+        <div style="background: #0f1020; border-radius: 12px; padding: 16px; margin: 16px 0;">
+          ${matchHtml}
+        </div>
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 16px 0 0;">
+          Connectez-vous à <strong style="color: #e8e8f0;">l'interface admin</strong> pour traiter cette demande dans un délai maximum de 30 jours (RGPD / App Store).
+        </p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}
+
+export async function sendDeletionConfirmedEmail(to: string, name: string) {
+  const safeName = escapeHtml(name);
+  await sendMail({
+    to,
+    subject: "✅ Votre compte NoStress a été supprimé",
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml(`Bonjour ${safeName},`)}
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 0 0 16px;">
+          Comme vous l'avez demandé, votre compte NoStress et l'ensemble des données qui y sont rattachées ont été <strong style="color: #4caf8a;">définitivement supprimés</strong>.
+        </p>
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #4caf8a;">
+          <p style="margin: 0; font-size: 14px; color: #b0b2cc; line-height: 1.6;">
+            Conformément au RGPD, vos informations personnelles, vos favoris, vos lieux et vos publications ont été retirés de nos serveurs.
+          </p>
+        </div>
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 16px 0 0;">
+          Nous sommes désolés de vous voir partir. Vous restez le bienvenu si vous souhaitez nous rejoindre à nouveau plus tard.<br><br>
+          <strong style="color: #e8e8f0;">L'équipe NoStress</strong>
+        </p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}

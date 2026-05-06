@@ -127,7 +127,10 @@ Flow client (mobile) : pick image → POST `/api/storage/uploads/request-url` `{
 | POST | `/api/admin/events/:id/approve` | Bearer | Modération : approuver une publication |
 | POST | `/api/admin/events/:id/reject` | Bearer | Modération : rejeter une publication |
 | GET | `/api/partners/:id/public` | — | Profil partenaire public + ses événements approuvés |
-| POST | `/api/account/deletion-request` | — | Demande de suppression de compte |
+| POST | `/api/account/deletion-request` | — | Demande de suppression (matching auto user/partner par email + email admin nostresstogo@gmail.com) |
+| POST | `/api/admin/deletion-requests/:id/delete-account` | Bearer | Supprime définitivement le compte lié + cascade DB + révoque sessions + email confirmation |
+| POST | `/api/admin/deletion-requests/:id/process` | Bearer | Marque la demande traitée (sans suppression) |
+| GET | `/api/admin/deletion-requests` | Bearer | Liste des demandes de suppression |
 | POST | `/api/contact` | — | Formulaire de contact (envoie email à l'admin + accusé de réception) |
 | GET | `/api/partners/approved-map` | — | Partenaires approuvés avec coordonnées |
 | GET | `/api/partners/status?email=` | — | Vérifier statut partenaire |
@@ -172,7 +175,7 @@ Toutes les données sont en mémoire (pas de DB). Les tableaux `partners`, `part
 - Splash screen animé : icônes flottantes, equalizer, pulse ring, palette lavender/coral/cyan
 - Mode sombre/clair/système
 - Bilingue FR/EN
-- Suppression de compte avec choix de motif (6 raisons localisées FR/EN)
+- **Suppression de compte (refonte mai 2026)** : bouton "Supprimer mon compte" dans `(tabs)/account.tsx` ouvre `https://no-stress.net/suppression-compte?email=...&name=...&type=user|partner` via `Linking.openURL` (alerte de confirmation FR/EN avant). Plus aucun flux in-app — la demande est soumise depuis le site web (RGPD / lien externe traçable).
 - Sélection d'image native (galerie/caméra) pour création d'événements et lieux (expo-image-picker)
 
 ### Panel admin (nostress-admin)
@@ -180,7 +183,7 @@ Toutes les données sont en mémoire (pas de DB). Les tableaux `partners`, `part
 - Dashboard avec statistiques globales
 - Gestion partenaires (approbation/rejet) avec carte interactive (Leaflet, CartoDB Voyager)
 - Gestion publications (événements des partenaires) avec message de notification auto-généré
-- Demandes de suppression de compte
+- **Demandes de suppression de compte (refonte mai 2026)** : page `/suppression` liste les demandes avec colonne "Compte lié" (matching auto user/partner par email à la création). Bouton **« Supprimer le compte »** appelle `POST /admin/deletion-requests/:id/delete-account` qui : (1) supprime user ou partner, (2) cascade DB efface favoris/lieux/events/refresh_tokens, (3) marque la demande `processed`, (4) envoie email confirmation au demandeur. Bouton désactivé si aucun compte trouvé.
 - Suppression de comptes partenaires (avec motif + email d'avertissement automatique)
 - Suppression de publications (avec motif + email d'avertissement automatique)
 - Statistiques d'inscriptions : barres Recharts par jour/semaine/mois/année

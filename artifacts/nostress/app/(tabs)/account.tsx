@@ -3,7 +3,6 @@ import {
   Alert,
   Image,
   Linking,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -206,47 +205,39 @@ export default function AccountScreen() {
   const { user, lang, setLang, logout, favorites, favoriteVenues, notifications, markAllRead, removeNotification, unreadCount, isDark, themeMode, setThemeMode, locationNotificationsEnabled, setLocationNotificationsEnabled, selectedCity, nearbyEventsCount, apiEvents } = useApp();
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>("favorites");
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [deleteReason, setDeleteReason] = useState<string | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const styles = useMemo(() => makeStyles(C), [C]);
 
-  const handleDeleteAccount = async () => {
-    if (!deleteReason || !user) return;
-    setDeleteLoading(true);
-    try {
-      const reasonLabel = DELETION_REASONS.find((r) => r.key === deleteReason);
-      const reasonText = lang === "fr" ? reasonLabel?.labelFr : reasonLabel?.labelEn;
-      const res = await fetch(`${API_BASE}/account/deletion-request`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: user.email,
-          name: user.name,
-          accountType: user.role === "structure" ? "partner" : "user",
-          reason: reasonText || deleteReason,
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Erreur serveur");
-      }
-      setDeleteModalVisible(false);
-      setDeleteReason(null);
-      Alert.alert(
-        lang === "fr" ? "Demande envoyée" : "Request submitted",
-        t("deleteAccountSuccess"),
-        [{ text: "OK", onPress: () => logout() }]
-      );
-    } catch {
-      Alert.alert(
-        t("error"),
-        lang === "fr" ? "Impossible d'envoyer la demande. Réessayez." : "Could not send request. Please try again."
-      );
-    } finally {
-      setDeleteLoading(false);
-    }
+  const handleOpenDeletionPage = () => {
+    if (!user) return;
+    const accountType = user.role === "structure" ? "partner" : "user";
+    const params = new URLSearchParams({
+      email: user.email,
+      name: user.name,
+      type: accountType,
+    });
+    const url = `${WEB_BASE}/suppression-compte?${params.toString()}`;
+    Alert.alert(
+      lang === "fr" ? "Suppression de compte" : "Account deletion",
+      lang === "fr"
+        ? "Vous allez être redirigé vers notre site web pour soumettre votre demande de suppression. Elle sera traitée sous 30 jours et toutes vos données seront définitivement effacées."
+        : "You will be redirected to our website to submit your deletion request. It will be processed within 30 days and all your data will be permanently erased.",
+      [
+        { text: lang === "fr" ? "Annuler" : "Cancel", style: "cancel" },
+        {
+          text: lang === "fr" ? "Continuer" : "Continue",
+          style: "destructive",
+          onPress: () => {
+            Linking.openURL(url).catch(() =>
+              Alert.alert(
+                t("error"),
+                lang === "fr" ? "Impossible d'ouvrir le navigateur." : "Could not open browser.",
+              ),
+            );
+          },
+        },
+      ],
+    );
   };
 
   const favoriteEvents = apiEvents
@@ -581,111 +572,15 @@ export default function AccountScreen() {
         <Text style={styles.logoutText}>{t("logout")}</Text>
       </TouchableOpacity>
 
-      {/* Delete Account */}
+      {/* Delete Account — redirige vers la page web /suppression-compte */}
       <TouchableOpacity
         style={[styles.logoutBtn, { borderColor: C.error, backgroundColor: C.error + "10", marginTop: 0 }]}
-        onPress={() => setDeleteModalVisible(true)}
+        onPress={handleOpenDeletionPage}
       >
         <Ionicons name="trash-outline" size={20} color={C.error} />
         <Text style={styles.logoutText}>{t("deleteAccount")}</Text>
+        <Ionicons name="open-outline" size={16} color={C.error} style={{ marginLeft: 6 }} />
       </TouchableOpacity>
-
-      {/* Delete Account Modal */}
-      <Modal visible={deleteModalVisible} animationType="slide" transparent onRequestClose={() => setDeleteModalVisible(false)}>
-        <View style={{
-          flex: 1,
-          backgroundColor: "rgba(0,0,0,0.6)",
-          justifyContent: "flex-end",
-        }}>
-          <View style={{
-            backgroundColor: C.card,
-            borderTopLeftRadius: 24,
-            borderTopRightRadius: 24,
-            padding: 24,
-            paddingBottom: Platform.OS === "ios" ? 40 : 24,
-            maxHeight: "80%",
-          }}>
-            <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <Text style={{ fontSize: 20, fontFamily: "Inter_700Bold", color: C.error }}>
-                {t("deleteAccountTitle")}
-              </Text>
-              <TouchableOpacity onPress={() => { setDeleteModalVisible(false); setDeleteReason(null); }}>
-                <Ionicons name="close" size={24} color={C.textMuted} />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={{ fontSize: 14, fontFamily: "Inter_400Regular", color: C.textMuted, marginBottom: 20, lineHeight: 20 }}>
-              {t("deleteAccountDesc")}
-            </Text>
-
-            <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text, marginBottom: 12 }}>
-              {t("deleteAccountReason")}
-            </Text>
-
-            <ScrollView style={{ maxHeight: 260 }} showsVerticalScrollIndicator={false}>
-              {DELETION_REASONS.map((r) => {
-                const label = lang === "fr" ? r.labelFr : r.labelEn;
-                const selected = deleteReason === r.key;
-                return (
-                  <TouchableOpacity
-                    key={r.key}
-                    onPress={() => setDeleteReason(r.key)}
-                    style={{
-                      flexDirection: "row",
-                      alignItems: "center",
-                      gap: 12,
-                      paddingVertical: 14,
-                      paddingHorizontal: 16,
-                      marginBottom: 8,
-                      borderRadius: 12,
-                      borderWidth: 1,
-                      borderColor: selected ? C.error : C.border,
-                      backgroundColor: selected ? C.error + "12" : C.bg,
-                    }}
-                  >
-                    <Ionicons
-                      name={selected ? "radio-button-on" : "radio-button-off"}
-                      size={20}
-                      color={selected ? C.error : C.textMuted}
-                    />
-                    <Text style={{
-                      flex: 1,
-                      fontSize: 14,
-                      fontFamily: selected ? "Inter_600SemiBold" : "Inter_400Regular",
-                      color: selected ? C.error : C.text,
-                    }}>
-                      {label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-
-            <TouchableOpacity
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-                paddingVertical: 16,
-                borderRadius: 12,
-                backgroundColor: deleteReason ? C.error : C.error + "40",
-                marginTop: 16,
-                opacity: deleteLoading ? 0.6 : 1,
-              }}
-              disabled={!deleteReason || deleteLoading}
-              onPress={handleDeleteAccount}
-            >
-              <Ionicons name="trash" size={18} color="#fff" />
-              <Text style={{ fontSize: 15, fontFamily: "Inter_700Bold", color: "#fff" }}>
-                {deleteLoading
-                  ? (lang === "fr" ? "Suppression..." : "Deleting...")
-                  : t("deleteAccountConfirm")}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </ScrollView>
   );
 }

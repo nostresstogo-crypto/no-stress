@@ -144,6 +144,11 @@ export const api = {
       request<DeletionRequest[]>(`/admin/deletion-requests${status ? `?status=${status}` : ""}`),
     process: (id: string) =>
       request<{ message: string }>(`/admin/deletion-requests/${id}/process`, { method: "POST" }),
+    deleteAccount: (id: string) =>
+      request<{ message: string; deleted: { kind: "user" | "partner"; id: string } }>(
+        `/admin/deletion-requests/${id}/delete-account`,
+        { method: "POST" },
+      ),
   },
 };
 
@@ -209,6 +214,8 @@ export interface DeletionRequest {
   accountType: string;
   reason: string | null;
   status: "pending" | "processed";
+  userId: string | null;
+  partnerId: string | null;
   createdAt: string;
 }
 

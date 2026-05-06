@@ -1,4 +1,5 @@
 import { pgTable, text, serial, timestamp, integer, doublePrecision, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -27,7 +28,7 @@ export type User = typeof usersTable.$inferSelect;
 
 export const partnersTable = pgTable("partners", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => usersTable.id),
+  userId: integer("user_id").references(() => usersTable.id, { onDelete: "cascade" }),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash"),
   contactName: text("contact_name").notNull(),
@@ -60,20 +61,32 @@ export const insertPartnerSchema = createInsertSchema(partnersTable).omit({
 export type InsertPartner = z.infer<typeof insertPartnerSchema>;
 export type Partner = typeof partnersTable.$inferSelect;
 
-export const deletionRequestsTable = pgTable("deletion_requests", {
-  id: serial("id").primaryKey(),
-  email: text("email").notNull(),
-  name: text("name").notNull(),
-  accountType: text("account_type").notNull(),
-  reason: text("reason"),
-  status: text("status").notNull().default("pending"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const deletionRequestsTable = pgTable(
+  "deletion_requests",
+  {
+    id: serial("id").primaryKey(),
+    email: text("email").notNull(),
+    name: text("name").notNull(),
+    accountType: text("account_type").notNull(),
+    reason: text("reason"),
+    status: text("status").notNull().default("pending"),
+    userId: integer("user_id").references(() => usersTable.id, { onDelete: "set null" }),
+    partnerId: integer("partner_id").references(() => partnersTable.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    pendingEmailUnique: uniqueIndex("deletion_requests_pending_email_unique")
+      .on(t.email)
+      .where(sql`status = 'pending'`),
+  }),
+);
 
 export const insertDeletionRequestSchema = createInsertSchema(deletionRequestsTable).omit({
   id: true,
   createdAt: true,
   status: true,
+  userId: true,
+  partnerId: true,
 });
 export type InsertDeletionRequest = z.infer<typeof insertDeletionRequestSchema>;
 export type DeletionRequest = typeof deletionRequestsTable.$inferSelect;
