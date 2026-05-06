@@ -1,0 +1,71 @@
+
+root@vps117164:~# ls -la /usr/bin/node
+sudo -u nostress /usr/bin/node --version
+-rwxr-xr-x 1 root root 98932688 mars  24 04:03 /usr/bin/node
+v20.20.2
+root@vps117164:~# ls /etc/letsencrypt/live/
+admin.no-stress.net       policy.mobile.no-stress.net
+admin.no-stress.net-0001  README
+api.no-stress.net         request-delete-account.no-stress.net
+no-stress.net
+root@vps117164:~# sudo -u nostress pm2 kill
+sudo -u nostress bash -c 'cd /var/www/nostress-api/current && /usr/bin/node dist/index.mjs' 2>&1 | head -20
+[PM2] Spawning PM2 daemon with pm2_home=/home/nostress/.pm2
+spawn /usr/bin/node EACCES
+spawn /usr/bin/node EACCES
+[PM2] Spawning PM2 daemon with pm2_home=/home/nostress/.pm2
+spawn /usr/bin/node EACCES
+spawn /usr/bin/node EACCES
+Error retrieving process list: spawn /usr/bin/node EACCES
+spawn /usr/bin/node EACCES
+[PM2] [v] All Applications Stopped
+[PM2] Spawning PM2 daemon with pm2_home=/home/nostress/.pm2
+spawn /usr/bin/node EACCES
+[PM2] Spawning PM2 daemon with pm2_home=/home/nostress/.pm2
+spawn /usr/bin/node EACCES
+/usr/lib/node_modules/pm2/lib/Client.js:630
+  this.client.call('stopWatch', method, env, function() {
+              ^
+
+TypeError: Cannot read properties of undefined (reading 'call')
+    at module.exports.stopWatch (/usr/lib/node_modules/pm2/lib/Client.js:630:15)
+    at module.exports.executeRemote (/usr/lib/node_modules/pm2/lib/Client.js:517:10)
+    at module.exports.killDaemon (/usr/lib/node_modules/pm2/lib/Client.js:589:8)
+    at /usr/lib/node_modules/pm2/lib/API.js:647:21
+    at /usr/lib/node_modules/pm2/lib/API/pm2-plus/link.js:118:21
+    at /usr/lib/node_modules/pm2/modules/pm2-io-agent/src/InteractorClient.js:86:37
+    at ReqSocket.<anonymous> (/usr/lib/node_modules/pm2/modules/pm2-io-agent/src/InteractorClient.js:44:14)
+    at Object.onceWrapper (node:events:638:28)
+    at ReqSocket.emit (node:events:524:28)
+    at Timeout._onTimeout (/usr/lib/node_modules/pm2/modules/pm2-axon/lib/sockets/sock.js:294:12)
+
+Node.js v20.20.2
+bash: line 1: cd: /var/www/nostress-api/current: No such file or directory
+root@vps117164:~# ^C
+root@vps117164:~# ls -la /usr/bin/node
+readlink -f /usr/bin/node
+ls -la "$(readlink -f /usr/bin/node)"
+-rwxr-xr-x 1 root root 98932688 mars  24 04:03 /usr/bin/node
+/usr/bin/node
+-rwxr-xr-x 1 root root 98932688 mars  24 04:03 /usr/bin/node
+root@vps117164:~# sudo -u nostress /usr/bin/node --version 2>&1
+v20.20.2
+root@vps117164:~# mount | grep -E "/usr|/home"
+root@vps117164:~# ls /etc/letsencrypt/live/ 2>&1
+ls /etc/nginx/sites-available/ 2>&1
+admin.no-stress.net       policy.mobile.no-stress.net
+admin.no-stress.net-0001  README
+api.no-stress.net         request-delete-account.no-stress.net
+no-stress.net
+admin.no-stress.net      dev.api.no-stress.net
+api.no-stress.net        no-stress.net
+api.no-stress.net.conf   policy.mobile.no-stress.net
+default                  request-delete-account.no-stress.net
+dev.admin.no-stress.net
+root@vps117164:~# ls -la /var/www/nostress-api/
+ls /var/www/nostress-api/releases/ 2>&1
+total 16
+drwxr-xr-x  4 nostress nostress 4096 mai    6 05:04 .
+drwxr-xr-x 11 root     root     4096 mai    6 05:04 ..
+drwxr-xr-x  2 nostress nostress 4096 mai    6 05:04 releases
+drwxr-xr-x  4 nostress nostress 4096 mai    6 05:04 shared
