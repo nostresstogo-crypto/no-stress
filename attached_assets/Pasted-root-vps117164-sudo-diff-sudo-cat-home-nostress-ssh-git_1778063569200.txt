@@ -1,0 +1,38 @@
+root@vps117164:/# sudo diff <(sudo cat /home/nostress/.ssh/github_actions.pub) <         (sudo grep -F "$(sudo cat /home/nostress/.ssh/github_actions.pub)" /home/nostres         s/.ssh/authorized_keys)
+echo "Exit: $?"
+diff: /dev/fd/63: No such file or directory
+diff: /dev/fd/62: No such file or directory
+Exit: 2
+root@vps117164:/# sudo diff <(sudo cat /home/nostress/.ssh/github_actions.pub) <         (sudo grep -F "$(sudo cat /home/nostress/.ssh/github_actions.pub)" /home/nostres         s/.ssh/authorized_keys)
+echo "Exit: $?"
+diff: /dev/fd/63: No such file or directory
+diff: /dev/fd/62: No such file or directory
+Exit: 2
+root@vps117164:/# ^C
+root@vps117164:/# sudo ls -ld /home/nostress /home/nostress/.ssh /home/nostress/         .ssh/authorized_keys /home/nostress/.ssh/github_actions
+drwxr-x--- 5 nostress nostress 4096 mai    6 11:40 /home/nostress
+drwxrwxr-x 2 nostress nostress 4096 mai    6 11:40 /home/nostress/.ssh
+-rw------- 1 nostress nostress   96 mai    6 04:30 /home/nostress/.ssh/authorize         d_keys
+-rw------- 1 nostress nostress  411 mai    6 04:29 /home/nostress/.ssh/github_ac         tions
+root@vps117164:/# sudo -u nostress ssh -i /home/nostress/.ssh/github_actions -o          StrictHostKeyChecking=no -o BatchMode=yes nostress@127.0.0.1 "echo SSH_OK"
+SSH_OK
+root@vps117164:/# sudo tail -30 /var/log/auth.log | grep -i ssh
+2026-05-06T12:31:02.497156+02:00 vps117164 sshd[751637]: Failed password for roo         t from 45.148.10.157 port 11058 ssh2
+2026-05-06T12:31:06.513619+02:00 vps117164 sshd[751637]: Failed password for roo         t from 45.148.10.157 port 11058 ssh2
+2026-05-06T12:31:09.287020+02:00 vps117164 sudo:     root : TTY=pts/7 ; PWD=/ ;          USER=root ; COMMAND=/usr/bin/ls -ld /home/nostress /home/nostress/.ssh /home/nos         tress/.ssh/authorized_keys /home/nostress/.ssh/github_actions
+2026-05-06T12:31:09.760863+02:00 vps117164 sshd[751637]: Failed password for roo         t from 45.148.10.157 port 11058 ssh2
+2026-05-06T12:31:11.120474+02:00 vps117164 sshd[751637]: Connection reset by aut         henticating user root 45.148.10.157 port 11058 [preauth]
+2026-05-06T12:31:11.120693+02:00 vps117164 sshd[751637]: PAM 4 more authenticati         on failures; logname= uid=0 euid=0 tty=ssh ruser= rhost=45.148.10.157  user=root
+2026-05-06T12:31:11.120762+02:00 vps117164 sshd[751637]: PAM service(sshd) ignor         ing max retries; 5 > 3
+2026-05-06T12:31:19.805311+02:00 vps117164 sshd[751661]: pam_unix(sshd:auth): au         thentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=118.70.178.158           user=root
+2026-05-06T12:31:20.806278+02:00 vps117164 sudo:     root : TTY=pts/7 ; PWD=/ ;          USER=nostress ; COMMAND=/usr/bin/ssh -i /home/nostress/.ssh/github_actions -o St         rictHostKeyChecking=no -o BatchMode=yes nostress@127.0.0.1 'echo SSH_OK'
+2026-05-06T12:31:21.196625+02:00 vps117164 sshd[751676]: Accepted publickey for          nostress from 127.0.0.1 port 37924 ssh2: ED25519 SHA256:s8aOKZthS/ub7Z4i9X8THMdo         xCd3zkj1ISWumh0GfY0
+2026-05-06T12:31:21.198648+02:00 vps117164 sshd[751676]: pam_unix(sshd:session):          session opened for user nostress(uid=1001) by (uid=0)
+2026-05-06T12:31:21.401502+02:00 vps117164 sshd[751701]: Received disconnect fro         m 127.0.0.1 port 37924:11: disconnected by user
+2026-05-06T12:31:21.401689+02:00 vps117164 sshd[751701]: Disconnected from user          nostress 127.0.0.1 port 37924
+2026-05-06T12:31:21.401783+02:00 vps117164 sshd[751676]: pam_unix(sshd:session):          session closed for user nostress
+2026-05-06T12:31:21.858699+02:00 vps117164 sshd[751661]: Failed password for roo         t from 118.70.178.158 port 41796 ssh2
+2026-05-06T12:31:24.060642+02:00 vps117164 sshd[751661]: Connection closed by au         thenticating user root 118.70.178.158 port 41796 [preauth]
+2026-05-06T12:31:27.385403+02:00 vps117164 sshd[751709]: pam_unix(sshd:auth): au         thentication failure; logname= uid=0 euid=0 tty=ssh ruser= rhost=45.82.13.133  u         ser=root
+2026-05-06T12:31:29.538230+02:00 vps117164 sshd[751709]: Failed password for roo         t from 45.82.13.133 port 33340 ssh2
+2026-05-06T12:31:30.858061+02:00 vps117164 sshd[751709]: Connection closed by au         thenticating user root 45.82.13.133 port 33340 [preauth]
