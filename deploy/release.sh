@@ -49,8 +49,9 @@ set -a; source "$SHARED_ENV"; set +a
     }
     fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
   '
-  # Standalone install (no workspace), then run drizzle-kit push.
-  pnpm install --silent --ignore-workspace
+  # Standalone install (no workspace, force devDependencies even when
+  # NODE_ENV=production — drizzle-kit lives in devDependencies).
+  pnpm install --silent --ignore-workspace --prod=false
   pnpm exec drizzle-kit push --config ./drizzle.config.ts
 )
 
