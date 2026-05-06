@@ -52,7 +52,7 @@ jobs:
           set -e
           STAGE="$RUNNER_TEMP/release"
           mkdir -p "$STAGE"
-          cp -r artifacts/nostress-admin/dist/. "$STAGE/"
+          cp -r artifacts/nostress-admin/dist/public/. "$STAGE/"
           test -f "$STAGE/index.html"
           ls -la "$STAGE" | head -20
 
