@@ -1,0 +1,99 @@
+name: Deploy Admin to VPS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "artifacts/nostress-admin/**"
+      - "lib/api-zod/**"
+      - "deploy/admin/**"
+      - ".github/workflows/deploy-admin.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-admin
+  cancel-in-progress: false
+
+env:
+  VPS_APP_DIR: /var/www/nostress-admin
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build nostress-admin
+        env:
+          NODE_ENV: production
+          BASE_PATH: /
+          PORT: "3000"
+        run: pnpm --filter @workspace/nostress-admin run build
+
+      - name: Stage release artifact
+        run: |
+          set -e
+          STAGE="$RUNNER_TEMP/release"
+          mkdir -p "$STAGE"
+          cp -r artifacts/nostress-admin/dist/. "$STAGE/"
+          test -f "$STAGE/index.html"
+          ls -la "$STAGE" | head -20
+
+      - name: Setup SSH
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          SSH_HOST: ${{ secrets.VPS_HOST }}
+          SSH_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${SSH_PORT:-22}" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Upload release to VPS
+        env:
+          SSH_USER: ${{ secrets.VPS_USER }}
+          SSH_HOST: ${{ secrets.VPS_HOST }}
+          SSH_PORT: ${{ secrets.VPS_PORT }}
+          SHA: ${{ github.sha }}
+        run: |
+          REMOTE_DIR="$VPS_APP_DIR/releases/$SHA"
+          ssh -p "${SSH_PORT:-22}" -i ~/.ssh/id_ed25519 \
+              "$SSH_USER@$SSH_HOST" "mkdir -p $REMOTE_DIR"
+          rsync -az --delete \
+              -e "ssh -p ${SSH_PORT:-22} -i ~/.ssh/id_ed25519" \
+              "$RUNNER_TEMP/release/" \
+              "$SSH_USER@$SSH_HOST:$REMOTE_DIR/"
+          rsync -az \
+              -e "ssh -p ${SSH_PORT:-22} -i ~/.ssh/id_ed25519" \
+              deploy/admin/release.sh \
+              "$SSH_USER@$SSH_HOST:$VPS_APP_DIR/release.sh"
+          ssh -p "${SSH_PORT:-22}" -i ~/.ssh/id_ed25519 \
+              "$SSH_USER@$SSH_HOST" "chmod +x $VPS_APP_DIR/release.sh && bash $VPS_APP_DIR/release.sh $SHA"
+
+      - name: Smoke test
+        run: |
+          sleep 3
+          curl -fsS "https://admin.no-stress.net/" -o /dev/null \
+            && echo "✅ admin.no-stress.net responds" \
+            || (echo "❌ Admin smoke test failed"; exit 1)
+          curl -fsS "https://admin.no-stress.net/login" -o /dev/null \
+            && echo "✅ SPA fallback OK" \
+            || (echo "❌ SPA fallback broken"; exit 1)
