@@ -16,7 +16,7 @@ Connecte-toi en SSH **en root** (ou avec sudo) sur ton VPS, puis :
 
 ```bash
 # Récupère le script depuis ton repo (ou scp-le)
-curl -fsSL https://raw.githubusercontent.com/nostresstogo-crypto/no-stress-api/main/deploy/server-setup.sh -o /tmp/setup.sh
+curl -fsSL https://raw.githubusercontent.com/nostresstogo-crypto/no-stress/main/deploy/server-setup.sh -o /tmp/setup.sh
 sudo bash /tmp/setup.sh
 ```
 
