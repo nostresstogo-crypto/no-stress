@@ -1,0 +1,54 @@
+
+[PM2] Spawning PM2 daemon with pm2_home=/home/nostress/.pm2
+spawn /usr/bin/node EACCES
+spawn /usr/bin/node EACCES
+[PM2] Spawning PM2 daemon with pm2_home=/home/nostress/.pm2
+spawn /usr/bin/node EACCES
+spawn /usr/bin/node EACCES
+spawn /usr/bin/node EACCES
+[PM2] Spawning PM2 daemon with pm2_home=/home/nostress/.pm2
+spawn /usr/bin/node EACCES
+spawn /usr/bin/node EACCES
+[PM2] Spawning PM2 daemon with pm2_home=/home/nostress/.pm2
+spawn /usr/bin/node EACCES
+spawn /usr/bin/node EACCES
+spawn /usr/bin/node EACCES
+[TAILING] Tailing last 50 lines for [nostress-api] process (change the value with --lines option)
+/usr/lib/node_modules/pm2/lib/API/LogManagement.js:318
+      list.forEach(function(proc) {
+           ^
+
+TypeError: Cannot read properties of undefined (reading 'forEach')
+    at /usr/lib/node_modules/pm2/lib/API/LogManagement.js:318:12
+    at /usr/lib/node_modules/pm2/lib/Client.js:528:18
+    at /usr/lib/node_modules/pm2/lib/Client.js:107:21
+    at ChildProcess.onError (/usr/lib/node_modules/pm2/lib/Client.js:266:17)
+    at Object.onceWrapper (node:events:639:26)
+    at ChildProcess.emit (node:events:524:28)
+    at ChildProcess._handle.onexit (node:internal/child_process:291:12)
+    at onErrorNT (node:internal/child_process:483:16)
+    at processTicksAndRejections (node:internal/process/task_queues:82:21)
+    at runNextTicks (node:internal/process/task_queues:64:3)
+
+Node.js v20.20.2
+curl: (7) Failed to connect to 127.0.0.1 port 8080 after 0 ms: Couldn't connect to server
+server {
+    listen 80;
+    listen [::]:80;
+    server_name api.no-stress.net;
+
+    location /.well-known/acme-challenge/ { root /var/www/html; }
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Upgrade           $http_upgrade;
+        proxy_set_header Connection        "upgrade";
+        proxy_read_timeout 300;
+        client_max_body_size 25m;
+    }
+}
