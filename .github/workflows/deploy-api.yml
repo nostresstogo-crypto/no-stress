@@ -17,7 +17,6 @@ concurrency:
 
 env:
   VPS_APP_DIR: /var/www/nostress-api
-  PM2_APP_NAME: nostress-api
 
 jobs:
   build-and-deploy:
@@ -53,6 +52,53 @@ jobs:
           set -e
           STAGE="$RUNNER_TEMP/release"
           mkdir -p "$STAGE/drizzle"
-          # 1. built bundle
           cp -r artifacts/api-server/dist "$STAGE/"
-          # 2. slim runtime package.
+          cp deploy/release-package.json "$STAGE/package.json"
+          cp deploy/ecosystem.config.cjs "$STAGE/" 2>/dev/null || true
+          cp -r lib/db/. "$STAGE/drizzle/"
+          node -e "
+            const fs = require('fs');
+            const path = '$STAGE/drizzle/package.json';
+            const p = JSON.parse(fs.readFileSync(path, 'utf8'));
+            p.devDependencies = p.devDependencies || {};
+            p.devDependencies['drizzle-kit'] = p.devDependencies['drizzle-kit'] || '^0.31.6';
+            p.scripts = p.scripts || {};
+            fs.writeFileSync(path, JSON.stringify(p, null, 2));
+          "
+          tar -C "$STAGE" -czf release.tar.gz .
+          ls -lh release.tar.gz
+
+      - name: Configure SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${{ secrets.VPS_PORT || 22 }}" -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Upload release to VPS
+        env:
+          SHA: ${{ github.sha }}
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER }}
+          PORT: ${{ secrets.VPS_PORT || 22 }}
+        run: |
+          REMOTE_DIR="$VPS_APP_DIR/releases/$SHA"
+          ssh -p "$PORT" "$USER@$HOST" "mkdir -p $REMOTE_DIR"
+          scp -P "$PORT" release.tar.gz "$USER@$HOST:$REMOTE_DIR/"
+          scp -P "$PORT" deploy/release.sh "$USER@$HOST:$REMOTE_DIR/release.sh"
+          ssh -p "$PORT" "$USER@$HOST" "
+            set -e
+            cd $REMOTE_DIR
+            tar -xzf release.tar.gz && rm release.tar.gz
+            chmod +x release.sh
+            ./release.sh $SHA
+          "
+
+      - name: Smoke test (health check)
+        run: |
+          sleep 4
+          curl --fail --silent --show-error --max-time 10 \
+            https://api.no-stress.net/health || \
+            (echo "Health check failed"; exit 1)
