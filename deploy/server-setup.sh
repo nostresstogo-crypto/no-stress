@@ -114,42 +114,89 @@ mkdir -p "$SHARED_DIR/uploads/private" "$SHARED_DIR/uploads/public"
 chown -R "$APP_USER:$APP_USER" "$SHARED_DIR/uploads"
 
 # ─── 8. Nginx site ─────────────────────────────────────────────────────────
-log "Installing nginx site for $DOMAIN"
 NGINX_SITE="/etc/nginx/sites-available/${DOMAIN}.conf"
-cat > "$NGINX_SITE" <<'NGINX'
+HAS_CERT=0
+[[ -d "/etc/letsencrypt/live/${DOMAIN}" ]] && HAS_CERT=1
+
+# Back up existing config so we can restore it on user request
+if [[ -f "$NGINX_SITE" ]]; then
+  cp "$NGINX_SITE" "${NGINX_SITE}.bak.$(date +%s)"
+  log "Existing nginx config backed up to ${NGINX_SITE}.bak.*"
+fi
+
+if [[ "$HAS_CERT" == "1" ]]; then
+  log "Installing nginx site for $DOMAIN (with HTTPS — existing Let's Encrypt cert detected)"
+  cat > "$NGINX_SITE" <<NGINX
 server {
     listen 80;
     listen [::]:80;
-    server_name api.no-stress.net;
-
-    # Certbot challenges
+    server_name ${DOMAIN};
     location /.well-known/acme-challenge/ { root /var/www/html; }
+    location / { return 301 https://\$host\$request_uri; }
+}
 
-    # Everything else proxied to the Node app
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name ${DOMAIN};
+
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
     location / {
         proxy_pass http://127.0.0.1:8080;
         proxy_http_version 1.1;
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header Upgrade           $http_upgrade;
+        proxy_set_header Host              \$host;
+        proxy_set_header X-Real-IP         \$remote_addr;
+        proxy_set_header X-Forwarded-For   \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Upgrade           \$http_upgrade;
         proxy_set_header Connection        "upgrade";
         proxy_read_timeout 300;
         client_max_body_size 25m;
     }
 }
 NGINX
+else
+  log "Installing nginx site for $DOMAIN (HTTP only — certbot will add HTTPS next)"
+  cat > "$NGINX_SITE" <<NGINX
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${DOMAIN};
+
+    location /.well-known/acme-challenge/ { root /var/www/html; }
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host              \$host;
+        proxy_set_header X-Real-IP         \$remote_addr;
+        proxy_set_header X-Forwarded-For   \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Upgrade           \$http_upgrade;
+        proxy_set_header Connection        "upgrade";
+        proxy_read_timeout 300;
+        client_max_body_size 25m;
+    }
+}
+NGINX
+fi
+
 ln -sf "$NGINX_SITE" "/etc/nginx/sites-enabled/${DOMAIN}.conf"
 rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl reload nginx
 
 # ─── 9. SSL (Let's Encrypt) ────────────────────────────────────────────────
-if [[ ! -d "/etc/letsencrypt/live/${DOMAIN}" ]]; then
+if [[ "$HAS_CERT" == "0" ]]; then
   log "Requesting SSL cert for ${DOMAIN}"
   certbot --nginx -d "$DOMAIN" --non-interactive --agree-tos \
           --register-unsafely-without-email --redirect || \
     echo "⚠️  certbot failed — make sure DNS A record for $DOMAIN points to this server, then run: certbot --nginx -d $DOMAIN"
+else
+  log "SSL cert already present for ${DOMAIN} — skipping certbot"
 fi
 
 # ─── 10. Firewall ──────────────────────────────────────────────────────────
