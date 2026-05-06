@@ -15,6 +15,17 @@ const SMTP_USER = process.env.SMTP_USER || "";
 const SMTP_PASS = process.env.SMTP_PASS;
 const FROM_EMAIL = process.env.SMTP_FROM || process.env.SMTP_USER || "nostresstogo@gmail.com";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "nostresstogo@gmail.com";
+
+console.info("[EMAIL] SMTP config loaded:", {
+  host: SMTP_HOST,
+  port: SMTP_PORT,
+  secure: SMTP_PORT === 465,
+  user: SMTP_USER,
+  userLength: SMTP_USER.length,
+  passLength: SMTP_PASS ? SMTP_PASS.length : 0,
+  passHasWhitespace: SMTP_PASS ? /\s/.test(SMTP_PASS) : false,
+  from: FROM_EMAIL,
+});
 const ADMIN_BASE_URL = (process.env.ADMIN_BASE_URL || "https://admin.no-stress.net").replace(/\/+$/, "");
 
 function createTransporter() {
