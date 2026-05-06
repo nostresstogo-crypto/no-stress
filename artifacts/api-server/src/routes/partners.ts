@@ -2,7 +2,15 @@ import { Router, type IRouter } from "express";
 import crypto from "node:crypto";
 import { eq, and, gte, sql, isNull } from "drizzle-orm";
 import { db, partnersTable, usersTable, eventsTable, registrationLogTable, refreshTokensTable } from "@workspace/db";
-import { hashPassword, signToken, rateLimit, issueRefreshToken, requireAuth } from "../lib/auth-utils.js";
+import {
+  hashPassword,
+  signToken,
+  rateLimit,
+  issueRefreshToken,
+  requireAuth,
+  generateVerificationCode,
+  verificationCodeExpiry,
+} from "../lib/auth-utils.js";
 
 function generateRandomPassword(): string {
   // 12 characters, easy-to-read base64url (no ambiguous chars), strong entropy
@@ -18,6 +26,7 @@ import {
   sendPartnerRejectionEmail,
   sendPublicationWarningEmail,
   sendAccountDeletedEmail,
+  sendVerificationCodeEmail,
 } from "../email.js";
 import { requireAdmin } from "./admin.js";
 
@@ -124,6 +133,7 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
     }
   }
   const passwordHash = await hashPassword(tempPassword);
+  const code = generateVerificationCode();
   const [partner] = await db
     .insert(partnersTable)
     .values({
@@ -138,20 +148,77 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
       longitude: null,
       description: description || null,
       websiteUrl: websiteUrl || null,
+      verificationCode: code,
+      verificationCodeExpires: verificationCodeExpiry(),
     })
     .returning();
   await db.insert(registrationLogTable).values({ type: "partner" });
-  const sub = `p_${partner.id}`;
-  const token = signToken({ sub, email: partner.email, role: "structure" });
-  const refreshToken = await issueRefreshToken(sub, req.headers["user-agent"] as string | undefined);
+  // No token issued — partner must (1) verify email by OTP, (2) wait for admin approval, then login.
   res.status(201).json({
-    message: "Demande d'inscription soumise avec succès. Elle sera examinée sous 48h.",
-    token,
-    refreshToken,
-    partner: serializePartner(partner),
+    message: "Code de vérification envoyé par email. Vérifiez votre email pour finaliser l'inscription.",
+    pendingVerification: true,
+    email,
   });
-  sendPartnerRegistrationEmailToPartner(email, contactName, businessName).catch(() => {});
+  sendVerificationCodeEmail(email, contactName, code).catch(() => {});
   sendPartnerRegistrationEmailToAdmin(email, contactName, businessName, businessType, city, phone).catch(() => {});
+});
+
+const partnerVerifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: "partner-verify" });
+const partnerResendLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, key: "partner-resend" });
+
+// Public OTP verification for partners. Does NOT issue a session — partners must wait for admin approval.
+router.post("/partners/verify-email", partnerVerifyLimiter, async (req, res) => {
+  const email = normEmail(req.body?.email);
+  const code = String(req.body?.code || "").trim();
+  if (!email || !code) return res.status(400).json({ error: "Email et code requis." });
+  const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.email, email));
+  if (!partner) return res.status(404).json({ error: "Partenaire introuvable." });
+  if (partner.emailVerified) {
+    return res.json({
+      message: "Email déjà vérifié.",
+      verified: true,
+      needsApproval: partner.status === "pending",
+      partnerStatus: partner.status,
+    });
+  }
+  if (!partner.verificationCode || !partner.verificationCodeExpires) {
+    return res.status(400).json({ error: "Aucun code en attente. Demandez un nouveau code." });
+  }
+  if (partner.verificationCodeExpires < new Date()) {
+    return res.status(400).json({ error: "Code expiré. Demandez un nouveau code." });
+  }
+  if (partner.verificationCode !== code) {
+    return res.status(400).json({ error: "Code incorrect." });
+  }
+  const [updated] = await db
+    .update(partnersTable)
+    .set({ emailVerified: new Date(), verificationCode: null, verificationCodeExpires: null, updatedAt: new Date() })
+    .where(eq(partnersTable.id, partner.id))
+    .returning();
+  res.json({
+    message: "Email vérifié. Votre compte est en attente d'approbation par l'administrateur.",
+    verified: true,
+    needsApproval: true,
+    partnerStatus: updated.status,
+    email: updated.email,
+  });
+  // Notify partner + admin only after email verification (avoids spam from fake registrations)
+  sendPartnerRegistrationEmailToPartner(updated.email, updated.contactName, updated.businessName).catch(() => {});
+});
+
+router.post("/partners/resend-verification", partnerResendLimiter, async (req, res) => {
+  const email = normEmail(req.body?.email);
+  if (!email) return res.status(400).json({ error: "Email requis." });
+  const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.email, email));
+  if (!partner) return res.status(404).json({ error: "Partenaire introuvable." });
+  if (partner.emailVerified) return res.json({ message: "Email déjà vérifié." });
+  const code = generateVerificationCode();
+  await db
+    .update(partnersTable)
+    .set({ verificationCode: code, verificationCodeExpires: verificationCodeExpiry(), updatedAt: new Date() })
+    .where(eq(partnersTable.id, partner.id));
+  res.json({ message: "Code envoyé." });
+  sendVerificationCodeEmail(partner.email, partner.contactName, code).catch(() => {});
 });
 
 // Authenticated partner sets their own GPS location (replaces lat/lng at register time).

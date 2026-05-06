@@ -2,15 +2,20 @@ import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { safeReplace } from "@/lib/navigation";
 
 import { useApp, useColors } from "@/context/AppContext";
 
+type VerifyRole = "user" | "partner";
+
 export default function VerifyEmailScreen() {
-  const { user, setUser, token, lang, authFetch } = useApp();
+  const { setUser, setSession, lang, addNotification } = useApp();
   const C = useColors();
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{ email?: string; role?: string }>();
+  const targetEmail = String(params.email || "").trim();
+  const role: VerifyRole = params.role === "partner" ? "partner" : "user";
 
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
@@ -25,31 +30,52 @@ export default function VerifyEmailScreen() {
   const fr = lang === "fr";
   const styles = makeStyles(C);
 
+  const verifyEndpoint = role === "partner"
+    ? `${API_BASE}/partners/verify-email`
+    : `${API_BASE}/auth/verify-email`;
+  const resendEndpoint = role === "partner"
+    ? `${API_BASE}/partners/resend-verification`
+    : `${API_BASE}/auth/resend-verification`;
+
   const handleVerify = async () => {
     setError("");
     setInfo("");
+    if (!targetEmail) {
+      setError(fr ? "Email manquant. Recommencez l'inscription." : "Email missing. Restart registration.");
+      return;
+    }
     if (!code || code.length !== 6) {
       setError(fr ? "Saisissez le code à 6 chiffres." : "Enter the 6-digit code.");
       return;
     }
-    if (!token) {
-      setError(fr ? "Session expirée. Reconnectez-vous." : "Session expired. Please log in again.");
-      return;
-    }
     setLoading(true);
     try {
-      const res = await authFetch(`${API_BASE}/auth/verify-email`, {
+      const res = await fetch(verifyEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: code.trim() }),
+        body: JSON.stringify({ email: targetEmail, code: code.trim() }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.error || (fr ? "Code invalide." : "Invalid code."));
+        setLoading(false);
+        return;
+      }
+      if (role === "partner") {
+        // Partner verified email but cannot log in until admin approval
+        addNotification({
+          title: "Email verified",
+          titleFr: "Email vérifié",
+          body: "Your account is pending admin approval. You will be notified by email.",
+          bodyFr: "Votre compte est en attente d'approbation par l'administrateur. Vous serez notifié par email.",
+        });
+        router.replace({ pathname: "/partner-pending", params: { email: targetEmail } });
       } else {
+        // User verified — session issued by API
         if (data.user) await setUser(data.user);
+        if (data.token) await setSession(data.token, data.refreshToken || null);
         setInfo(fr ? "Email vérifié !" : "Email verified!");
-        setTimeout(() => safeReplace("/(tabs)"), 800);
+        setTimeout(() => safeReplace("/(tabs)"), 600);
       }
     } catch {
       setError(fr ? "Erreur réseau." : "Network error.");
@@ -60,15 +86,16 @@ export default function VerifyEmailScreen() {
   const handleResend = async () => {
     setError("");
     setInfo("");
-    if (!token) {
-      setError(fr ? "Session expirée." : "Session expired.");
+    if (!targetEmail) {
+      setError(fr ? "Email manquant." : "Email missing.");
       return;
     }
     setResending(true);
     try {
-      const res = await authFetch(`${API_BASE}/auth/resend-verification`, {
+      const res = await fetch(resendEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: targetEmail }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -96,8 +123,19 @@ export default function VerifyEmailScreen() {
         <Text style={styles.title}>{fr ? "Vérifiez votre email" : "Verify your email"}</Text>
         <Text style={styles.subtitle}>
           {fr ? "Un code à 6 chiffres a été envoyé à" : "A 6-digit code was sent to"}{" "}
-          <Text style={styles.email}>{user?.email || ""}</Text>
+          <Text style={styles.email}>{targetEmail || (fr ? "votre adresse email" : "your email")}</Text>
         </Text>
+
+        {role === "partner" && (
+          <View style={styles.partnerBanner}>
+            <Ionicons name="business-outline" size={16} color={C.gold} />
+            <Text style={styles.partnerBannerText}>
+              {fr
+                ? "Après vérification, votre compte sera examiné par l'administrateur (24-48h)."
+                : "After verification, your account will be reviewed by the administrator (24-48h)."}
+            </Text>
+          </View>
+        )}
 
         <TextInput
           style={styles.codeInput}
@@ -123,12 +161,6 @@ export default function VerifyEmailScreen() {
             {resending ? (fr ? "Envoi…" : "Sending…") : (fr ? "Renvoyer le code" : "Resend code")}
           </Text>
         </TouchableOpacity>
-
-        <TouchableOpacity style={styles.linkBtn} onPress={() => safeReplace("/(tabs)")}>
-          <Text style={[styles.linkText, { color: C.textMuted }]}>
-            {fr ? "Plus tard" : "Later"}
-          </Text>
-        </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -139,8 +171,10 @@ const makeStyles = (C: any) => StyleSheet.create({
   backBtn: { alignSelf: "flex-start", padding: 6, marginBottom: 12 },
   iconCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: C.lavender + "22", alignItems: "center", justifyContent: "center", marginTop: 12, marginBottom: 20 },
   title: { fontSize: 22, fontFamily: "Inter_700Bold", color: C.text, textAlign: "center", marginBottom: 10 },
-  subtitle: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.textMuted, textAlign: "center", lineHeight: 22, marginBottom: 28 },
+  subtitle: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.textMuted, textAlign: "center", lineHeight: 22, marginBottom: 20 },
   email: { color: C.lavender, fontFamily: "Inter_600SemiBold" },
+  partnerBanner: { flexDirection: "row", alignItems: "flex-start", gap: 8, backgroundColor: C.gold + "15", borderRadius: 12, borderWidth: 1, borderColor: C.gold + "44", padding: 12, width: "100%", maxWidth: 380, marginBottom: 18 },
+  partnerBannerText: { color: C.gold, fontSize: 12, lineHeight: 17, fontFamily: "Inter_500Medium", flex: 1 },
   codeInput: { width: "100%", maxWidth: 320, fontSize: 28, letterSpacing: 12, fontFamily: "Inter_700Bold", color: C.text, backgroundColor: C.surface, borderRadius: 14, paddingVertical: 18, marginBottom: 16, borderWidth: 1, borderColor: C.border || "#2a2c4a" },
   error: { color: "#ff7a7a", fontSize: 13, fontFamily: "Inter_500Medium", marginBottom: 12, textAlign: "center" },
   info: { color: "#6acf9c", fontSize: 13, fontFamily: "Inter_500Medium", marginBottom: 12, textAlign: "center" },

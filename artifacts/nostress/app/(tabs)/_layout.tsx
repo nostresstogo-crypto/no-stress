@@ -166,7 +166,6 @@ function ClassicTabLayout() {
   const t = useT();
   const { user, isDark } = useApp();
   const C = useColors();
-  const isAdmin = user?.role === "admin";
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
 
@@ -281,24 +280,6 @@ function ClassicTabLayout() {
         }}
       />
 
-      {/* Admin — hidden for non-admins */}
-      <Tabs.Screen
-        name="adminpanel"
-        options={{
-          title: t("admin"),
-          tabBarItemStyle: isAdmin ? undefined : { display: "none" },
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon
-              focused={focused}
-              color={color}
-              ionName="shield"
-              sfName="shield.fill"
-              isIOS={isIOS}
-              glowColor={C.gold}
-            />
-          ),
-        }}
-      />
     </Tabs>
   );
 }

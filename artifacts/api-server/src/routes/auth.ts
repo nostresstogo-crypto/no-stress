@@ -33,6 +33,7 @@ function publicUser(u: typeof usersTable.$inferSelect) {
     phone: u.phone,
     country: u.country,
     role: u.role,
+    profileImage: u.profileImage ?? null,
     emailVerified: !!u.emailVerified,
     favorites: [],
   };
@@ -40,6 +41,8 @@ function publicUser(u: typeof usersTable.$inferSelect) {
 
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: "login" });
 const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, key: "register" });
+const verifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: "verify" });
+const resendLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, key: "resend" });
 
 router.post("/auth/login", loginLimiter, async (req, res) => {
   const email = normEmail(req.body?.email);
@@ -51,9 +54,32 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
   // Try partner first
   const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.email, email));
   if (partner) {
-    const ok = await verifyPassword(password, partner.passwordHash);
+    const ok = partner.passwordHash ? await verifyPassword(password, partner.passwordHash) : false;
     if (!ok) {
       return res.status(401).json({ error: "Email ou mot de passe incorrect." });
+    }
+    if (!partner.emailVerified) {
+      return res.status(403).json({
+        error: "Email non vérifié. Saisissez le code envoyé par email.",
+        needsVerification: true,
+        role: "partner",
+        email: partner.email,
+      });
+    }
+    if (partner.status === "rejected") {
+      return res.status(403).json({
+        error: partner.rejectionReason || "Demande rejetée par l'administrateur.",
+        partnerStatus: "rejected",
+        partnerRejectionReason: partner.rejectionReason ?? null,
+      });
+    }
+    if (partner.status !== "approved") {
+      // Pending (or any other non-approved state) — no session until admin approves.
+      return res.status(403).json({
+        error: "Compte partenaire en attente d'approbation par l'administrateur.",
+        partnerStatus: partner.status,
+        email: partner.email,
+      });
     }
     const sub = `p_${partner.id}`;
     const token = signToken({ sub, email: partner.email, role: "structure" });
@@ -74,6 +100,7 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
         city: partner.city,
         latitude: partner.latitude,
         longitude: partner.longitude,
+        profileImage: partner.profileImage ?? null,
       },
     });
   }
@@ -85,6 +112,21 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
   const ok = await verifyPassword(password, user.passwordHash);
   if (!ok) {
     return res.status(401).json({ error: "Email ou mot de passe incorrect." });
+  }
+  // Mobile clients are not allowed to log in as admin — admin access is web-only.
+  if (user.role === "admin") {
+    return res.status(403).json({
+      error: "L'administration est accessible uniquement depuis l'interface web.",
+      adminWebOnly: true,
+    });
+  }
+  if (!user.emailVerified) {
+    return res.status(403).json({
+      error: "Email non vérifié. Saisissez le code envoyé par email.",
+      needsVerification: true,
+      role: "user",
+      email: user.email,
+    });
   }
   const sub = `u_${user.id}`;
   const token = signToken({ sub, email: user.email, role: user.role as any });
@@ -102,8 +144,18 @@ router.post("/auth/register", registerLimiter, async (req, res) => {
   if (typeof password !== "string" || password.length < 8) {
     return res.status(400).json({ error: "Le mot de passe doit faire au moins 8 caractères." });
   }
-  const [existingUser] = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.email, email));
+  const [existingUser] = await db.select({ id: usersTable.id, emailVerified: usersTable.emailVerified }).from(usersTable).where(eq(usersTable.email, email));
   if (existingUser) {
+    // Allow re-trigger of OTP if account exists but isn't verified yet
+    if (!existingUser.emailVerified) {
+      const code = generateVerificationCode();
+      await db
+        .update(usersTable)
+        .set({ verificationCode: code, verificationCodeExpires: verificationCodeExpiry() })
+        .where(eq(usersTable.id, existingUser.id));
+      sendVerificationCodeEmail(email, name, code).catch(() => {});
+      return res.status(200).json({ pendingVerification: true, email, message: "Nouveau code envoyé par email." });
+    }
     return res.status(409).json({ error: "Un compte existe déjà avec cet email." });
   }
   const [existingPartner] = await db
@@ -124,7 +176,7 @@ router.post("/auth/register", registerLimiter, async (req, res) => {
   }
   const passwordHash = await hashPassword(password);
   const code = generateVerificationCode();
-  const [user] = await db
+  await db
     .insert(usersTable)
     .values({
       email,
@@ -132,15 +184,17 @@ router.post("/auth/register", registerLimiter, async (req, res) => {
       name,
       phone: phone || null,
       country: country || null,
-      role: email.includes("admin") ? "admin" : "user",
+      // Public registration NEVER creates an admin account, regardless of email format.
+      role: "user",
       verificationCode: code,
       verificationCodeExpires: verificationCodeExpiry(),
-    })
-    .returning();
-  const sub = `u_${user.id}`;
-  const token = signToken({ sub, email: user.email, role: user.role as any });
-  const refreshToken = await issueRefreshToken(sub, req.headers["user-agent"] as string | undefined);
-  res.status(201).json({ token, refreshToken, user: publicUser(user) });
+    });
+  // No token issued — user must verify email first.
+  res.status(201).json({
+    pendingVerification: true,
+    email,
+    message: "Code de vérification envoyé par email.",
+  });
   sendVerificationCodeEmail(email, name, code).catch(() => {});
 });
 
@@ -155,7 +209,6 @@ router.post("/auth/refresh", refreshLimiter, async (req, res) => {
   if (!rotated) {
     return res.status(401).json({ error: "Refresh token invalide ou expiré." });
   }
-  // Look up subject to issue a fresh access token with current email/role
   const sub = rotated.subject;
   let email = "";
   let role: "user" | "structure" | "admin" = "user";
@@ -192,23 +245,23 @@ router.post("/auth/logout", async (req, res) => {
   res.json({ message: "Déconnexion réussie." });
 });
 
-const verifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: "verify" });
-const resendLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, key: "resend" });
-
-router.post("/auth/verify-email", verifyLimiter, requireAuth, async (req: any, res) => {
-  const { code } = req.body || {};
-  if (!code || typeof code !== "string") {
-    return res.status(400).json({ error: "Code requis." });
+// Public verify-email endpoint (no auth) — verifies code by email and issues a session for users.
+// Partners use /partners/verify-email which does NOT issue a session (admin approval required).
+router.post("/auth/verify-email", verifyLimiter, async (req, res) => {
+  const email = normEmail(req.body?.email);
+  const code = String(req.body?.code || "").trim();
+  if (!email || !code) {
+    return res.status(400).json({ error: "Email et code requis." });
   }
-  const sub: string = req.auth.sub;
-  if (!sub.startsWith("u_")) {
-    return res.status(400).json({ error: "Vérification email réservée aux comptes utilisateurs." });
-  }
-  const id = parseInt(sub.slice(2), 10);
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
   if (!user) return res.status(404).json({ error: "Compte introuvable." });
   if (user.emailVerified) {
-    return res.json({ message: "Email déjà vérifié.", user: publicUser(user) });
+    // Already verified — DO NOT mint a session here (would allow account takeover with email only).
+    // Tell the client to log in normally with their password.
+    return res.status(400).json({
+      error: "Email déjà vérifié. Connectez-vous avec votre mot de passe.",
+      alreadyVerified: true,
+    });
   }
   if (!user.verificationCode || !user.verificationCodeExpires) {
     return res.status(400).json({ error: "Aucun code en attente. Demandez un nouveau code." });
@@ -216,34 +269,33 @@ router.post("/auth/verify-email", verifyLimiter, requireAuth, async (req: any, r
   if (user.verificationCodeExpires < new Date()) {
     return res.status(400).json({ error: "Code expiré. Demandez un nouveau code." });
   }
-  if (user.verificationCode !== code.trim()) {
+  if (user.verificationCode !== code) {
     return res.status(400).json({ error: "Code incorrect." });
   }
   const [updated] = await db
     .update(usersTable)
     .set({ emailVerified: new Date(), verificationCode: null, verificationCodeExpires: null })
-    .where(eq(usersTable.id, id))
+    .where(eq(usersTable.id, user.id))
     .returning();
-  res.json({ message: "Email vérifié.", user: publicUser(updated) });
+  // Now issue a session — user is fully activated.
+  const sub = `u_${updated.id}`;
+  const token = signToken({ sub, email: updated.email, role: updated.role as any });
+  const refreshToken = await issueRefreshToken(sub, req.headers["user-agent"] as string | undefined);
+  res.json({ message: "Email vérifié.", token, refreshToken, user: publicUser(updated) });
   sendWelcomeEmail(updated.email, updated.name).catch(() => {});
 });
 
-router.post("/auth/resend-verification", resendLimiter, requireAuth, async (req: any, res) => {
-  const sub: string = req.auth.sub;
-  if (!sub.startsWith("u_")) {
-    return res.status(400).json({ error: "Réservé aux comptes utilisateurs." });
-  }
-  const id = parseInt(sub.slice(2), 10);
-  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+router.post("/auth/resend-verification", resendLimiter, async (req, res) => {
+  const email = normEmail(req.body?.email);
+  if (!email) return res.status(400).json({ error: "Email requis." });
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
   if (!user) return res.status(404).json({ error: "Compte introuvable." });
-  if (user.emailVerified) {
-    return res.json({ message: "Email déjà vérifié." });
-  }
+  if (user.emailVerified) return res.json({ message: "Email déjà vérifié." });
   const code = generateVerificationCode();
   await db
     .update(usersTable)
     .set({ verificationCode: code, verificationCodeExpires: verificationCodeExpiry() })
-    .where(eq(usersTable.id, id));
+    .where(eq(usersTable.id, user.id));
   res.json({ message: "Code envoyé." });
   sendVerificationCodeEmail(user.email, user.name, code).catch(() => {});
 });

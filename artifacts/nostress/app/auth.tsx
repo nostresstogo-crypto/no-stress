@@ -111,7 +111,6 @@ export default function AuthScreen() {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-          // 409 → friendly message + flip to Login mode if "already registered"
           if (res.status === 409 && data?.alreadyRegistered) {
             setError(data.error || (lang === "fr"
               ? "Compte déjà existant. Connectez-vous."
@@ -124,31 +123,9 @@ export default function AuthScreen() {
           setLoading(false);
           return;
         }
-        const partner = data.partner || {};
-        const mockUser = {
-          id: String(partner.id || "u_" + Date.now()),
-          email: partner.email || cleanEmail,
-          name: partner.contactName || name,
-          phone: partner.phone || phone,
-          role: "structure" as const,
-          favorites: [],
-          partnerStatus: (partner.status || "pending") as "pending" | "approved" | "rejected",
-          businessName: partner.businessName || name,
-          city: partner.city || city,
-        };
-        await setUser(mockUser);
-        if (data.token) {
-          await setSession(data.token, data.refreshToken || null);
-        }
-        addNotification({
-          title: "Partner request submitted!",
-          titleFr: "Demande partenaire envoyée !",
-          body: "Your partner account request is under review. You will be notified once approved.",
-          bodyFr: "Votre demande de compte partenaire est en cours d'examen. Vous serez notifié(e) dès son approbation.",
-        });
+        // Partner must verify email by OTP first; no session issued yet.
         setLoading(false);
-        setRegisteredEmail(email);
-        setRegistrationSuccess(true);
+        dismissAndReplace({ pathname: "/verify-email", params: { email: cleanEmail, role: "partner" } } as any);
         return;
       }
 
@@ -158,13 +135,40 @@ export default function AuthScreen() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: cleanEmail, password }),
         });
+        const data = await loginRes.json().catch(() => ({}));
         if (!loginRes.ok) {
-          const errData = await loginRes.json().catch(() => ({}));
-          setError(errData.error || (lang === "fr" ? "Erreur de connexion." : "Login error."));
+          // Email not verified → redirect to OTP screen
+          if (data?.needsVerification) {
+            setLoading(false);
+            dismissAndReplace({ pathname: "/verify-email", params: { email: data.email || cleanEmail, role: data.role === "partner" ? "partner" : "user" } } as any);
+            return;
+          }
+          // Admin trying to log in via mobile
+          if (data?.adminWebOnly) {
+            setError(lang === "fr"
+              ? "L'administration est accessible uniquement depuis l'interface web."
+              : "Administration is accessible only from the web interface.");
+            setLoading(false);
+            return;
+          }
+          // Partner pending admin approval → redirect to pending screen, NO session granted
+          if (data?.partnerStatus === "pending") {
+            setLoading(false);
+            dismissAndReplace({ pathname: "/partner-pending", params: { email: data.email || cleanEmail } } as any);
+            return;
+          }
+          if (data?.partnerStatus === "rejected") {
+            setError(data?.partnerRejectionReason
+              ? (lang === "fr" ? `Demande rejetée : ${data.partnerRejectionReason}` : `Request rejected: ${data.partnerRejectionReason}`)
+              : (lang === "fr" ? "Votre demande a été rejetée par l'administrateur." : "Your request was rejected by the administrator."));
+            setLoading(false);
+            return;
+          }
+          setError(data?.error || (lang === "fr" ? "Erreur de connexion." : "Login error."));
           setLoading(false);
           return;
         }
-        const { token: apiToken, refreshToken: apiRefresh, user: apiUser } = await loginRes.json();
+        const { token: apiToken, refreshToken: apiRefresh, user: apiUser } = data;
         await setUser(apiUser);
         await setSession(apiToken, apiRefresh || null);
 
@@ -182,24 +186,15 @@ export default function AuthScreen() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: cleanEmail, password, name: name || cleanEmail.split("@")[0], phone, country }),
         });
+        const data = await regRes.json().catch(() => ({}));
         if (!regRes.ok) {
-          const errData = await regRes.json().catch(() => ({}));
-          setError(errData.error || (lang === "fr" ? "Erreur lors de l'inscription." : "Registration error."));
+          setError(data?.error || (lang === "fr" ? "Erreur lors de l'inscription." : "Registration error."));
           setLoading(false);
           return;
         }
-        const { token: apiToken, refreshToken: apiRefresh, user: apiUser } = await regRes.json();
-        await setUser(apiUser);
-        await setSession(apiToken, apiRefresh || null);
-
-        addNotification({
-          title: "Verify your email",
-          titleFr: "Vérifiez votre email",
-          body: "We sent a 6-digit code to your inbox. Enter it to activate your account.",
-          bodyFr: "Nous avons envoyé un code à 6 chiffres dans votre boîte mail. Saisissez-le pour activer votre compte.",
-        });
+        // User must verify email before getting a session.
         setLoading(false);
-        dismissAndReplace("/verify-email");
+        dismissAndReplace({ pathname: "/verify-email", params: { email: cleanEmail, role: "user" } } as any);
         return;
       }
     } catch (e) {

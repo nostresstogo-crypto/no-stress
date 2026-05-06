@@ -307,7 +307,7 @@ export default function AccountScreen() {
 
       {user.role === "user" && user.emailVerified === false ? (
         <TouchableOpacity
-          onPress={() => safePush("/verify-email")}
+          onPress={() => safePush({ pathname: "/verify-email", params: { email: user.email, role: "user" } })}
           style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, backgroundColor: "#3a2a18", borderRadius: 12, marginBottom: 16, borderLeftWidth: 4, borderLeftColor: "#f0a830" }}
         >
           <Ionicons name="mail-unread" size={22} color="#f0a830" />

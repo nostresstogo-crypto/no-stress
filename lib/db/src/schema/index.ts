@@ -11,6 +11,7 @@ export const usersTable = pgTable("users", {
   country: text("country"),
   role: text("role").notNull().default("user"),
   status: text("status").notNull().default("active"),
+  profileImage: text("profile_image"),
   emailVerified: timestamp("email_verified"),
   verificationCode: text("verification_code"),
   verificationCodeExpires: timestamp("verification_code_expires"),
@@ -37,6 +38,10 @@ export const partnersTable = pgTable("partners", {
   longitude: doublePrecision("longitude"),
   status: text("status").notNull().default("pending"),
   rejectionReason: text("rejection_reason"),
+  profileImage: text("profile_image"),
+  emailVerified: timestamp("email_verified"),
+  verificationCode: text("verification_code"),
+  verificationCodeExpires: timestamp("verification_code_expires"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -136,12 +141,24 @@ export const venuesTable = pgTable("venues", {
   images: jsonb("images"),
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
-  isVerified: text("is_verified").notNull().default("false"),
+  status: text("status").notNull().default("pending"),
+  rejectionReason: text("rejection_reason"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export type Venue = typeof venuesTable.$inferSelect;
 export type InsertVenue = typeof venuesTable.$inferInsert;
+
+export const favoritesTable = pgTable("favorites", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  itemType: text("item_type").notNull(),
+  itemId: integer("item_id").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Favorite = typeof favoritesTable.$inferSelect;
+export type InsertFavorite = typeof favoritesTable.$inferInsert;
 
 export const pushTokensTable = pgTable("push_tokens", {
   id: serial("id").primaryKey(),

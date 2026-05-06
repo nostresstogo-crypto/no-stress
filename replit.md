@@ -84,8 +84,16 @@ artifacts/
 - **Rate limiting** par IP : login 10/15min, register 5/h, refresh 30/15min, verify-email 10/15min, resend 5/h.
   - Backend Redis si `REDIS_URL` est défini (multi-instance safe), sinon repli mémoire.
   - INCR + EXPIRE NX atomique côté Redis ; fallback mémoire si Redis tombe (fail-open).
-- **Email verification** : code 6 chiffres, expiration 24h, welcome email envoyé après vérification.
-- **Inscription partenaire (mai 2026)** : pas de mot de passe demandé au formulaire. Backend génère un password random au register (hash stocké). À l'approbation admin, un NOUVEAU password est régénéré, hashé, et envoyé par email (sendMailOrThrow). Les refresh_tokens du sub `p_<id>` sont révoqués pour invalider la session auto émise au register. Si l'email échoue → réponse 207 + flag `emailError:true` ; admin peut cliquer "Renvoyer les identifiants" → POST `/admin/partners/:id/resend-credentials`.
+- **Email verification (refonte mai 2026)** : code 6 chiffres, expiration 24h. **OTP obligatoire AVANT toute session** pour users ET partners.
+  - `/auth/register` (user) : génère code, envoie email, retourne `{pendingVerification, email}` — **pas de token**.
+  - `POST /auth/verify-email` (public) `{email, code}` : vérifie + crée session user (token+refresh). Si déjà vérifié → 400 `alreadyVerified` (pas de token mint pour empêcher takeover par email seul).
+  - `POST /auth/resend-verification` `{email}` (public).
+  - `/partners/register` : génère code OTP, envoie email, retourne `{pendingVerification, email}` — **pas de token**.
+  - `POST /partners/verify-email` (public) : vérifie email partner — toujours **pas de token** (attend approbation admin), retourne `{verified, needsApproval, partnerStatus}`.
+  - `POST /partners/resend-verification`.
+  - `/auth/login` : refuse `role=admin` avec 403 `adminWebOnly` (admin uniquement via web). Bloque user/partner non vérifié → 403 `needsVerification`. Bloque partner `status !== "approved"` → 403 `partnerStatus: "pending"|"rejected"` (pas de token émis).
+- **Inscription partenaire** : pas de password au formulaire. Backend génère password random au register (hash stocké). À l'approbation admin, NOUVEAU password régénéré, hashé, envoyé par email (sendMailOrThrow). Refresh_tokens du sub `p_<id>` révoqués. Si email échoue → 207 + flag `emailError:true` → POST `/admin/partners/:id/resend-credentials`.
+- **Backfill** : les comptes users/partners créés AVANT cette refonte ont été grandfatherés (`UPDATE … SET email_verified=NOW() WHERE email_verified IS NULL`).
 - **Clients** : `authFetch` (mobile, dans AppContext) et le helper `request` (admin web `lib/api.ts`) interceptent les 401 et rejouent automatiquement après refresh.
 
 ## Upload d'images
@@ -101,8 +109,12 @@ Flow client (mobile) : pick image → POST `/api/storage/uploads/request-url` `{
 
 | Méthode | Route | Auth | Description |
 |---------|-------|------|-------------|
-| POST | `/api/auth/login` | — | Connexion client/partenaire (détecte auto le rôle) |
-| POST | `/api/auth/register` | — | Inscription client |
+| POST | `/api/auth/login` | — | Connexion client/partenaire (refuse admin+pending+rejected+unverified) |
+| POST | `/api/auth/register` | — | Inscription client (envoie OTP, pas de session) |
+| POST | `/api/auth/verify-email` | — | Vérifie code user → crée session |
+| POST | `/api/auth/resend-verification` | — | Renvoie un code à un user |
+| POST | `/api/partners/verify-email` | — | Vérifie code partner (pas de session) |
+| POST | `/api/partners/resend-verification` | — | Renvoie un code à un partner |
 | POST | `/api/admin/login` | — | Connexion admin |
 | GET | `/api/admin/partners` | Bearer | Liste partenaires |
 | PATCH | `/api/admin/partners/:id/status` | Bearer | Approuver/rejeter |
