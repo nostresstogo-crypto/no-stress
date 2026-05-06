@@ -5,10 +5,15 @@
  * NoStress Events API
  * OpenAPI spec version: 0.1.0
  */
+import type { RegisterRequestGender } from "./registerRequestGender";
 
 export interface RegisterRequest {
   email: string;
+  /** Min 6 chars, must contain letters and digits. */
   password: string;
-  name: string;
+  firstName: string;
+  lastName: string;
+  country: string;
+  gender: RegisterRequestGender;
   phone?: string;
 }

@@ -134,24 +134,36 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
   }
   const passwordHash = await hashPassword(tempPassword);
   const code = generateVerificationCode();
-  const [partner] = await db
-    .insert(partnersTable)
-    .values({
-      email,
-      passwordHash,
-      contactName,
-      businessName,
-      businessType,
-      phone,
-      city: country ? `${city}, ${country}` : city,
-      latitude: null,
-      longitude: null,
-      description: description || null,
-      websiteUrl: websiteUrl || null,
-      verificationCode: code,
-      verificationCodeExpires: verificationCodeExpiry(),
-    })
-    .returning();
+  let partner;
+  try {
+    [partner] = await db
+      .insert(partnersTable)
+      .values({
+        email,
+        passwordHash,
+        contactName,
+        businessName,
+        businessType,
+        phone,
+        city: country ? `${city}, ${country}` : city,
+        latitude: null,
+        longitude: null,
+        description: description || null,
+        websiteUrl: websiteUrl || null,
+        verificationCode: code,
+        verificationCodeExpires: verificationCodeExpiry(),
+      })
+      .returning();
+  } catch (err: any) {
+    // Handle race-condition unique violation on partners.email
+    if (err?.code === "23505") {
+      return res.status(409).json({
+        error: "Une demande avec cet email existe déjà. Connectez-vous pour reprendre votre dossier.",
+        alreadyRegistered: true,
+      });
+    }
+    throw err;
+  }
   await db.insert(registrationLogTable).values({ type: "partner" });
   // No token issued — partner must (1) verify email by OTP, (2) wait for admin approval, then login.
   res.status(201).json({

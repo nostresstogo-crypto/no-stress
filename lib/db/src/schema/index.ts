@@ -7,6 +7,9 @@ export const usersTable = pgTable("users", {
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   name: text("name").notNull(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  gender: text("gender"),
   phone: text("phone"),
   country: text("country"),
   role: text("role").notNull().default("user"),
@@ -25,7 +28,7 @@ export type User = typeof usersTable.$inferSelect;
 export const partnersTable = pgTable("partners", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").references(() => usersTable.id),
-  email: text("email").notNull(),
+  email: text("email").notNull().unique(),
   passwordHash: text("password_hash"),
   contactName: text("contact_name").notNull(),
   businessName: text("business_name").notNull(),

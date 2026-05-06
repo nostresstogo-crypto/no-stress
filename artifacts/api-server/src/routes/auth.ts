@@ -30,6 +30,9 @@ function publicUser(u: typeof usersTable.$inferSelect) {
     id: String(u.id),
     email: u.email,
     name: u.name,
+    firstName: u.firstName ?? null,
+    lastName: u.lastName ?? null,
+    gender: u.gender ?? null,
     phone: u.phone,
     country: u.country,
     role: u.role,
@@ -37,6 +40,14 @@ function publicUser(u: typeof usersTable.$inferSelect) {
     emailVerified: !!u.emailVerified,
     favorites: [],
   };
+}
+
+const ALLOWED_GENDERS = new Set(["F", "M", "ND"]);
+function isStrongPassword(p: string): boolean {
+  return typeof p === "string"
+    && p.length >= 6
+    && /[A-Za-z]/.test(p)
+    && /[0-9]/.test(p);
 }
 
 const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: "login" });
@@ -137,13 +148,22 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
 router.post("/auth/register", registerLimiter, async (req, res) => {
   const email = normEmail(req.body?.email);
   const phone = normPhone(req.body?.phone);
-  const { password, name, country } = req.body || {};
-  if (!email || !password || !name) {
-    return res.status(400).json({ error: "Email, mot de passe et nom requis." });
+  const firstName = String(req.body?.firstName || "").trim();
+  const lastName = String(req.body?.lastName || "").trim();
+  const country = String(req.body?.country || "").trim();
+  const gender = String(req.body?.gender || "").trim().toUpperCase();
+  const { password } = req.body || {};
+  const fullName = `${firstName} ${lastName}`.trim();
+  if (!email || !password || !firstName || !lastName || !country || !gender) {
+    return res.status(400).json({ error: "Tous les champs sont obligatoires : prénoms, nom, email, pays, sexe et mot de passe." });
   }
-  if (typeof password !== "string" || password.length < 8) {
-    return res.status(400).json({ error: "Le mot de passe doit faire au moins 8 caractères." });
+  if (!ALLOWED_GENDERS.has(gender)) {
+    return res.status(400).json({ error: "Sexe invalide. Valeurs acceptées : F, M, ND." });
   }
+  if (!isStrongPassword(password)) {
+    return res.status(400).json({ error: "Le mot de passe doit contenir au moins 6 caractères, avec lettres et chiffres." });
+  }
+  const name = fullName;
   const [existingUser] = await db.select({ id: usersTable.id, emailVerified: usersTable.emailVerified }).from(usersTable).where(eq(usersTable.email, email));
   if (existingUser) {
     // Allow re-trigger of OTP if account exists but isn't verified yet
@@ -182,6 +202,9 @@ router.post("/auth/register", registerLimiter, async (req, res) => {
       email,
       passwordHash,
       name,
+      firstName,
+      lastName,
+      gender,
       phone: phone || null,
       country: country || null,
       // Public registration NEVER creates an admin account, regardless of email format.

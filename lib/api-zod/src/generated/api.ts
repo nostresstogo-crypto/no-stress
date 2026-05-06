@@ -357,8 +357,13 @@ export const LoginResponse = zod.object({
  */
 export const RegisterBody = zod.object({
   email: zod.string(),
-  password: zod.string(),
-  name: zod.string(),
+  password: zod
+    .string()
+    .describe("Min 6 chars, must contain letters and digits."),
+  firstName: zod.string(),
+  lastName: zod.string(),
+  country: zod.string(),
+  gender: zod.enum(["F", "M", "ND"]),
   phone: zod.string().optional(),
 });
 

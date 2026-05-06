@@ -36,6 +36,9 @@ function publicUser(u: typeof usersTable.$inferSelect) {
     id: String(u.id),
     email: u.email,
     name: u.name,
+    firstName: u.firstName ?? null,
+    lastName: u.lastName ?? null,
+    gender: u.gender ?? null,
     phone: u.phone,
     country: u.country,
     role: u.role,
@@ -69,13 +72,30 @@ router.patch("/users/me", requireAuth, async (req: any, res) => {
   const id = userIdFromAuth(req.auth);
   if (id == null) return res.status(403).json({ error: "Réservé aux utilisateurs." });
   const allowed: any = {};
-  for (const k of ["name", "phone", "country", "profileImage"]) {
+  for (const k of ["name", "firstName", "lastName", "gender", "phone", "country", "profileImage"]) {
     if (k in req.body) {
       const v = req.body[k];
       allowed[k] = typeof v === "string" ? v.trim() || null : v;
     }
   }
-  if ("name" in allowed && (!allowed.name || allowed.name.length < 2)) {
+  if ("gender" in allowed && allowed.gender && !["F", "M", "ND"].includes(String(allowed.gender).toUpperCase())) {
+    return res.status(400).json({ error: "Sexe invalide. Valeurs acceptées : F, M, ND." });
+  }
+  if ("gender" in allowed && allowed.gender) allowed.gender = String(allowed.gender).toUpperCase();
+  if (("firstName" in allowed) || ("lastName" in allowed)) {
+    const fn = ("firstName" in allowed ? allowed.firstName : undefined) ?? null;
+    const ln = ("lastName" in allowed ? allowed.lastName : undefined) ?? null;
+    if (fn !== null && (typeof fn !== "string" || fn.length < 1)) {
+      return res.status(400).json({ error: "Prénom invalide." });
+    }
+    if (ln !== null && (typeof ln !== "string" || ln.length < 1)) {
+      return res.status(400).json({ error: "Nom invalide." });
+    }
+    if (fn || ln) {
+      allowed.name = `${fn ?? ""} ${ln ?? ""}`.trim() || allowed.name || undefined;
+    }
+  }
+  if ("name" in allowed && allowed.name && (typeof allowed.name !== "string" || allowed.name.length < 2)) {
     return res.status(400).json({ error: "Le nom doit contenir au moins 2 caractères." });
   }
   if (Object.keys(allowed).length === 0) {

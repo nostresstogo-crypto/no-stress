@@ -84,6 +84,8 @@ artifacts/
 - **Rate limiting** par IP : login 10/15min, register 5/h, refresh 30/15min, verify-email 10/15min, resend 5/h.
   - Backend Redis si `REDIS_URL` est défini (multi-instance safe), sinon repli mémoire.
   - INCR + EXPIRE NX atomique côté Redis ; fallback mémoire si Redis tombe (fail-open).
+- **Inscription users (refonte T12 mai 2026)** : champs **obligatoires** = `firstName`, `lastName`, `email` (unique), `country`, `gender` (`F|M|ND`), `password`. Backend compose `name = firstName lastName`. Strong password = min 6 chars + lettres + chiffres (validé client + serveur). `passwordConfirm` validé côté client uniquement. Mobile UI : 2 champs nom séparés, sélecteur sexe à 3 boutons, indicateur force mdp en temps réel, message "ne correspondent pas" sous confirmation.
+- **Email partners unique** : contrainte DB `partners_email_unique` (UNIQUE(email)) ajoutée. Le check applicatif existant renvoie déjà 409 friendly avant que la contrainte ne soit atteinte.
 - **Email verification (refonte mai 2026)** : code 6 chiffres, expiration 24h. **OTP obligatoire AVANT toute session** pour users ET partners.
   - `/auth/register` (user) : génère code, envoie email, retourne `{pendingVerification, email}` — **pas de token**.
   - `POST /auth/verify-email` (public) `{email, code}` : vérifie + crée session user (token+refresh). Si déjà vérifié → 400 `alreadyVerified` (pas de token mint pour empêcher takeover par email seul).

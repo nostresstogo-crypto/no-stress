@@ -21,6 +21,7 @@ export * from "./loginRequest";
 export * from "./purchaseTicketRequest";
 export * from "./purchaseTicketRequestPaymentMethod";
 export * from "./registerRequest";
+export * from "./registerRequestGender";
 export * from "./subscriptionPlan";
 export * from "./subscriptionPlansResponse";
 export * from "./ticketPurchaseResponse";

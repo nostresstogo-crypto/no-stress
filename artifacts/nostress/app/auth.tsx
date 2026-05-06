@@ -43,7 +43,11 @@ export default function AuthScreen() {
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
   const [name, setName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [gender, setGender] = useState<"F" | "M" | "ND" | "">("");
   const [phone, setPhone] = useState("");
   const [registerRole, setRegisterRole] = useState<RegisterRole>("user");
   const [showPassword, setShowPassword] = useState(false);
@@ -181,10 +185,40 @@ export default function AuthScreen() {
           });
         }
       } else {
+        const fn = firstName.trim();
+        const ln = lastName.trim();
+        if (!fn || !ln) {
+          setError(lang === "fr" ? "Prénoms et nom sont obligatoires." : "First and last name are required.");
+          setLoading(false);
+          return;
+        }
+        if (!country) {
+          setError(lang === "fr" ? "Le pays est obligatoire." : "Country is required.");
+          setLoading(false);
+          return;
+        }
+        if (!gender) {
+          setError(lang === "fr" ? "Veuillez sélectionner votre sexe." : "Please select your gender.");
+          setLoading(false);
+          return;
+        }
+        const strong = password.length >= 6 && /[A-Za-z]/.test(password) && /[0-9]/.test(password);
+        if (!strong) {
+          setError(lang === "fr"
+            ? "Mot de passe trop faible : 6 caractères minimum, avec lettres et chiffres."
+            : "Password too weak: minimum 6 characters with letters and digits.");
+          setLoading(false);
+          return;
+        }
+        if (password !== passwordConfirm) {
+          setError(lang === "fr" ? "Les mots de passe ne correspondent pas." : "Passwords do not match.");
+          setLoading(false);
+          return;
+        }
         const regRes = await fetch(`${API_BASE}/auth/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: cleanEmail, password, name: name || cleanEmail.split("@")[0], phone, country }),
+          body: JSON.stringify({ email: cleanEmail, password, firstName: fn, lastName: ln, gender, phone, country }),
         });
         const data = await regRes.json().catch(() => ({}));
         if (!regRes.ok) {
@@ -331,20 +365,85 @@ export default function AuthScreen() {
                 </View>
               </View>
 
-              <View style={styles.field}>
-                <Text style={styles.fieldLabel}>{t("name")}</Text>
-                <View style={styles.inputRow}>
-                  <Ionicons name="person-outline" size={18} color={C.textMuted} />
-                  <TextInput
-                    value={name}
-                    onChangeText={setName}
-                    placeholder={t("name")}
-                    placeholderTextColor={C.textMuted}
-                    style={styles.input}
-                    autoCapitalize="words"
-                  />
+              {registerRole === "user" ? (
+                <>
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>{lang === "fr" ? "Prénoms *" : "First name *"}</Text>
+                    <View style={styles.inputRow}>
+                      <Ionicons name="person-outline" size={18} color={C.textMuted} />
+                      <TextInput
+                        value={firstName}
+                        onChangeText={setFirstName}
+                        placeholder={lang === "fr" ? "Vos prénoms" : "Your first name"}
+                        placeholderTextColor={C.textMuted}
+                        style={styles.input}
+                        autoCapitalize="words"
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>{lang === "fr" ? "Nom *" : "Last name *"}</Text>
+                    <View style={styles.inputRow}>
+                      <Ionicons name="person-outline" size={18} color={C.textMuted} />
+                      <TextInput
+                        value={lastName}
+                        onChangeText={setLastName}
+                        placeholder={lang === "fr" ? "Votre nom" : "Your last name"}
+                        placeholderTextColor={C.textMuted}
+                        style={styles.input}
+                        autoCapitalize="words"
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>{lang === "fr" ? "Sexe *" : "Gender *"}</Text>
+                    <View style={{ flexDirection: "row", gap: 8 }}>
+                      {([
+                        { key: "F", label: lang === "fr" ? "F" : "F" },
+                        { key: "M", label: lang === "fr" ? "M" : "M" },
+                        { key: "ND", label: lang === "fr" ? "Non défini" : "Unspecified" },
+                      ] as const).map((g) => {
+                        const active = gender === g.key;
+                        return (
+                          <TouchableOpacity
+                            key={g.key}
+                            onPress={() => setGender(g.key)}
+                            activeOpacity={0.8}
+                            style={{
+                              flex: 1,
+                              paddingVertical: 12,
+                              borderRadius: 12,
+                              borderWidth: 1.5,
+                              borderColor: active ? C.lavender : C.border,
+                              backgroundColor: active ? C.lavender + "22" : "transparent",
+                              alignItems: "center",
+                            }}
+                          >
+                            <Text style={{ color: active ? C.lavender : C.text, fontFamily: "Inter_600SemiBold" }}>
+                              {g.label}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                </>
+              ) : (
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>{t("name")}</Text>
+                  <View style={styles.inputRow}>
+                    <Ionicons name="person-outline" size={18} color={C.textMuted} />
+                    <TextInput
+                      value={name}
+                      onChangeText={setName}
+                      placeholder={t("name")}
+                      placeholderTextColor={C.textMuted}
+                      style={styles.input}
+                      autoCapitalize="words"
+                    />
+                  </View>
                 </View>
-              </View>
+              )}
             </>
           )}
 
@@ -366,28 +465,66 @@ export default function AuthScreen() {
           </View>
 
           {!(mode === "register" && registerRole === "structure") && (
-            <View style={styles.field}>
-              <Text style={styles.fieldLabel}>{t("password")}</Text>
-              <View style={styles.inputRow}>
-                <Ionicons name="lock-closed-outline" size={18} color={C.textMuted} />
-                <TextInput
-                  value={password}
-                  onChangeText={setPassword}
-                  placeholder="••••••••"
-                  placeholderTextColor={C.textMuted}
-                  style={styles.input}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                  <Ionicons
-                    name={showPassword ? "eye-off-outline" : "eye-outline"}
-                    size={18}
-                    color={C.textMuted}
+            <>
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>{t("password")}</Text>
+                <View style={styles.inputRow}>
+                  <Ionicons name="lock-closed-outline" size={18} color={C.textMuted} />
+                  <TextInput
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="••••••••"
+                    placeholderTextColor={C.textMuted}
+                    style={styles.input}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
                   />
-                </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                    <Ionicons
+                      name={showPassword ? "eye-off-outline" : "eye-outline"}
+                      size={18}
+                      color={C.textMuted}
+                    />
+                  </TouchableOpacity>
+                </View>
+                {mode === "register" && (
+                  <Text style={{ marginTop: 6, fontSize: 11, color: C.textMuted, fontFamily: "Inter_400Regular" }}>
+                    {lang === "fr"
+                      ? "6 caractères min · lettres + chiffres requis"
+                      : "Min 6 chars · letters + digits required"}
+                    {password.length > 0 && (
+                      <Text style={{ color: (password.length >= 6 && /[A-Za-z]/.test(password) && /[0-9]/.test(password)) ? C.success : C.error }}>
+                        {"  "}{(password.length >= 6 && /[A-Za-z]/.test(password) && /[0-9]/.test(password))
+                          ? (lang === "fr" ? "✓ Fort" : "✓ Strong")
+                          : (lang === "fr" ? "✗ Faible" : "✗ Weak")}
+                      </Text>
+                    )}
+                  </Text>
+                )}
               </View>
-            </View>
+              {mode === "register" && (
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>{lang === "fr" ? "Confirmer le mot de passe *" : "Confirm password *"}</Text>
+                  <View style={styles.inputRow}>
+                    <Ionicons name="lock-closed-outline" size={18} color={C.textMuted} />
+                    <TextInput
+                      value={passwordConfirm}
+                      onChangeText={setPasswordConfirm}
+                      placeholder="••••••••"
+                      placeholderTextColor={C.textMuted}
+                      style={styles.input}
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                    />
+                  </View>
+                  {passwordConfirm.length > 0 && passwordConfirm !== password && (
+                    <Text style={{ marginTop: 6, fontSize: 11, color: C.error, fontFamily: "Inter_400Regular" }}>
+                      {lang === "fr" ? "Les mots de passe ne correspondent pas." : "Passwords do not match."}
+                    </Text>
+                  )}
+                </View>
+              )}
+            </>
           )}
 
           {mode === "register" && registerRole === "structure" && (

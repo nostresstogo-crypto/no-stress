@@ -163,10 +163,23 @@ export interface LoginRequest {
   password: string;
 }
 
+export type RegisterRequestGender =
+  (typeof RegisterRequestGender)[keyof typeof RegisterRequestGender];
+
+export const RegisterRequestGender = {
+  F: "F",
+  M: "M",
+  ND: "ND",
+} as const;
+
 export interface RegisterRequest {
   email: string;
+  /** Min 6 chars, must contain letters and digits. */
   password: string;
-  name: string;
+  firstName: string;
+  lastName: string;
+  country: string;
+  gender: RegisterRequestGender;
   phone?: string;
 }
 

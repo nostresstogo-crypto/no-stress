@@ -676,14 +676,25 @@ components:
           type: string
         password:
           type: string
-        name:
+          description: "Min 6 chars, must contain letters and digits."
+        firstName:
           type: string
+        lastName:
+          type: string
+        country:
+          type: string
+        gender:
+          type: string
+          enum: [F, M, ND]
         phone:
           type: string
       required:
         - email
         - password
-        - name
+        - firstName
+        - lastName
+        - country
+        - gender
 
     AuthResponse:
       type: object

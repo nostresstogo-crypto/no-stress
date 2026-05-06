@@ -81,6 +81,10 @@ export default function EditProfileScreen() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploading, setUploading] = useState(false);
 
+  const [firstName, setFirstName] = useState<string>((user as any)?.firstName || "");
+  const [lastName, setLastName] = useState<string>((user as any)?.lastName || "");
+  const [gender, setGender] = useState<"F" | "M" | "ND" | "">(((user as any)?.gender as any) || "");
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
@@ -125,7 +129,18 @@ export default function EditProfileScreen() {
       const url = isPartner ? `${API_BASE}/partners/me` : `${API_BASE}/users/me`;
       const body: any = isPartner
         ? { contactName: name.trim(), businessName: businessName.trim(), phone: phone.trim(), city: city.trim(), profileImage }
-        : { name: name.trim(), phone: phone.trim(), profileImage };
+        : {
+            firstName: firstName.trim() || undefined,
+            lastName: lastName.trim() || undefined,
+            gender: gender || undefined,
+            phone: phone.trim(),
+            profileImage,
+          };
+      if (!isPartner && (!body.firstName || !body.lastName)) {
+        Alert.alert(lang === "fr" ? "Prénoms et nom requis." : "First and last name required.");
+        setSavingProfile(false);
+        return;
+      }
       const r = await authFetch(url, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -140,7 +155,13 @@ export default function EditProfileScreen() {
           name: updated.name || updated.contactName || user.name,
           phone: updated.phone || user.phone,
           ...(updated.profileImage ? { avatarUrl: updated.profileImage } : {}),
-          ...(isPartner ? { businessName: updated.businessName, city: updated.city } : {}),
+          ...(isPartner
+            ? { businessName: updated.businessName, city: updated.city }
+            : {
+                firstName: updated.firstName ?? firstName,
+                lastName: updated.lastName ?? lastName,
+                gender: updated.gender ?? gender,
+              }),
         } as any);
       }
       Alert.alert(t("profileUpdated"));
@@ -202,10 +223,51 @@ export default function EditProfileScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("editProfile")}</Text>
-          <View>
-            <Text style={styles.label}>{lang === "fr" ? (isPartner ? "Nom du contact" : "Nom") : (isPartner ? "Contact name" : "Name")}</Text>
-            <TextInput value={name} onChangeText={setName} style={styles.input} placeholderTextColor={C.textMuted} />
-          </View>
+          {isPartner ? (
+            <View>
+              <Text style={styles.label}>{lang === "fr" ? "Nom du contact" : "Contact name"}</Text>
+              <TextInput value={name} onChangeText={setName} style={styles.input} placeholderTextColor={C.textMuted} />
+            </View>
+          ) : (
+            <>
+              <View>
+                <Text style={styles.label}>{lang === "fr" ? "Prénoms" : "First name"}</Text>
+                <TextInput value={firstName} onChangeText={setFirstName} style={styles.input} placeholderTextColor={C.textMuted} autoCapitalize="words" />
+              </View>
+              <View>
+                <Text style={styles.label}>{lang === "fr" ? "Nom" : "Last name"}</Text>
+                <TextInput value={lastName} onChangeText={setLastName} style={styles.input} placeholderTextColor={C.textMuted} autoCapitalize="words" />
+              </View>
+              <View>
+                <Text style={styles.label}>{lang === "fr" ? "Sexe" : "Gender"}</Text>
+                <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
+                  {(["F", "M", "ND"] as const).map((g) => {
+                    const active = gender === g;
+                    return (
+                      <TouchableOpacity
+                        key={g}
+                        onPress={() => setGender(g)}
+                        activeOpacity={0.8}
+                        style={{
+                          flex: 1,
+                          paddingVertical: 10,
+                          borderRadius: 10,
+                          borderWidth: 1.5,
+                          borderColor: active ? C.lavender : C.border,
+                          backgroundColor: active ? C.lavender + "22" : "transparent",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Text style={{ color: active ? C.lavender : C.text, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
+                          {g === "ND" ? (lang === "fr" ? "Non défini" : "Unspecified") : g}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+            </>
+          )}
           {isPartner && (
             <View>
               <Text style={styles.label}>{lang === "fr" ? "Nom de la structure" : "Business name"}</Text>
