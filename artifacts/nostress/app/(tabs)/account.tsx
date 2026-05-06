@@ -517,17 +517,20 @@ export default function AccountScreen() {
                 <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: C.text, marginTop: 8 }}>
                   {t("favoriteVenues")}
                 </Text>
-                {favoriteVenues.map((vid) => (
-                  <TouchableOpacity
-                    key={`fv_${vid}`}
-                    style={[styles.notifCard, { alignItems: "center" }]}
-                    onPress={() => safePush(`/venue/${vid}`)}
-                  >
-                    <Ionicons name="location" size={20} color={C.lavender} />
-                    <Text style={[styles.notifTitle, { flex: 1 }]}>#{vid}</Text>
-                    <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
-                  </TouchableOpacity>
-                ))}
+                {favoriteVenues.map((vid) => {
+                  const navId = vid.startsWith("api_") ? vid : `api_${vid}`;
+                  return (
+                    <TouchableOpacity
+                      key={`fv_${vid}`}
+                      style={[styles.notifCard, { alignItems: "center" }]}
+                      onPress={() => safePush(`/venue/${navId}`)}
+                    >
+                      <Ionicons name="location" size={20} color={C.lavender} />
+                      <Text style={[styles.notifTitle, { flex: 1 }]}>#{vid}</Text>
+                      <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
+                    </TouchableOpacity>
+                  );
+                })}
               </>
             )}
           </>

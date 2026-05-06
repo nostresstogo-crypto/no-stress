@@ -233,11 +233,12 @@ Toutes les données sont en mémoire (pas de DB). Les tableaux `partners`, `part
 - **Multilingue** : 4 langues exposées (FR, EN, Eʋegbe, Taqbaylit). Ewé/Kabye contiennent quelques traductions de base ; le reste retombe automatiquement sur le français via `translations[lang][key] || translations.fr[key]`. À enrichir progressivement dans `constants/i18n.ts` (objets `ewe`, `kab`).
 
 ## Phase 3 — Profil + Favoris (mai 2026)
-- **Profil éditable mobile** : `app/edit-profile.tsx` (modal) — avatar via expo-image-picker → `/storage/uploads/request-url` → PATCH `/users|partners/me`. Bouton dans `(tabs)/account.tsx` (header cliquable + bouton dédié).
-- **Change password** : section dans edit-profile (current+new) → POST `/users|partners/me/change-password` → toutes sessions révoquées (revokeAllForSubject) → re-login forcé.
+- **Profil éditable mobile** : `app/edit-profile.tsx` (modal) — avatar via expo-image-picker → `/storage/uploads/request-url` → PATCH `/users|partners/me`. Bouton dans `(tabs)/account.tsx` (header cliquable + bouton dédié). Validation `contactName`/`businessName` côté client uniquement en mode partner (mode user envoie `firstName`/`lastName`).
+- **Change password** : section dans edit-profile avec **3 champs** (mot de passe actuel + nouveau + **confirmation**, vérif client `passwordsDontMatch` inline) → POST `/users|partners/me/change-password` → toutes sessions révoquées (revokeAllForSubject) → re-login forcé.
 - **Favoris backend** : table `favorites(userId,itemType:event|venue,itemId)` — POST/DELETE/GET `/me/favorites`. Cible vérifiée approved. Idempotent.
-- **AppContext sync** : `syncFavoritesFromBackend()` GET au montage si role=user, `persistFavorites()` POST/DELETE à chaque toggle. `favoriteVenues` + `toggleFavoriteVenue/isFavoriteVenue` exposés. Logout clear listes+keys.
-- **Account UI favoris** : section "Favoris" affiche événements (cards) + lieux favoris (lien vers `/venue/:id`).
+- **AppContext sync** : `syncFavoritesFromBackend()` GET au montage si role=user, `persistFavorites()` POST/DELETE à chaque toggle. **IDs venues normalisés** : `toggleFavoriteVenue`/`isFavoriteVenue` strip préfixe `api_` avant stockage/API (le backend ne connaît que les IDs numériques). Logout clear listes+keys.
+- **Bouton cœur fiche venue** : `app/venue/[id].tsx` affiche un cœur en haut à droite (visible si `user.role === "user"` && venue API) qui appelle `toggleFavoriteVenue(venue.id)`.
+- **Account UI favoris** : section "Favoris" affiche événements (cards) + lieux favoris (lien vers `/venue/api_${vid}` — préfixe ajouté pour route mobile).
 
 ### À faire (Phase 4)
 - Avis & notes événements (table `reviews` + UI)

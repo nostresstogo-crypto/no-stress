@@ -360,19 +360,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const toggleFavoriteVenue = useCallback(async (venueId: string) => {
+    const apiId = venueId.startsWith("api_") ? venueId.slice(4) : venueId;
     let nextHasIt = false;
     setFavoriteVenues((prev) => {
-      const has = prev.includes(venueId);
+      const has = prev.includes(apiId);
       nextHasIt = !has;
-      const next = has ? prev.filter((id) => id !== venueId) : [...prev, venueId];
+      const next = has ? prev.filter((id) => id !== apiId) : [...prev, apiId];
       AsyncStorage.setItem(KEYS.favoriteVenues, JSON.stringify(next));
       return next;
     });
-    persistFavorites("venue", venueId, nextHasIt);
+    persistFavorites("venue", apiId, nextHasIt);
   }, [persistFavorites]);
 
   const isFavoriteVenue = useCallback(
-    (venueId: string) => favoriteVenues.includes(venueId),
+    (venueId: string) => {
+      const apiId = venueId.startsWith("api_") ? venueId.slice(4) : venueId;
+      return favoriteVenues.includes(apiId);
+    },
     [favoriteVenues]
   );
 

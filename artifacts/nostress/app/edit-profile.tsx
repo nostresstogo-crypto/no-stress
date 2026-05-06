@@ -87,6 +87,7 @@ export default function EditProfileScreen() {
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
 
   if (!user) {
@@ -120,9 +121,15 @@ export default function EditProfileScreen() {
 
   const saveProfile = async () => {
     if (savingProfile) return;
-    if (!name.trim() || name.trim().length < 2) {
-      Alert.alert(lang === "fr" ? "Nom trop court" : "Name too short");
-      return;
+    if (isPartner) {
+      if (!name.trim() || name.trim().length < 2) {
+        Alert.alert(lang === "fr" ? "Nom du contact trop court" : "Contact name too short");
+        return;
+      }
+      if (!businessName.trim()) {
+        Alert.alert(lang === "fr" ? "Nom de la structure requis" : "Business name required");
+        return;
+      }
     }
     setSavingProfile(true);
     try {
@@ -176,6 +183,10 @@ export default function EditProfileScreen() {
     if (savingPassword) return;
     if (!currentPassword || newPassword.length < 8) {
       Alert.alert(lang === "fr" ? "Le nouveau mot de passe doit faire au moins 8 caractères." : "New password must be at least 8 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert(t("passwordsDontMatch"));
       return;
     }
     setSavingPassword(true);
@@ -298,6 +309,15 @@ export default function EditProfileScreen() {
           <View>
             <Text style={styles.label}>{t("newPassword")}</Text>
             <TextInput value={newPassword} onChangeText={setNewPassword} secureTextEntry style={styles.input} placeholderTextColor={C.textMuted} />
+          </View>
+          <View>
+            <Text style={styles.label}>{t("confirmNewPassword")}</Text>
+            <TextInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry style={styles.input} placeholderTextColor={C.textMuted} />
+            {confirmPassword.length > 0 && newPassword !== confirmPassword ? (
+              <Text style={{ color: "#dc2626", fontSize: 12, marginTop: 4, fontFamily: "Inter_400Regular" }}>
+                {t("passwordsDontMatch")}
+              </Text>
+            ) : null}
           </View>
           <TouchableOpacity style={[styles.primaryBtn, savingPassword && styles.primaryBtnDisabled]} onPress={changePassword} disabled={savingPassword}>
             <Text style={styles.primaryBtnText}>{savingPassword ? "..." : t("save")}</Text>

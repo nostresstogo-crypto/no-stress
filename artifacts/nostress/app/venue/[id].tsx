@@ -42,7 +42,7 @@ export default function VenueDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const t = useT();
   const C = useColors();
-  const { lang } = useApp();
+  const { lang, user, toggleFavoriteVenue, isFavoriteVenue } = useApp();
   const insets = useSafeAreaInsets();
 
   const [apiVenue, setApiVenue] = useState<Venue | null>(null);
@@ -187,6 +187,20 @@ export default function VenueDetailScreen() {
           >
             <Ionicons name="arrow-back" size={20} color={C.text} />
           </TouchableOpacity>
+
+          {user?.role === "user" && isApi && (
+            <TouchableOpacity
+              style={[styles.navBtn, { top: (insets.top || 20) + 8, right: 16, left: undefined }]}
+              onPress={() => toggleFavoriteVenue(venue.id)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons
+                name={isFavoriteVenue(venue.id) ? "heart" : "heart-outline"}
+                size={20}
+                color={isFavoriteVenue(venue.id) ? "#ef4444" : C.text}
+              />
+            </TouchableOpacity>
+          )}
 
           {venue.isVerified && (
             <View style={styles.verifiedHero}>
