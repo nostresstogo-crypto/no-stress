@@ -69,10 +69,22 @@ artifacts/
 
 ## Pages légales (App Store / Google Play)
 
-- **Site web** : `/politique-confidentialite`, `/conditions-utilisation`, `/suppression-compte` (via `nostress-web/src/pages/{Privacy,TermsOfUse,AccountDeletion}.tsx`).
-- **App mobile** : pages standalone in-app `app/legal/terms.tsx` + `app/legal/privacy.tsx` (route `/legal/terms`, `/legal/privacy`). Contenu localisé FR/EN.
-- **Checkbox obligatoire** sur les 2 formulaires d'inscription mobile (user + structure) dans `auth.tsx` — bloque le submit tant que non cochée. Liens "CGU" et "Politique" tappables avant acceptation (router.push).
+- **Source unique** : package `lib/legal-content` (JS pur + `.d.ts`) exporte `PRIVACY_FR/EN`, `TERMS_FR/EN`, `LAST_UPDATED_FR/EN`, `CONTACT`, type `LegalSection`. Consommé par mobile + web. Pour modifier les CGU/Privacy, éditer **uniquement** `lib/legal-content/src/index.js`.
+- **Site web** : `/politique-confidentialite`, `/conditions-utilisation`, `/suppression-compte` (via `nostress-web/src/pages/{Privacy,TermsOfUse,AccountDeletion}.tsx` qui rendent depuis le package).
+- **App mobile** : `app/legal/terms.tsx` + `app/legal/privacy.tsx` (route `/legal/terms`, `/legal/privacy`) qui rendent depuis le package. Contenu localisé FR/EN.
+- **Checkbox obligatoire** sur les 2 formulaires d'inscription mobile (user + structure) dans `auth.tsx`.
 - Contact officiel : nostresstogo@gmail.com / WhatsApp +1 319 777 4884.
+
+## Photos events/venues (T14 mai 2026)
+
+- **Min 1 photo obligatoire** côté backend (POST + PATCH events/venues — refus 400 si `imgs.length === 0` quand le payload touche les images).
+- **Max 3 photos** : backend slice(0,3) + mobile `MAX_VENUE_IMAGES = MAX_EVENT_IMAGES = 3` (`dashboard.tsx`, `create-event.tsx`).
+
+## Notifications admin (T14 mai 2026)
+
+- À chaque inscription partenaire → email admin avec deeplink `${ADMIN_BASE_URL}/partenaires?id=<id>` (`sendPartnerRegistrationEmailToAdmin`).
+- À chaque création de lieu → email admin avec deeplink `${ADMIN_BASE_URL}/lieux?id=<id>` (`sendNewVenueAdminNotification`, appel best-effort post-réponse dans `venues.ts`).
+- `ADMIN_BASE_URL` env var (défaut `https://admin.no-stress.net`).
 
 ## Authentification
 

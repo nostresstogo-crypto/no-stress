@@ -15,6 +15,7 @@ const SMTP_USER = process.env.SMTP_USER || "";
 const SMTP_PASS = process.env.SMTP_PASS;
 const FROM_EMAIL = "nostresstogo@gmail.com";
 const ADMIN_EMAIL = "nostresstogo@gmail.com";
+const ADMIN_BASE_URL = (process.env.ADMIN_BASE_URL || "https://admin.no-stress.net").replace(/\/+$/, "");
 
 function createTransporter() {
   if (!SMTP_PASS || !SMTP_USER) {
@@ -174,7 +175,8 @@ export async function sendPartnerRegistrationEmailToPartner(to: string, contactN
   });
 }
 
-export async function sendPartnerRegistrationEmailToAdmin(partnerEmail: string, contactName: string, businessName: string, businessType: string, city: string, phone: string) {
+export async function sendPartnerRegistrationEmailToAdmin(partnerId: number, partnerEmail: string, contactName: string, businessName: string, businessType: string, city: string, phone: string) {
+  const adminLink = `${ADMIN_BASE_URL}/partenaires?id=${partnerId}`;
   await sendMail({
     to: ADMIN_EMAIL,
     subject: `🆕 Nouvelle demande partenaire : ${businessName}`,
@@ -194,9 +196,51 @@ export async function sendPartnerRegistrationEmailToAdmin(partnerEmail: string, 
             <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Ville</td><td style="padding: 6px 0; color: #e8e8f0;">${city}</td></tr>
           </table>
         </div>
-        <p style="color: #b0b2cc; line-height: 1.7; margin: 16px 0 0;">
-          Connectez-vous à l'interface admin pour valider ou rejeter cette demande.<br><br>
-          <strong style="color: #e8e8f0;">NoStress Admin</strong>
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${adminLink}" style="display: inline-block; background: #7c6af7; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 600; font-size: 14px;">
+            Examiner cette demande
+          </a>
+        </div>
+        <p style="color: #6b6d8a; line-height: 1.5; margin: 16px 0 0; font-size: 12px; text-align: center;">
+          Lien direct : <a href="${adminLink}" style="color: #7c6af7; word-break: break-all;">${adminLink}</a>
+        </p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}
+
+export async function sendNewVenueAdminNotification(
+  venue: { id: number; name: string; type?: string | null; city?: string | null; country?: string | null; address?: string | null },
+  partner: { id: number; businessName: string; contactName: string; email: string },
+) {
+  const adminLink = `${ADMIN_BASE_URL}/lieux?id=${venue.id}`;
+  await sendMail({
+    to: ADMIN_EMAIL,
+    subject: `🏠 Nouveau lieu à valider : ${venue.name}`,
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml("Nouveau lieu à valider")}
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 0 0 16px;">
+          Un partenaire vient de soumettre un nouveau lieu pour validation.
+        </p>
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px; width: 40%;">Lieu</td><td style="padding: 6px 0; color: #e8e8f0; font-weight: 600;">${venue.name}</td></tr>
+            ${venue.type ? `<tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Type</td><td style="padding: 6px 0; color: #e8e8f0;">${venue.type}</td></tr>` : ""}
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Ville</td><td style="padding: 6px 0; color: #e8e8f0;">${venue.city || "—"}${venue.country ? `, ${venue.country}` : ""}</td></tr>
+            ${venue.address ? `<tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Adresse</td><td style="padding: 6px 0; color: #e8e8f0;">${venue.address}</td></tr>` : ""}
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Partenaire</td><td style="padding: 6px 0; color: #e8e8f0;">${partner.businessName}</td></tr>
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Contact</td><td style="padding: 6px 0;"><a href="mailto:${partner.email}" style="color: #7c6af7;">${partner.contactName} (${partner.email})</a></td></tr>
+          </table>
+        </div>
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${adminLink}" style="display: inline-block; background: #7c6af7; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 600; font-size: 14px;">
+            Valider ce lieu
+          </a>
+        </div>
+        <p style="color: #6b6d8a; line-height: 1.5; margin: 16px 0 0; font-size: 12px; text-align: center;">
+          Lien direct : <a href="${adminLink}" style="color: #7c6af7; word-break: break-all;">${adminLink}</a>
         </p>
         ${footerHtml}
       </div>

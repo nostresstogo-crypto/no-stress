@@ -27,7 +27,7 @@ function normalizeImages(input: any): string[] {
   return arr
     .filter((x) => typeof x === "string" && x.trim().length > 0)
     .map((x) => String(x).trim())
-    .slice(0, 4);
+    .slice(0, 3);
 }
 
 const ARCHIVE_AFTER_DAYS = 30;
@@ -122,6 +122,9 @@ router.post("/partners/me/events", requireAuth, async (req: any, res) => {
     return res.status(400).json({ error: "Ce lieu n'est pas encore approuvé par l'administrateur." });
   }
   const imgs = normalizeImages(images || (imageUrl ? [imageUrl] : []));
+  if (imgs.length === 0) {
+    return res.status(400).json({ error: "Au moins une photo de l'événement est obligatoire (jusqu'à 3 photos)." });
+  }
   const [event] = await db
     .insert(eventsTable)
     .values({
@@ -135,7 +138,7 @@ router.post("/partners/me/events", requireAuth, async (req: any, res) => {
       venueId: venueIdNum,
       city: city || venue.city || null,
       category: category || null,
-      imageUrl: imgs[0] || imageUrl || null,
+      imageUrl: imgs[0],
       images: imgs,
       price: price != null ? Number(price) : null,
       currency: currency || "FCFA",
@@ -190,8 +193,11 @@ router.patch("/partners/me/events/:id", requireAuth, async (req: any, res) => {
   }
   if ("images" in req.body || "imageUrl" in req.body) {
     const imgs = normalizeImages(req.body.images || (req.body.imageUrl ? [req.body.imageUrl] : []));
+    if (imgs.length === 0) {
+      return res.status(400).json({ error: "Au moins une photo de l'événement est obligatoire." });
+    }
     allowed.images = imgs;
-    allowed.imageUrl = imgs[0] || null;
+    allowed.imageUrl = imgs[0];
   }
   // Re-edited event goes back to moderation.
   allowed.status = "pending";

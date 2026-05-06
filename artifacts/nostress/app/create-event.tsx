@@ -80,7 +80,7 @@ type FormData = {
 
 type FieldErrors = Partial<Record<keyof FormData, string>>;
 
-const MAX_EVENT_IMAGES = 4;
+const MAX_EVENT_IMAGES = 3;
 
 const INITIAL_FORM: FormData = {
   titleFr: "",

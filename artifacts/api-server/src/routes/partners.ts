@@ -172,7 +172,7 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
     email,
   });
   sendVerificationCodeEmail(email, contactName, code).catch(() => {});
-  sendPartnerRegistrationEmailToAdmin(email, contactName, businessName, businessType, city, phone).catch(() => {});
+  sendPartnerRegistrationEmailToAdmin(partner.id, email, contactName, businessName, businessType, city, phone).catch(() => {});
 });
 
 const partnerVerifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: "partner-verify" });

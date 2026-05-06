@@ -41,7 +41,7 @@ interface MyVenue {
   longitude?: number | null;
 }
 
-const MAX_VENUE_IMAGES = 4;
+const MAX_VENUE_IMAGES = 3;
 
 async function uploadVenueImage(uri: string, apiBase: string): Promise<string> {
   const lowerUri = uri.toLowerCase();

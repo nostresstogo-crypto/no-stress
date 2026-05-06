@@ -1,8 +1,11 @@
 import { Router, type IRouter } from "express";
 import { eq, and, ilike, gte } from "drizzle-orm";
-import { db, venuesTable, eventsTable } from "@workspace/db";
+import { db, venuesTable, eventsTable, partnersTable } from "@workspace/db";
 import { requireAuth } from "../lib/auth-utils.js";
 import { requireAdmin } from "./admin.js";
+import { sendNewVenueAdminNotification } from "../email.js";
+
+const MAX_GALLERY = 3;
 
 const router: IRouter = Router();
 
@@ -27,7 +30,7 @@ function normalizeImages(input: any): string[] {
   return arr
     .filter((x) => typeof x === "string" && x.trim().length > 0)
     .map((x) => String(x).trim())
-    .slice(0, 4);
+    .slice(0, MAX_GALLERY);
 }
 
 function partnerIdFromAuth(auth: any): number | null {
@@ -79,6 +82,9 @@ router.post("/partners/me/venues", requireAuth, async (req: any, res) => {
     return res.status(400).json({ error: "Le nom et la ville sont obligatoires." });
   }
   const imgs = normalizeImages(images || (imageUrl ? [imageUrl] : []));
+  if (imgs.length === 0) {
+    return res.status(400).json({ error: "Au moins une photo du lieu est obligatoire (jusqu'à 3 photos)." });
+  }
   const [v] = await db
     .insert(venuesTable)
     .values({
@@ -88,7 +94,7 @@ router.post("/partners/me/venues", requireAuth, async (req: any, res) => {
       country: country || null,
       address: address || null,
       description: description || null,
-      imageUrl: imgs[0] || imageUrl || null,
+      imageUrl: imgs[0],
       images: imgs,
       latitude: latitude != null ? Number(latitude) : null,
       longitude: longitude != null ? Number(longitude) : null,
@@ -97,6 +103,11 @@ router.post("/partners/me/venues", requireAuth, async (req: any, res) => {
     })
     .returning();
   res.status(201).json(serialize(v));
+
+  // Notification admin (best-effort, hors réponse)
+  db.select().from(partnersTable).where(eq(partnersTable.id, partnerId)).then(([p]) => {
+    if (p) sendNewVenueAdminNotification(v, p).catch(() => {});
+  }).catch(() => {});
 });
 
 router.patch("/partners/me/venues/:id", requireAuth, async (req: any, res) => {
@@ -114,8 +125,11 @@ router.patch("/partners/me/venues/:id", requireAuth, async (req: any, res) => {
   }
   if ("images" in req.body || "imageUrl" in req.body) {
     const imgs = normalizeImages(req.body.images || (req.body.imageUrl ? [req.body.imageUrl] : []));
+    if (imgs.length === 0) {
+      return res.status(400).json({ error: "Au moins une photo du lieu est obligatoire." });
+    }
     allowed.images = imgs;
-    allowed.imageUrl = imgs[0] || null;
+    allowed.imageUrl = imgs[0];
   }
   // Editing core info resets status to pending so admin re-validates.
   if (Object.keys(allowed).length > 0 && existing.status === "approved") {
