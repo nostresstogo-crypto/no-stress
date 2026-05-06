@@ -1,0 +1,58 @@
+name: Deploy API to VPS
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "artifacts/api-server/**"
+      - "lib/db/**"
+      - "lib/api-zod/**"
+      - "deploy/**"
+      - ".github/workflows/deploy-api.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+env:
+  VPS_APP_DIR: /var/www/nostress-api
+  PM2_APP_NAME: nostress-api
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm --filter @workspace/api-server run typecheck
+
+      - name: Build api-server
+        run: pnpm --filter @workspace/api-server run build
+
+      - name: Stage release artifact
+        run: |
+          set -e
+          STAGE="$RUNNER_TEMP/release"
+          mkdir -p "$STAGE/drizzle"
+          # 1. built bundle
+          cp -r artifacts/api-server/dist "$STAGE/"
+          # 2. slim runtime package.
