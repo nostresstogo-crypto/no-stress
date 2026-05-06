@@ -1,0 +1,188 @@
+
+Atteint :1 http://archive.ubuntu.com/ubuntu noble InRelease
+Atteint :2 http://security.ubuntu.com/ubuntu noble-security InRelease
+Atteint :3 https://deb.nodesource.com/node_20.x nodistro InRelease
+Atteint :4 http://archive.ubuntu.com/ubuntu noble-updates InRelease
+Atteint :5 https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 InRelease
+Lecture des listes de paquets... Fait
+Lecture des listes de paquets... Fait
+Construction de l'arbre des dépendances... Fait
+Lecture des informations d'état... Fait
+curl est déjà la version la plus récente (8.5.0-2ubuntu10.9).
+ca-certificates est déjà la version la plus récente (20240203).
+gnupg est déjà la version la plus récente (2.4.4-2ubuntu17.4).
+lsb-release est déjà la version la plus récente (12.0-2).
+ufw est déjà la version la plus récente (0.36.2-6).
+nginx est déjà la version la plus récente (1.24.0-2ubuntu7.7).
+postgresql est déjà la version la plus récente (16+257build1.1).
+postgresql-contrib est déjà la version la plus récente (16+257build1.1).
+certbot est déjà la version la plus récente (2.9.0-1).
+python3-certbot-nginx est déjà la version la plus récente (2.9.0-1).
+build-essential est déjà la version la plus récente (12.10ubuntu1).
+rsync est déjà la version la plus récente (3.2.7-1ubuntu1.2).
+git est déjà la version la plus récente (1:2.43.0-1ubuntu7.3).
+Les paquets suivants ont été installés automatiquement et ne sont plus nécessaires :
+  libcares2 node-busboy node-cjs-module-lexer node-undici node-xtend
+Veuillez utiliser « sudo apt autoremove » pour les supprimer.
+0 mis à jour, 0 nouvellement installés, 0 à enlever et 93 non mis à jour.
+
+▶ Installing pnpm + PM2 globally
+
+changed 91 packages in 6s
+
+9 packages are looking for funding
+  run `npm fund` for details
+
+▶ Setting up directories under /var/www/nostress-api
+
+▶ Configuring PostgreSQL
+Synchronizing state of postgresql.service with SysV service script with /usr/lib/systemd/systemd-sysv-install.
+Executing: /usr/lib/systemd/systemd-sysv-install enable postgresql
+
+▶ Existing nginx config backed up to /etc/nginx/sites-available/api.no-stress.net.conf.bak.*
+
+▶ Installing nginx site for api.no-stress.net (with HTTPS — existing Let's Encrypt cert detected)
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+
+▶ SSL cert already present for api.no-stress.net — skipping certbot
+
+▶ Configuring UFW (allow OpenSSH + nginx)
+
+▶ Setting PM2 to start at boot
+
+                        -------------
+
+__/\\\\\\\\\\\\\____/\\\\____________/\\\\____/\\\\\\\\\_____
+ _\/\\\/////////\\\_\/\\\\\\________/\\\\\\__/\\\///////\\\___
+  _\/\\\_______\/\\\_\/\\\//\\\____/\\\//\\\_\///______\//\\\__
+   _\/\\\\\\\\\\\\\/__\/\\\\///\\\/\\\/_\/\\\___________/\\\/___
+    _\/\\\/////////____\/\\\__\///\\\/___\/\\\________/\\\//_____
+     _\/\\\_____________\/\\\____\///_____\/\\\_____/\\\//________
+      _\/\\\_____________\/\\\_____________\/\\\___/\\\/___________
+       _\/\\\_____________\/\\\_____________\/\\\__/\\\\\\\\\\\\\\\_
+        _\///______________\///______________\///__\///////////////__
+
+
+                          Runtime Edition
+
+        PM2 is a Production Process Manager for Node.js applications
+                     with a built-in Load Balancer.
+
+                Start and Daemonize any application:
+                $ pm2 start app.js
+
+                Load Balance 4 instances of api.js:
+                $ pm2 start api.js -i 4
+
+                Monitor in production:
+                $ pm2 monitor
+
+                Make pm2 auto-boot at server restart:
+                $ pm2 startup
+
+                To go further checkout:
+                http://pm2.io/
+
+
+                        -------------
+
+[PM2] Init System found: systemd
+[PM2] To setup the Startup Script, copy/paste the following command:
+sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u nostress --hp /home/nostress
+
+▶ ✅ Bootstrap complete
+  Domain         : https://api.no-stress.net
+  App user       : nostress
+  App dir        : /var/www/nostress-api
+  PG database    : nostress
+  PG user        : nostress
+  PG password    : (saved in /root/.nostress_db_pass)
+  Env file       : /var/www/nostress-api/shared/.env
+
+👉 Next steps:
+  1. Edit /var/www/nostress-api/shared/.env if needed (admin password, SMTP, etc.)
+  2. Add the SSH public key of GitHub Actions to /home/nostress/.ssh/authorized_keys
+  3. Push to main (or trigger the deploy workflow manually) — first deploy will run drizzle push
+root@vps117164:~# systemctl status nostress-api.service
+Unit nostress-api.service could not be found.
+root@vps117164:~# ^C
+root@vps117164:~# git log --oneline -3
+fatal: not a git repository (or any of the parent directories): .git
+root@vps117164:~# curl -fsSL https://raw.githubusercontent.com/nostresstogo-crypto/no-stress/main/deploy/server-setup.sh -o /tmp/setup.sh
+grep "systemd unit" /tmp/setup.sh
+root@vps117164:~# sudo bash /tmp/setup.sh
+
+▶ Installing base packages
+Atteint :1 http://security.ubuntu.com/ubuntu noble-security InRelease
+Atteint :2 https://deb.nodesource.com/node_20.x nodistro InRelease
+Atteint :3 http://archive.ubuntu.com/ubuntu noble InRelease
+Atteint :4 https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 InRelease
+Atteint :5 http://archive.ubuntu.com/ubuntu noble-updates InRelease
+Lecture des listes de paquets... Fait
+Lecture des listes de paquets... Fait
+Construction de l'arbre des dépendances... Fait
+Lecture des informations d'état... Fait
+curl est déjà la version la plus récente (8.5.0-2ubuntu10.9).
+ca-certificates est déjà la version la plus récente (20240203).
+gnupg est déjà la version la plus récente (2.4.4-2ubuntu17.4).
+lsb-release est déjà la version la plus récente (12.0-2).
+ufw est déjà la version la plus récente (0.36.2-6).
+nginx est déjà la version la plus récente (1.24.0-2ubuntu7.7).
+postgresql est déjà la version la plus récente (16+257build1.1).
+postgresql-contrib est déjà la version la plus récente (16+257build1.1).
+certbot est déjà la version la plus récente (2.9.0-1).
+python3-certbot-nginx est déjà la version la plus récente (2.9.0-1).
+build-essential est déjà la version la plus récente (12.10ubuntu1).
+rsync est déjà la version la plus récente (3.2.7-1ubuntu1.2).
+git est déjà la version la plus récente (1:2.43.0-1ubuntu7.3).
+Les paquets suivants ont été installés automatiquement et ne sont plus nécessaires :
+  libcares2 node-busboy node-cjs-module-lexer node-undici node-xtend
+Veuillez utiliser « sudo apt autoremove » pour les supprimer.
+0 mis à jour, 0 nouvellement installés, 0 à enlever et 93 non mis à jour.
+
+▶ Installing pnpm + PM2 globally
+
+changed 91 packages in 3s
+
+9 packages are looking for funding
+  run `npm fund` for details
+
+▶ Setting up directories under /var/www/nostress-api
+
+▶ Configuring PostgreSQL
+Synchronizing state of postgresql.service with SysV service script with /usr/lib/systemd/systemd-sysv-install.
+Executing: /usr/lib/systemd/systemd-sysv-install enable postgresql
+
+▶ Existing nginx config backed up to /etc/nginx/sites-available/api.no-stress.net.conf.bak.*
+
+▶ Installing nginx site for api.no-stress.net (with HTTPS — existing Let's Encrypt cert detected)
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+
+▶ SSL cert already present for api.no-stress.net — skipping certbot
+
+▶ Configuring UFW (allow OpenSSH + nginx)
+
+▶ Setting PM2 to start at boot
+[PM2] Init System found: systemd
+[PM2] To setup the Startup Script, copy/paste the following command:
+sudo env PATH=$PATH:/usr/bin pm2 startup systemd -u nostress --hp /home/nostress
+
+▶ ✅ Bootstrap complete
+  Domain         : https://api.no-stress.net
+  App user       : nostress
+  App dir        : /var/www/nostress-api
+  PG database    : nostress
+  PG user        : nostress
+  PG password    : (saved in /root/.nostress_db_pass)
+  Env file       : /var/www/nostress-api/shared/.env
+
+👉 Next steps:
+  1. Edit /var/www/nostress-api/shared/.env if needed (admin password, SMTP, etc.)
+  2. Add the SSH public key of GitHub Actions to /home/nostress/.ssh/authorized_keys
+  3. Push to main (or trigger the deploy workflow manually) — first deploy will run drizzle push
+root@vps117164:~# ls -la /etc/systemd/system/nostress-api.service
+systemctl status nostress-api.service
+ls: cannot access '/etc/systemd/system/nostress-api.service': No such file or directory
+Unit nostress-api.service could not be found.
