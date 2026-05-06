@@ -1,0 +1,147 @@
+
+root@vps117164:/# sudo systemctl status nostress-api.service --no-pager | head -20
+● nostress-api.service - NoStress API server
+     Loaded: loaded (/etc/systemd/system/nostress-api.service; enabled; preset: enabled)
+    Drop-In: /run/systemd/system/service.d
+             └─zzz-lxc-service.conf
+     Active: active (running) since Wed 2026-05-06 13:10:15 CEST; 3min 6s ago
+   Main PID: 755204 (node)
+      Tasks: 11 (limit: 1312)
+     Memory: 56.8M (peak: 104.9M)
+        CPU: 1.665s
+     CGroup: /system.slice/nostress-api.service
+             └─755204 /usr/bin/node --enable-source-maps /var/www/nostress-api/current/dist/index.mjs
+
+mai 06 13:10:15 vps117164 systemd[1]: Started nostress-api.service - NoStress API server.
+root@vps117164:/# sudo ss -tlnp | grep 8080
+LISTEN 0      511                *:8080             *:*    users:(("node",pid=755204,fd=18))                                                                    
+root@vps117164:/# curl -i http://127.0.0.1:8080/health
+echo "---"
+curl -i http://127.0.0.1:8080/healthz
+HTTP/1.1 404 Not Found
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: cross-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=15552000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+Access-Control-Allow-Origin: *
+Content-Security-Policy: default-src 'none'
+Content-Type: text/html; charset=utf-8
+Content-Length: 145
+Date: Wed, 06 May 2026 11:14:04 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Cannot GET /health</pre>
+</body>
+</html>
+---
+HTTP/1.1 404 Not Found
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: cross-origin
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=15552000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+Access-Control-Allow-Origin: *
+Content-Security-Policy: default-src 'none'
+Content-Type: text/html; charset=utf-8
+Content-Length: 146
+Date: Wed, 06 May 2026 11:14:04 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Cannot GET /healthz</pre>
+</body>
+</html>
+root@vps117164:/# curl -i https://api.no-stress.net/health
+echo "---"
+curl -i https://api.no-stress.net/healthz
+HTTP/2 404
+server: nginx/1.24.0 (Ubuntu)
+date: Wed, 06 May 2026 11:14:14 GMT
+content-type: text/html; charset=utf-8
+content-length: 145
+cross-origin-opener-policy: same-origin
+cross-origin-resource-policy: cross-origin
+origin-agent-cluster: ?1
+referrer-policy: no-referrer
+strict-transport-security: max-age=15552000; includeSubDomains
+x-content-type-options: nosniff
+x-dns-prefetch-control: off
+x-download-options: noopen
+x-frame-options: SAMEORIGIN
+x-permitted-cross-domain-policies: none
+x-xss-protection: 0
+access-control-allow-origin: *
+content-security-policy: default-src 'none'
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Cannot GET /health</pre>
+</body>
+</html>
+---
+HTTP/2 404
+server: nginx/1.24.0 (Ubuntu)
+date: Wed, 06 May 2026 11:14:14 GMT
+content-type: text/html; charset=utf-8
+content-length: 146
+cross-origin-opener-policy: same-origin
+cross-origin-resource-policy: cross-origin
+origin-agent-cluster: ?1
+referrer-policy: no-referrer
+strict-transport-security: max-age=15552000; includeSubDomains
+x-content-type-options: nosniff
+x-dns-prefetch-control: off
+x-download-options: noopen
+x-frame-options: SAMEORIGIN
+x-permitted-cross-domain-policies: none
+x-xss-protection: 0
+access-control-allow-origin: *
+content-security-policy: default-src 'none'
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Error</title>
+</head>
+<body>
+<pre>Cannot GET /healthz</pre>
+</body>
+</html>
+root@vps117164:/# sudo tail -30 /var/www/nostress-api/shared/logs/err.log
+root@vps117164:/# ^[[200~sudo nginx -T 2>/dev/null | grep -A20 "server_name api.no-stress.net" | head -40~
+head: invalid trailing option -- ~
+Try 'head --help' for more information.
