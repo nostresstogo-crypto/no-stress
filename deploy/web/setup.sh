@@ -28,16 +28,20 @@ mkdir -p "$APP_DIR/releases"
 chown -R "$APP_USER:$APP_USER" "$APP_DIR"
 
 # ─── 2. Disable existing vhost(s) for this domain ──────────────────────────
-log "Backing up & disabling any existing vhost for $DOMAIN"
+log "Backing up & disabling any existing vhost for $DOMAIN (apex only)"
 TS=$(date +%Y%m%d-%H%M%S)
-for f in /etc/nginx/sites-enabled/*"$DOMAIN"* /etc/nginx/sites-available/*"$DOMAIN"*; do
+# Only match files whose name is exactly the apex domain or www.<domain>,
+# optionally followed by a recognized suffix (.conf / .OLD-BACKUP-…).
+# This avoids touching unrelated subdomain vhosts (admin, api, policy, etc.).
+for f in /etc/nginx/sites-enabled/* /etc/nginx/sites-available/*; do
   [[ -e "$f" ]] || continue
+  base="$(basename "$f")"
+  case "$base" in
+    "${DOMAIN}"|"${DOMAIN}.conf"|"www.${DOMAIN}"|"www.${DOMAIN}.conf") ;;
+    *) continue ;;
+  esac
   # Skip the file we're about to write
   [[ "$f" == "/etc/nginx/sites-available/${DOMAIN}.conf" ]] && continue
-  # Don't touch admin/api vhosts
-  case "$f" in
-    *admin.no-stress.net*|*api.no-stress.net*) continue ;;
-  esac
   if [[ -L "$f" ]]; then
     echo "  unlink   $f"
     rm -f "$f"
