@@ -1,0 +1,51 @@
+
+root@vps117164:~# LATEST=$(ls -1t /var/www/nostress-api/releases/ | head -1)
+echo "=== Dernier release : $LATEST ==="
+=== Dernier release : fe62a7d6750e6fe8c23d0307249be021baf6be09 ===
+root@vps117164:~# echo "=== Contenu drizzle/ ==="
+ls -la /var/www/nostress-api/releases/$LATEST/drizzle/ 2>&1
+=== Contenu drizzle/ ===
+total 28
+drwxr-xr-x 4 nostress nostress 4096 mai    6 12:50 .
+drwxr-xr-x 5 nostress nostress 4096 mai    6 12:50 ..
+-rw-r--r-- 1 nostress nostress  352 mai    6 12:50 drizzle.config.ts
+drwxr-xr-x 4 nostress nostress 4096 mai    6 12:50 node_modules
+-rw-r--r-- 1 nostress nostress  576 mai    6 12:50 package.json
+drwxr-xr-x 3 nostress nostress 4096 mai    6 12:50 src
+-rw-r--r-- 1 nostress nostress  244 mai    6 12:50 tsconfig.json
+root@vps117164:~# echo "=== DATABASE_URL présent ? ==="
+sudo grep -c "^DATABASE_URL=" /var/www/nostress-api/shared/.env
+=== DATABASE_URL présent ? ===
+1
+root@vps117164:~# echo "=== Reproduction de drizzle push ==="
+cd /var/www/nostress-api/releases/$LATEST
+set -a; source /var/www/nostress-api/shared/.env; set +a
+cd drizzle && pnpm install 2>&1 | tail -20
+pnpm exec drizzle-kit push --config ./drizzle.config.ts 2>&1
+=== Reproduction de drizzle push ===
+@types/pg is linked to /var/www/nostress-api/releases/fe62a7d6750e6fe8c23d0307249be021baf6be09/drizzle/node_modules from /var/www/nostress-api/releases/node_modules/.pnpm/@types+pg@8.18.0/node_modules/@types/pg
+drizzle-orm is linked to /var/www/nostress-api/releases/fe62a7d6750e6fe8c23d0307249be021baf6be09/drizzle/node_modules from /var/www/nostress-api/releases/node_modules/.pnpm/drizzle-orm@0.45.2_@opentelemetry+api@1.9.1_@types+pg@8.18.0_pg@8.20.0/node_modules/drizzle-orm
+pg is linked to /var/www/nostress-api/releases/fe62a7d6750e6fe8c23d0307249be021baf6be09/drizzle/node_modules from /var/www/nostress-api/releases/node_modules/.pnpm/pg@8.20.0/node_modules/pg
+zod is linked to /var/www/nostress-api/releases/fe62a7d6750e6fe8c23d0307249be021baf6be09/drizzle/node_modules from /var/www/nostress-api/releases/node_modules/.pnpm/zod@3.25.76/node_modules/zod
+drizzle-zod is linked to /var/www/nostress-api/releases/fe62a7d6750e6fe8c23d0307249be021baf6be09/drizzle/node_modules from /var/www/nostress-api/releases/node_modules/.pnpm/drizzle-zod@0.8.3_drizzle-orm@0.45.2_@opentelemetry+api@1.9.1_@types+pg@8.18.0_pg@8.20.0__zod@3.25.76/node_modules/drizzle-zod
+@types/node is linked to /var/www/nostress-api/releases/fe62a7d6750e6fe8c23d0307249be021baf6be09/drizzle/node_modules from /var/www/nostress-api/releases/node_modules/.pnpm/@types+node@25.3.5/node_modules/@types/node
+drizzle-kit is linked to /var/www/nostress-api/releases/fe62a7d6750e6fe8c23d0307249be021baf6be09/drizzle/node_modules from /var/www/nostress-api/releases/node_modules/.pnpm/drizzle-kit@0.31.9/node_modules/drizzle-kit
+ ERR_PNPM_CATALOG_ENTRY_NOT_FOUND_FOR_SPEC  No catalog entry 'drizzle-orm' was found for catalog 'default'.
+node:internal/modules/cjs/loader:1424
+  throw err;
+  ^
+
+Error: Cannot find module '/var/www/nostress-api/releases/fe62a7d6750e6fe8c23d0307249be021baf6be09/drizzle/node_modules/drizzle-kit/bin.cjs'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1421:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1059:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1064:22)
+    at Module._load (node:internal/modules/cjs/loader:1227:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:328:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:245:24)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v24.12.0

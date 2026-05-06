@@ -26,7 +26,33 @@ pnpm install --prod --no-frozen-lockfile --silent
 
 echo "▶ Pushing database schema (drizzle)"
 set -a; source "$SHARED_ENV"; set +a
-( cd drizzle && pnpm install --silent && pnpm exec drizzle-kit push --config ./drizzle.config.ts )
+(
+  cd drizzle
+  # The VPS has no pnpm-workspace.yaml, so `catalog:` references can't be
+  # resolved. Rewrite package.json with explicit versions (kept in sync with
+  # /pnpm-workspace.yaml `catalog:` block at the repo root).
+  node -e '
+    const fs = require("fs");
+    const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
+    const catalog = {
+      "drizzle-orm": "^0.45.2",
+      "zod": "^3.25.76",
+      "@types/node": "^25.3.3",
+    };
+    for (const section of ["dependencies", "devDependencies"]) {
+      if (!pkg[section]) continue;
+      for (const [name, version] of Object.entries(pkg[section])) {
+        if (version === "catalog:" && catalog[name]) {
+          pkg[section][name] = catalog[name];
+        }
+      }
+    }
+    fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
+  '
+  # Standalone install (no workspace), then run drizzle-kit push.
+  pnpm install --silent --ignore-workspace
+  pnpm exec drizzle-kit push --config ./drizzle.config.ts
+)
 
 echo "▶ Switching 'current' symlink"
 ln -sfn "$RELEASE_DIR" "$APP_DIR/current"
