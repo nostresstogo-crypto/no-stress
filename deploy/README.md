@@ -107,31 +107,50 @@ Le workflow va :
 
 ---
 
-## 5. Stockage des images (important)
+## 5. Stockage des images
 
-Le code utilise par défaut `@google-cloud/storage` (Replit Object Storage = GCS).
+Le code supporte deux drivers, sélectionnés via la variable d'env `OBJECT_STORAGE_DRIVER` :
 
-Sur ton VPS, deux options :
+### ✅ Option A — Stockage local sur disque (par défaut sur le VPS)
 
-### Option A — Stockage local (par défaut dans ce setup)
-
-Le `.env` pointe `PRIVATE_OBJECT_DIR` et `PUBLIC_OBJECT_SEARCH_PATHS` vers `/var/www/nostress-api/shared/uploads/`. **Mais** le code `lib/objectStorage.ts` utilise l'API GCS — il faut soit :
-- garder Replit Object Storage (ajouter creds GCS dans le `.env`)
-- soit adapter `lib/objectStorage.ts` pour écrire sur disque local (je peux te le faire en bonus)
-
-### Option B — Garder Replit Object Storage depuis le VPS
-
-Récupère le service-account JSON GCS de ton bucket Replit, place-le sur le VPS :
-```bash
-sudo nano /var/www/nostress-api/shared/gcp-key.json
-sudo chown nostress:nostress /var/www/nostress-api/shared/gcp-key.json
-sudo chmod 600 /var/www/nostress-api/shared/gcp-key.json
+`server-setup.sh` configure automatiquement :
+```env
+OBJECT_STORAGE_DRIVER=local
+PUBLIC_BASE_URL=https://api.no-stress.net
+STORAGE_HMAC_SECRET=<aléatoire généré>
+PRIVATE_OBJECT_DIR=/var/www/nostress-api/shared/uploads/private
+PUBLIC_OBJECT_SEARCH_PATHS=/var/www/nostress-api/shared/uploads/public
 ```
-Puis ajoute dans `/var/www/nostress-api/shared/.env` :
-```
-GOOGLE_APPLICATION_CREDENTIALS=/var/www/nostress-api/shared/gcp-key.json
-DEFAULT_OBJECT_STORAGE_BUCKET_ID=<ton-bucket-id>
-```
+
+Comment ça marche :
+- Le mobile demande une URL d'upload via `POST /storage/uploads/request-url`
+- Le backend renvoie une URL signée HMAC : `https://api.no-stress.net/storage/uploads/local/<id>?exp=…&token=…` (TTL 15 min)
+- Le mobile fait un `PUT` direct avec les bytes de l'image (≤ 10 Mo)
+- Le backend valide le token, écrit dans `/var/www/nostress-api/shared/uploads/private/uploads/<id>` + un sidecar `.meta.json` (contentType, size, ACL)
+- L'image est ensuite servie via `GET /storage/objects/uploads/<id>` (avec ACL appliquée)
+
+L'arborescence `shared/uploads/` est **persistante entre releases** (montée hors du dossier `current` style Capistrano). Pense à la sauvegarder régulièrement (rsync, restic, borgbackup, …).
+
+### Option B — Garder Replit Object Storage (GCS) depuis le VPS
+
+Si tu préfères stocker ailleurs que sur le disque du VPS :
+
+1. Récupère un service-account JSON GCS du bucket Replit, place-le sur le VPS :
+   ```bash
+   sudo nano /var/www/nostress-api/shared/gcp-key.json
+   sudo chown nostress:nostress /var/www/nostress-api/shared/gcp-key.json
+   sudo chmod 600 /var/www/nostress-api/shared/gcp-key.json
+   ```
+2. Édite `/var/www/nostress-api/shared/.env` :
+   ```
+   OBJECT_STORAGE_DRIVER=gcs
+   GOOGLE_APPLICATION_CREDENTIALS=/var/www/nostress-api/shared/gcp-key.json
+   DEFAULT_OBJECT_STORAGE_BUCKET_ID=<ton-bucket-id>
+   PRIVATE_OBJECT_DIR=/<bucket-id>/.private
+   PUBLIC_OBJECT_SEARCH_PATHS=/<bucket-id>/public
+   ```
+3. Ajoute `@google-cloud/storage` à `deploy/release-package.json` (pas inclus par défaut pour alléger le bundle local).
+4. `pm2 reload nostress-api`.
 
 ---
 

@@ -91,7 +91,10 @@ JWT_SECRET=$(openssl rand -base64 48 | tr -d '\n')
 INITIAL_ADMIN_EMAIL=admin@no-stress.net
 INITIAL_ADMIN_PASSWORD=$(openssl rand -base64 18 | tr -d '/+=' | head -c 20)
 
-# Object storage (local disk fallback — see deploy/README.md to switch to S3/GCS)
+# Object storage — local disk driver (no GCS needed on the VPS)
+OBJECT_STORAGE_DRIVER=local
+PUBLIC_BASE_URL=https://${DOMAIN}
+STORAGE_HMAC_SECRET=$(openssl rand -base64 48 | tr -d '\n')
 PRIVATE_OBJECT_DIR=${SHARED_DIR}/uploads/private
 PUBLIC_OBJECT_SEARCH_PATHS=${SHARED_DIR}/uploads/public
 

@@ -9,7 +9,7 @@ Monorepo pnpm TypeScript pour une plateforme de découverte d'événements et bi
 - **Monorepo** : pnpm workspaces
 - **Node.js** : v24, TypeScript 5.9
 - **API** : Express 5 + Drizzle ORM + PostgreSQL (Replit)
-- **Storage** : Replit Object Storage (Google Cloud Storage) via presigned URLs
+- **Storage** : driver à 2 backends — `gcs` (Replit Object Storage, défaut en dev) ou `local` (disque local, utilisé sur le VPS). Sélection via `OBJECT_STORAGE_DRIVER` env var. Voir `artifacts/api-server/src/lib/objectStorage.ts` et `deploy/README.md` §5.
 - **Mobile** : React Native + Expo (expo-router)
 - **Admin web** : React + Vite + Tailwind
 - **Site public** : React + react-scripts (CRA 5.0.1, Tailwind v3)
