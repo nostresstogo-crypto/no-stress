@@ -52,7 +52,7 @@ jobs:
           TSC_COMPILE_ON_ERROR: "true"
           GENERATE_SOURCEMAP: "false"
           CI: "false"
-        run: pnpm --filter @workspace/nostress-web run build
+        run: pnpm --filter @workspace/nostress-web run build:prod
 
       - name: Stage release artifact
         run: |
