@@ -22,10 +22,15 @@ let seedPromise: Promise<void> | null = null;
 async function ensureSeedAdmin(): Promise<void> {
   if (seedPromise) return seedPromise;
   seedPromise = (async () => {
-    const [existing] = await db
-      .select({ id: adminsTable.id })
-      .from(adminsTable)
-      .where(eq(adminsTable.email, DEFAULT_ADMIN_EMAIL));
+    const allAdmins = await db
+      .select({ id: adminsTable.id, email: adminsTable.email })
+      .from(adminsTable);
+    console.log(
+      `[admin][seed-debug] total_admin_rows=${allAdmins.length} emails=${JSON.stringify(allAdmins.map((a) => a.email))}`,
+    );
+    const existing = allAdmins.find(
+      (a) => a.email.toLowerCase() === DEFAULT_ADMIN_EMAIL.toLowerCase(),
+    );
     if (!existing) {
       const passwordHash = await hashPassword(DEFAULT_ADMIN_PASSWORD);
       await db.insert(adminsTable).values({
@@ -38,7 +43,7 @@ async function ensureSeedAdmin(): Promise<void> {
       const raw = process.env.ADMIN_PASSWORD_RESET_TO;
       const newPassword = raw?.trim();
       console.log(
-        `[admin][reset-debug] raw_len=${raw?.length ?? 0} trimmed_len=${newPassword?.length ?? 0} first_char_code=${raw?.charCodeAt(0) ?? "none"} last_char_code=${raw?.charCodeAt((raw?.length ?? 1) - 1) ?? "none"}`,
+        `[admin][reset-debug] raw_len=${raw?.length ?? 0} trimmed_len=${newPassword?.length ?? 0} first_char_code=${raw?.charCodeAt(0) ?? "none"} last_char_code=${raw?.charCodeAt((raw?.length ?? 1) - 1) ?? "none"} matched_admin_id=${existing.id} matched_email=${JSON.stringify(existing.email)}`,
       );
       if (!newPassword || newPassword.length < 12) {
         console.error(
@@ -46,12 +51,12 @@ async function ensureSeedAdmin(): Promise<void> {
         );
       } else {
         const passwordHash = await hashPassword(newPassword);
-        await db
+        const result: any = await db
           .update(adminsTable)
           .set({ passwordHash })
-          .where(eq(adminsTable.email, DEFAULT_ADMIN_EMAIL));
+          .where(eq(adminsTable.id, existing.id));
         console.log(
-          `[admin] Password reset for ${DEFAULT_ADMIN_EMAIL} (used trimmed value, length=${newPassword.length}) — REMOVE RESET_ADMIN_PASSWORD and ADMIN_PASSWORD_RESET_TO env vars now.`,
+          `[admin] Password reset for id=${existing.id} email=${JSON.stringify(existing.email)} length=${newPassword.length} rowCount=${result?.rowCount ?? "n/a"} — REMOVE RESET_ADMIN_PASSWORD and ADMIN_PASSWORD_RESET_TO env vars now.`,
         );
       }
     }
@@ -86,8 +91,12 @@ router.post("/admin/login", adminLoginLimiter, async (req, res) => {
   }
   await ensureSeedAdmin();
   const cleanEmail = String(email).trim().toLowerCase();
-  const [admin] = await db.select().from(adminsTable).where(eq(adminsTable.email, cleanEmail));
+  const [admin] = await db
+    .select()
+    .from(adminsTable)
+    .where(sql`lower(${adminsTable.email}) = ${cleanEmail}`);
   if (!admin) {
+    console.log(`[admin][login-debug] no admin found for email=${JSON.stringify(cleanEmail)}`);
     return res.status(401).json({ error: "Identifiants incorrects." });
   }
   const ok = await verifyPassword(password, admin.passwordHash);
