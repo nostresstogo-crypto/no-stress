@@ -1,11 +1,29 @@
 import { Router, type IRouter } from "express";
 import { eq, and, ilike, gte } from "drizzle-orm";
-import { db, venuesTable, eventsTable, partnersTable } from "@workspace/db";
+import { db, venuesTable, venueSpecialtiesTable, eventsTable, partnersTable } from "@workspace/db";
 import { requireAuth } from "../lib/auth-utils.js";
 import { requireAdmin } from "./admin.js";
 import { sendNewVenueAdminNotification } from "../email.js";
 
 const MAX_GALLERY = 3;
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+function normalizeTime(v: any): string | null {
+  if (v == null || v === "") return null;
+  const s = String(v).trim();
+  return TIME_RE.test(s) ? s : null;
+}
+
+function serializeSpecialty(s: any) {
+  if (!s) return s;
+  return {
+    ...s,
+    id: String(s.id),
+    venueId: String(s.venueId),
+    price: s.price ?? null,
+    description: s.description ?? null,
+  };
+}
 
 const router: IRouter = Router();
 
@@ -60,7 +78,8 @@ router.get("/venues/:id", async (req, res) => {
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Lieu introuvable." });
   const [v] = await db.select().from(venuesTable).where(eq(venuesTable.id, id));
   if (!v || v.status !== "approved") return res.status(404).json({ error: "Lieu introuvable." });
-  res.json(serialize(v));
+  const specs = await db.select().from(venueSpecialtiesTable).where(eq(venueSpecialtiesTable.venueId, id));
+  res.json({ ...serialize(v), specialties: specs.map(serializeSpecialty) });
 });
 
 // ── Partner-owned venues (auth required) ───────────────────────────────────
@@ -77,7 +96,7 @@ router.get("/partners/me/venues", requireAuth, async (req: any, res) => {
 router.post("/partners/me/venues", requireAuth, async (req: any, res) => {
   const partnerId = partnerIdFromAuth(req.auth);
   if (!partnerId) return res.status(403).json({ error: "Réservé aux comptes partenaires." });
-  const { name, type, city, country, address, description, imageUrl, images, latitude, longitude } = req.body || {};
+  const { name, type, city, country, address, description, imageUrl, images, latitude, longitude, openingTime, closingTime } = req.body || {};
   if (!name || !city) {
     return res.status(400).json({ error: "Le nom et la ville sont obligatoires." });
   }
@@ -98,6 +117,8 @@ router.post("/partners/me/venues", requireAuth, async (req: any, res) => {
       images: imgs,
       latitude: latitude != null ? Number(latitude) : null,
       longitude: longitude != null ? Number(longitude) : null,
+      openingTime: normalizeTime(openingTime),
+      closingTime: normalizeTime(closingTime),
       partnerId,
       status: "pending",
     })
@@ -122,6 +143,9 @@ router.patch("/partners/me/venues/:id", requireAuth, async (req: any, res) => {
   const allowed: any = {};
   for (const k of ["name", "type", "city", "country", "address", "description"]) {
     if (k in req.body) allowed[k] = req.body[k];
+  }
+  for (const k of ["openingTime", "closingTime"] as const) {
+    if (k in req.body) allowed[k] = normalizeTime(req.body[k]);
   }
   if ("images" in req.body || "imageUrl" in req.body) {
     const imgs = normalizeImages(req.body.images || (req.body.imageUrl ? [req.body.imageUrl] : []));
@@ -221,6 +245,101 @@ router.post("/admin/venues/:id/reject", requireAdmin, async (req: any, res) => {
     .returning();
   if (!v) return res.status(404).json({ error: "Lieu introuvable." });
   res.json(serialize(v));
+});
+
+// ── Specialties (menu items / signature dishes) ────────────────────────────
+
+async function ownsVenue(partnerId: number, venueId: number): Promise<boolean> {
+  const [v] = await db.select({ partnerId: venuesTable.partnerId }).from(venuesTable).where(eq(venuesTable.id, venueId));
+  return !!v && v.partnerId === partnerId;
+}
+
+router.get("/partners/me/venues/:id/specialties", requireAuth, async (req: any, res) => {
+  const partnerId = partnerIdFromAuth(req.auth);
+  if (!partnerId) return res.status(403).json({ error: "Réservé aux comptes partenaires." });
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id) || !(await ownsVenue(partnerId, id))) {
+    return res.status(404).json({ error: "Lieu introuvable." });
+  }
+  const rows = await db.select().from(venueSpecialtiesTable).where(eq(venueSpecialtiesTable.venueId, id));
+  res.json({ specialties: rows.map(serializeSpecialty), total: rows.length });
+});
+
+router.post("/partners/me/venues/:id/specialties", requireAuth, async (req: any, res) => {
+  const partnerId = partnerIdFromAuth(req.auth);
+  if (!partnerId) return res.status(403).json({ error: "Réservé aux comptes partenaires." });
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id) || !(await ownsVenue(partnerId, id))) {
+    return res.status(404).json({ error: "Lieu introuvable." });
+  }
+  const { name, imageUrl, description, price } = req.body || {};
+  if (!name || !String(name).trim()) return res.status(400).json({ error: "Le nom est obligatoire." });
+  if (!imageUrl || !String(imageUrl).trim()) return res.status(400).json({ error: "Une image est obligatoire." });
+  const priceNum = price == null || price === "" ? null : Number(price);
+  if (priceNum != null && (!Number.isFinite(priceNum) || priceNum < 0)) {
+    return res.status(400).json({ error: "Prix invalide." });
+  }
+  const [s] = await db
+    .insert(venueSpecialtiesTable)
+    .values({
+      venueId: id,
+      name: String(name).trim(),
+      imageUrl: String(imageUrl).trim(),
+      description: description ? String(description).trim() : null,
+      price: priceNum,
+    })
+    .returning();
+  res.status(201).json(serializeSpecialty(s));
+});
+
+router.patch("/partners/me/venues/:id/specialties/:specId", requireAuth, async (req: any, res) => {
+  const partnerId = partnerIdFromAuth(req.auth);
+  if (!partnerId) return res.status(403).json({ error: "Réservé aux comptes partenaires." });
+  const id = parseInt(req.params.id, 10);
+  const specId = parseInt(req.params.specId, 10);
+  if (!Number.isFinite(id) || !Number.isFinite(specId) || !(await ownsVenue(partnerId, id))) {
+    return res.status(404).json({ error: "Spécialité introuvable." });
+  }
+  const allowed: any = {};
+  if ("name" in req.body) {
+    const n = String(req.body.name || "").trim();
+    if (!n) return res.status(400).json({ error: "Le nom est obligatoire." });
+    allowed.name = n;
+  }
+  if ("imageUrl" in req.body) {
+    const u = String(req.body.imageUrl || "").trim();
+    if (!u) return res.status(400).json({ error: "Une image est obligatoire." });
+    allowed.imageUrl = u;
+  }
+  if ("description" in req.body) {
+    allowed.description = req.body.description ? String(req.body.description).trim() : null;
+  }
+  if ("price" in req.body) {
+    const p = req.body.price == null || req.body.price === "" ? null : Number(req.body.price);
+    if (p != null && (!Number.isFinite(p) || p < 0)) return res.status(400).json({ error: "Prix invalide." });
+    allowed.price = p;
+  }
+  const [s] = await db
+    .update(venueSpecialtiesTable)
+    .set(allowed)
+    .where(and(eq(venueSpecialtiesTable.id, specId), eq(venueSpecialtiesTable.venueId, id)))
+    .returning();
+  if (!s) return res.status(404).json({ error: "Spécialité introuvable." });
+  res.json(serializeSpecialty(s));
+});
+
+router.delete("/partners/me/venues/:id/specialties/:specId", requireAuth, async (req: any, res) => {
+  const partnerId = partnerIdFromAuth(req.auth);
+  if (!partnerId) return res.status(403).json({ error: "Réservé aux comptes partenaires." });
+  const id = parseInt(req.params.id, 10);
+  const specId = parseInt(req.params.specId, 10);
+  if (!Number.isFinite(id) || !Number.isFinite(specId) || !(await ownsVenue(partnerId, id))) {
+    return res.status(404).json({ error: "Spécialité introuvable." });
+  }
+  await db
+    .delete(venueSpecialtiesTable)
+    .where(and(eq(venueSpecialtiesTable.id, specId), eq(venueSpecialtiesTable.venueId, id)));
+  res.json({ success: true });
 });
 
 export default router;

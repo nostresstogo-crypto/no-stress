@@ -21,6 +21,14 @@ import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_VENUES, MOCK_EVENTS } from "@/constants/data";
 import { API_BASE } from "@/lib/apiBase";
 
+type Specialty = {
+  id: string;
+  name: string;
+  imageUrl: string;
+  description?: string | null;
+  price?: number | null;
+};
+
 type Venue = {
   id: string;
   name: string;
@@ -33,6 +41,9 @@ type Venue = {
   latitude?: number | null;
   longitude?: number | null;
   isVerified?: boolean;
+  openingTime?: string | null;
+  closingTime?: string | null;
+  specialties?: Specialty[];
 };
 
 export default function VenueDetailScreen() {
@@ -71,6 +82,9 @@ export default function VenueDetailScreen() {
             latitude: data.latitude ?? null,
             longitude: data.longitude ?? null,
             isVerified: !!data.isVerified,
+            openingTime: data.openingTime ?? null,
+            closingTime: data.closingTime ?? null,
+            specialties: Array.isArray(data.specialties) ? data.specialties : [],
           });
         }
       } catch {}
@@ -250,12 +264,52 @@ export default function VenueDetailScreen() {
             </View>
           ) : null}
 
+          {(venue.openingTime || venue.closingTime) ? (
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconWrap}>
+                <Ionicons name="time" size={16} color={C.lavender} />
+              </View>
+              <View style={styles.infoText}>
+                <Text style={styles.infoLabel}>
+                  {lang === "fr" ? "Horaires" : "Hours"}
+                </Text>
+                <Text style={styles.infoValue}>
+                  {venue.openingTime || "—"} → {venue.closingTime || "—"}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+
           {venue.description ? (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>
                 {lang === "fr" ? "À propos" : "About"}
               </Text>
               <Text style={styles.description}>{venue.description}</Text>
+            </View>
+          ) : null}
+
+          {venue.specialties && venue.specialties.length > 0 ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>
+                {lang === "fr" ? `Spécialités (${venue.specialties.length})` : `Specialties (${venue.specialties.length})`}
+              </Text>
+              {venue.specialties.map((sp) => (
+                <View key={sp.id} style={styles.specialtyRow}>
+                  <Image source={{ uri: sp.imageUrl }} style={styles.specialtyImage} resizeMode="cover" />
+                  <View style={styles.specialtyInfo}>
+                    <Text style={styles.specialtyName} numberOfLines={1}>{sp.name}</Text>
+                    {sp.description ? (
+                      <Text style={styles.specialtyDesc} numberOfLines={2}>{sp.description}</Text>
+                    ) : null}
+                    {sp.price != null ? (
+                      <Text style={styles.specialtyPrice}>
+                        {sp.price.toLocaleString()} FCFA
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+              ))}
             </View>
           ) : null}
 
@@ -578,6 +632,43 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: "Inter_400Regular",
     color: C.textMuted,
+  },
+  specialtyRow: {
+    flexDirection: "row",
+    backgroundColor: C.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.border,
+    padding: 10,
+    gap: 12,
+    marginBottom: 8,
+  },
+  specialtyImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 10,
+    backgroundColor: C.bg,
+  },
+  specialtyInfo: {
+    flex: 1,
+    justifyContent: "center",
+    gap: 4,
+  },
+  specialtyName: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: C.text,
+  },
+  specialtyDesc: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: C.textMuted,
+  },
+  specialtyPrice: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    color: C.gold,
+    marginTop: 2,
   },
   freeBadge: {
     backgroundColor: C.success + "22",

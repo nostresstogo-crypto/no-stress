@@ -157,6 +157,8 @@ export const venuesTable = pgTable("venues", {
   images: jsonb("images"),
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
+  openingTime: text("opening_time"),
+  closingTime: text("closing_time"),
   status: text("status").notNull().default("pending"),
   rejectionReason: text("rejection_reason"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -164,6 +166,19 @@ export const venuesTable = pgTable("venues", {
 
 export type Venue = typeof venuesTable.$inferSelect;
 export type InsertVenue = typeof venuesTable.$inferInsert;
+
+export const venueSpecialtiesTable = pgTable("venue_specialties", {
+  id: serial("id").primaryKey(),
+  venueId: integer("venue_id").notNull().references(() => venuesTable.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  imageUrl: text("image_url").notNull(),
+  description: text("description"),
+  price: integer("price"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type VenueSpecialty = typeof venueSpecialtiesTable.$inferSelect;
+export type InsertVenueSpecialty = typeof venueSpecialtiesTable.$inferInsert;
 
 export const favoritesTable = pgTable("favorites", {
   id: serial("id").primaryKey(),

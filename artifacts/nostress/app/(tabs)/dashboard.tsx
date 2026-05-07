@@ -40,6 +40,8 @@ interface MyVenue {
   rejectionReason?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  openingTime?: string | null;
+  closingTime?: string | null;
 }
 
 const MAX_VENUE_IMAGES = 3;
@@ -94,6 +96,9 @@ export default function DashboardScreen() {
   const [venueAddress, setVenueAddress] = useState("");
   const [venueDesc, setVenueDesc] = useState("");
   const [venueImages, setVenueImages] = useState<string[]>([]);
+  const [venueOpening, setVenueOpening] = useState("");
+  const [venueClosing, setVenueClosing] = useState("");
+  const [venueSpecialties, setVenueSpecialties] = useState<Array<{ id?: string; name: string; imageUrl: string; description?: string; price?: string }>>([]);
   const [savingVenue, setSavingVenue] = useState(false);
 
   const loadMyVenues = useCallback(async () => {
@@ -121,6 +126,8 @@ export default function DashboardScreen() {
         rejectionReason: v.rejectionReason ?? null,
         latitude: v.latitude ?? null,
         longitude: v.longitude ?? null,
+        openingTime: v.openingTime ?? null,
+        closingTime: v.closingTime ?? null,
       }));
       setMyVenues(mapped);
       AsyncStorage.setItem(NS_MY_VENUES_KEY, JSON.stringify(mapped)).catch(() => {});
@@ -133,10 +140,11 @@ export default function DashboardScreen() {
   const openVenueModal = () => {
     setEditingVenueId(null);
     setVenueName(""); setVenueType(""); setVenueCity(""); setVenueAddress(""); setVenueDesc(""); setVenueImages([]);
+    setVenueOpening(""); setVenueClosing(""); setVenueSpecialties([]);
     setShowVenueModal(true);
   };
 
-  const openEditVenueModal = (v: MyVenue) => {
+  const openEditVenueModal = async (v: MyVenue) => {
     setEditingVenueId(v.id);
     setVenueName(v.name || "");
     setVenueType(v.type || "");
@@ -144,7 +152,70 @@ export default function DashboardScreen() {
     setVenueAddress(v.address || "");
     setVenueDesc(v.description || "");
     setVenueImages(Array.isArray(v.images) && v.images.length > 0 ? v.images.slice(0, MAX_VENUE_IMAGES) : (v.imageUrl ? [v.imageUrl] : []));
+    setVenueOpening((v as any).openingTime || "");
+    setVenueClosing((v as any).closingTime || "");
+    setVenueSpecialties([]);
     setShowVenueModal(true);
+    try {
+      const r = await authFetch(`${API_BASE}/partners/me/venues/${v.id}/specialties`);
+      if (r.ok) {
+        const data = await r.json();
+        setVenueSpecialties(
+          (Array.isArray(data?.specialties) ? data.specialties : []).map((s: any) => ({
+            id: String(s.id),
+            name: s.name || "",
+            imageUrl: s.imageUrl || "",
+            description: s.description || "",
+            price: s.price != null ? String(s.price) : "",
+          })),
+        );
+      }
+    } catch {}
+  };
+
+  const pickSpecialtyImage = async (idx: number) => {
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [4, 3], quality: 0.8 });
+    if (!result.canceled && result.assets[0]) {
+      setVenueSpecialties((prev) => prev.map((s, i) => i === idx ? { ...s, imageUrl: result.assets[0].uri } : s));
+    }
+  };
+
+  const addSpecialty = () => {
+    setVenueSpecialties((prev) => [...prev, { name: "", imageUrl: "", description: "", price: "" }]);
+  };
+
+  const removeSpecialty = (idx: number) => {
+    setVenueSpecialties((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const syncSpecialties = async (venueId: string) => {
+    const existingRes = await authFetch(`${API_BASE}/partners/me/venues/${venueId}/specialties`);
+    const existing = existingRes.ok ? ((await existingRes.json())?.specialties || []) : [];
+    const keptIds = new Set(venueSpecialties.filter((s) => s.id).map((s) => s.id));
+    for (const old of existing) {
+      if (!keptIds.has(String(old.id))) {
+        await authFetch(`${API_BASE}/partners/me/venues/${venueId}/specialties/${old.id}`, { method: "DELETE" });
+      }
+    }
+    for (const s of venueSpecialties) {
+      if (!s.name.trim() || !s.imageUrl) continue;
+      let imageUrl = s.imageUrl;
+      if (imageUrl.startsWith("file:") || imageUrl.startsWith("content:") || imageUrl.startsWith("ph:") || imageUrl.startsWith("/")) {
+        try { imageUrl = await uploadVenueImage(imageUrl, API_BASE); } catch { continue; }
+      }
+      const priceNum = s.price && s.price.trim() ? Number(s.price.replace(/[^0-9]/g, "")) : null;
+      const body = JSON.stringify({
+        name: s.name.trim(),
+        imageUrl,
+        description: s.description?.trim() || null,
+        price: priceNum,
+      });
+      if (s.id) {
+        await authFetch(`${API_BASE}/partners/me/venues/${venueId}/specialties/${s.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body });
+      } else {
+        await authFetch(`${API_BASE}/partners/me/venues/${venueId}/specialties`, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+      }
+    }
   };
 
   const saveVenue = async () => {
@@ -180,6 +251,8 @@ export default function DashboardScreen() {
           description: venueDesc.trim(),
           images: uploaded,
           imageUrl: uploaded[0] || null,
+          openingTime: venueOpening.trim() || null,
+          closingTime: venueClosing.trim() || null,
         }),
       });
       if (!r.ok) {
@@ -209,6 +282,7 @@ export default function DashboardScreen() {
         AsyncStorage.setItem(NS_MY_VENUES_KEY, JSON.stringify(next));
         return next;
       });
+      try { await syncSpecialties(savedVenue.id); } catch (e: any) { console.warn("specialties sync failed", e?.message); }
       setShowVenueModal(false);
       setEditingVenueId(null);
       addNotification({
@@ -1104,6 +1178,87 @@ export default function DashboardScreen() {
                   onChangeText={setVenueDesc}
                   multiline
                 />
+
+                <Text style={[styles.modalLabel, { color: C.textMuted }]}>
+                  {lang === "fr" ? "Heures d'ouverture et fermeture" : "Opening & closing hours"}
+                </Text>
+                <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>{lang === "fr" ? "Ouverture" : "Opening"}</Text>
+                    <TextInput
+                      style={[styles.modalInput, { backgroundColor: C.bg, borderColor: C.border, color: C.text }]}
+                      placeholder="08:00"
+                      placeholderTextColor={C.textMuted}
+                      value={venueOpening}
+                      onChangeText={(v) => setVenueOpening(v.replace(/[^0-9:]/g, "").slice(0, 5))}
+                      maxLength={5}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>{lang === "fr" ? "Fermeture" : "Closing"}</Text>
+                    <TextInput
+                      style={[styles.modalInput, { backgroundColor: C.bg, borderColor: C.border, color: C.text }]}
+                      placeholder="22:00"
+                      placeholderTextColor={C.textMuted}
+                      value={venueClosing}
+                      onChangeText={(v) => setVenueClosing(v.replace(/[^0-9:]/g, "").slice(0, 5))}
+                      maxLength={5}
+                    />
+                  </View>
+                </View>
+                <Text style={{ fontSize: 10, color: C.textMuted, marginTop: -8, marginBottom: 12 }}>
+                  {lang === "fr" ? "Format 24h (HH:MM). Optionnel." : "24h format (HH:MM). Optional."}
+                </Text>
+
+                <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                  <Text style={[styles.modalLabel, { color: C.textMuted, marginBottom: 0 }]}>
+                    {lang === "fr" ? "Spécialités / Menu" : "Specialties / Menu"}
+                  </Text>
+                  <TouchableOpacity onPress={addSpecialty} style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: C.lavender + "22", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 }}>
+                    <Ionicons name="add" size={14} color={C.lavender} />
+                    <Text style={{ fontSize: 12, color: C.lavender, fontFamily: "Inter_600SemiBold" }}>{lang === "fr" ? "Ajouter" : "Add"}</Text>
+                  </TouchableOpacity>
+                </View>
+                {venueSpecialties.map((sp, idx) => (
+                  <View key={idx} style={{ backgroundColor: C.bg, borderRadius: 10, borderWidth: 1, borderColor: C.border, padding: 10, marginBottom: 10, flexDirection: "row", gap: 10 }}>
+                    <TouchableOpacity onPress={() => pickSpecialtyImage(idx)} style={{ width: 70, height: 70, borderRadius: 8, backgroundColor: C.card, borderWidth: 1, borderColor: C.border, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+                      {sp.imageUrl ? (
+                        <Image source={{ uri: sp.imageUrl }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                      ) : (
+                        <Ionicons name="image-outline" size={22} color={C.textMuted} />
+                      )}
+                    </TouchableOpacity>
+                    <View style={{ flex: 1, gap: 6 }}>
+                      <TextInput
+                        style={[styles.modalInput, { backgroundColor: C.card, borderColor: C.border, color: C.text, marginBottom: 0, paddingVertical: 6, fontSize: 13 }]}
+                        placeholder={lang === "fr" ? "Nom *" : "Name *"}
+                        placeholderTextColor={C.textMuted}
+                        value={sp.name}
+                        onChangeText={(v) => setVenueSpecialties((prev) => prev.map((s, i) => i === idx ? { ...s, name: v } : s))}
+                      />
+                      <TextInput
+                        style={[styles.modalInput, { backgroundColor: C.card, borderColor: C.border, color: C.text, marginBottom: 0, paddingVertical: 6, fontSize: 12 }]}
+                        placeholder={lang === "fr" ? "Description (optionnelle)" : "Description (optional)"}
+                        placeholderTextColor={C.textMuted}
+                        value={sp.description}
+                        onChangeText={(v) => setVenueSpecialties((prev) => prev.map((s, i) => i === idx ? { ...s, description: v } : s))}
+                      />
+                      <View style={{ flexDirection: "row", gap: 6, alignItems: "center" }}>
+                        <TextInput
+                          style={[styles.modalInput, { backgroundColor: C.card, borderColor: C.border, color: C.text, marginBottom: 0, paddingVertical: 6, fontSize: 12, flex: 1 }]}
+                          placeholder={lang === "fr" ? "Prix FCFA (optionnel)" : "Price FCFA (optional)"}
+                          placeholderTextColor={C.textMuted}
+                          value={sp.price}
+                          onChangeText={(v) => setVenueSpecialties((prev) => prev.map((s, i) => i === idx ? { ...s, price: v.replace(/[^0-9]/g, "") } : s))}
+                          keyboardType="numeric"
+                        />
+                        <TouchableOpacity onPress={() => removeSpecialty(idx)} style={{ padding: 6 }}>
+                          <Ionicons name="trash-outline" size={18} color={C.error} />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                ))}
 
                 <Text style={[styles.modalLabel, { color: C.textMuted }]}>
                   {lang === "fr" ? `Photos du lieu (max ${MAX_VENUE_IMAGES})` : `Venue photos (max ${MAX_VENUE_IMAGES})`}
