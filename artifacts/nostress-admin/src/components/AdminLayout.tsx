@@ -14,6 +14,7 @@ import {
   BarChart2,
   Menu,
   MapPin,
+  UserCog,
 } from "lucide-react";
 
 const navItems = [
@@ -23,6 +24,7 @@ const navItems = [
   { href: "/publications", label: "Publications", icon: FileText },
   { href: "/suppressions", label: "Suppressions de compte", icon: Trash2 },
   { href: "/statistiques", label: "Statistiques", icon: BarChart2 },
+  { href: "/profil", label: "Mon profil", icon: UserCog },
 ];
 
 interface AdminLayoutProps {

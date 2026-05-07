@@ -86,6 +86,11 @@ export const api = {
       });
     },
     me: () => request<{ admin: { adminId: string; name: string; email: string } }>("/admin/me"),
+    changePassword: (currentPassword: string, newPassword: string) =>
+      request<{ message: string }>("/admin/change-password", {
+        method: "POST",
+        body: JSON.stringify({ currentPassword, newPassword }),
+      }),
     stats: () =>
       request<{
         pendingPartners: number;

@@ -117,8 +117,52 @@ router.post("/admin/logout", async (req, res) => {
   res.json({ message: "Déconnexion réussie." });
 });
 
-router.get("/admin/me", requireAdmin, (req: any, res) => {
-  res.json({ admin: req.admin });
+router.get("/admin/me", requireAdmin, async (req: any, res) => {
+  const id = Number(req.admin.adminId);
+  if (!Number.isFinite(id)) {
+    return res.status(400).json({ error: "Identifiant admin invalide." });
+  }
+  const [row] = await db
+    .select({ id: adminsTable.id, name: adminsTable.name, email: adminsTable.email })
+    .from(adminsTable)
+    .where(eq(adminsTable.id, id));
+  if (!row) {
+    return res.status(404).json({ error: "Admin introuvable." });
+  }
+  res.json({ admin: { adminId: String(row.id), name: row.name, email: row.email } });
+});
+
+router.post("/admin/change-password", requireAdmin, async (req: any, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+  if (typeof currentPassword !== "string" || typeof newPassword !== "string") {
+    return res.status(400).json({ error: "Mot de passe actuel et nouveau mot de passe requis." });
+  }
+  if (newPassword.length < 12) {
+    return res
+      .status(400)
+      .json({ error: "Le nouveau mot de passe doit faire au moins 12 caractères." });
+  }
+  if (currentPassword === newPassword) {
+    return res
+      .status(400)
+      .json({ error: "Le nouveau mot de passe doit être différent de l'ancien." });
+  }
+  const id = Number(req.admin.adminId);
+  if (!Number.isFinite(id)) {
+    return res.status(400).json({ error: "Identifiant admin invalide." });
+  }
+  const [admin] = await db.select().from(adminsTable).where(eq(adminsTable.id, id));
+  if (!admin) {
+    return res.status(404).json({ error: "Admin introuvable." });
+  }
+  const ok = await verifyPassword(currentPassword, admin.passwordHash);
+  if (!ok) {
+    return res.status(401).json({ error: "Mot de passe actuel incorrect." });
+  }
+  const passwordHash = await hashPassword(newPassword);
+  await db.update(adminsTable).set({ passwordHash }).where(eq(adminsTable.id, id));
+  console.log(`[admin] Password changed via UI for id=${id} email=${JSON.stringify(admin.email)}`);
+  res.json({ message: "Mot de passe modifié avec succès." });
 });
 
 router.get("/admin/stats", requireAdmin, async (_req, res) => {
