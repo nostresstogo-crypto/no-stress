@@ -134,12 +134,13 @@ export default function VenueDetailScreen() {
     );
   }
 
+  const hasCoords =
+    venue.latitude != null &&
+    venue.longitude != null &&
+    Number.isFinite(venue.latitude) &&
+    Number.isFinite(venue.longitude);
+
   const openMaps = () => {
-    const hasCoords =
-      venue.latitude != null &&
-      venue.longitude != null &&
-      Number.isFinite(venue.latitude) &&
-      Number.isFinite(venue.longitude);
     const queryText = [venue.name, venue.address, venue.city, venue.country || "Togo"]
       .filter(Boolean)
       .join(", ");
