@@ -182,7 +182,33 @@ export default function CreateEventScreen() {
     if (!form.category) newErrors.category = t("requiredField");
     if (!form.city) newErrors.city = t("requiredField");
     if (!form.venueId) newErrors.venue = t("requiredField");
-    if (!form.date.trim()) newErrors.date = t("requiredField");
+    const trimmedDate = form.date.trim();
+    if (!trimmedDate) {
+      newErrors.date = t("requiredField");
+    } else {
+      // Strict YYYY-MM-DD parse so we don't accept "2026-13-99" etc., then
+      // ensure the date is today or later. The backend enforces the same rule
+      // (date < todayISO() → 400), this just gives instant in-form feedback.
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmedDate);
+      if (!m) {
+        newErrors.date = lang === "fr" ? "Format attendu : AAAA-MM-JJ" : "Expected format: YYYY-MM-DD";
+      } else {
+        const y = +m[1], mo = +m[2], d = +m[3];
+        const parsed = new Date(y, mo - 1, d);
+        const valid = parsed.getFullYear() === y && parsed.getMonth() === mo - 1 && parsed.getDate() === d;
+        if (!valid) {
+          newErrors.date = lang === "fr" ? "Date invalide." : "Invalid date.";
+        } else {
+          const today = new Date();
+          const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+          if (parsed.getTime() < todayMidnight.getTime()) {
+            newErrors.date = lang === "fr"
+              ? "La date doit être aujourd'hui ou ultérieure."
+              : "Date must be today or later.";
+          }
+        }
+      }
+    }
     if (!form.time.trim()) newErrors.time = t("requiredField");
     // Price field removed from UI — no validation needed (always submitted as 0/free).
     if (!form.descriptionFr.trim()) newErrors.descriptionFr = t("requiredField");
