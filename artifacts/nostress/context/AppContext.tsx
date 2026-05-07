@@ -214,7 +214,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         }
         const userObj = safeParse<User>(u);
-        if (userObj) setUserState(userObj);
+        if (userObj) {
+          const anyUser = userObj as any;
+          if (anyUser.profileImage && !userObj.avatarUrl) {
+            userObj.avatarUrl = anyUser.profileImage;
+          }
+          setUserState(userObj);
+        }
         if (t) { setTokenState(t); tokenRef.current = t; }
         if (rt) { setRefreshTokenState(rt); refreshRef.current = rt; }
         const fav = safeParse<string[]>(f);

@@ -176,7 +176,10 @@ export default function AuthScreen() {
           return;
         }
         const { token: apiToken, refreshToken: apiRefresh, user: apiUser } = data;
-        await setUser(apiUser);
+        const normalizedUser = apiUser?.profileImage && !apiUser.avatarUrl
+          ? { ...apiUser, avatarUrl: apiUser.profileImage }
+          : apiUser;
+        await setUser(normalizedUser);
         await setSession(apiToken, apiRefresh || null);
 
         if (apiUser.role === "structure" && apiUser.partnerStatus === "approved") {
