@@ -1215,6 +1215,7 @@ export default function DashboardScreen() {
                       textColor={C.text}
                       value={venueOpening}
                       onChange={setVenueOpening}
+                      lang={lang as "fr" | "en"}
                     />
                   </View>
                   <View style={{ flex: 1 }}>
@@ -1226,6 +1227,7 @@ export default function DashboardScreen() {
                       textColor={C.text}
                       value={venueClosing}
                       onChange={setVenueClosing}
+                      lang={lang as "fr" | "en"}
                     />
                   </View>
                 </View>

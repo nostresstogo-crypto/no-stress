@@ -502,6 +502,7 @@ export default function CreateEventScreen() {
                 min={todayISO()}
                 hasError={!!errors.date}
                 errorBorderColor={C.error || "#e54848"}
+                lang={lang as "fr" | "en"}
               />
             </Field>
           </View>
@@ -516,6 +517,7 @@ export default function CreateEventScreen() {
                 onChange={(v) => setField("time", v)}
                 hasError={!!errors.time}
                 errorBorderColor={C.error || "#e54848"}
+                lang={lang as "fr" | "en"}
               />
             </Field>
           </View>
