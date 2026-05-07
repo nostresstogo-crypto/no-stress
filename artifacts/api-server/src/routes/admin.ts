@@ -35,7 +35,11 @@ async function ensureSeedAdmin(): Promise<void> {
       });
       console.log(`[admin] Seeded initial admin account: ${DEFAULT_ADMIN_EMAIL}`);
     } else if (process.env.RESET_ADMIN_PASSWORD === "1") {
-      const newPassword = process.env.ADMIN_PASSWORD_RESET_TO;
+      const raw = process.env.ADMIN_PASSWORD_RESET_TO;
+      const newPassword = raw?.trim();
+      console.log(
+        `[admin][reset-debug] raw_len=${raw?.length ?? 0} trimmed_len=${newPassword?.length ?? 0} first_char_code=${raw?.charCodeAt(0) ?? "none"} last_char_code=${raw?.charCodeAt((raw?.length ?? 1) - 1) ?? "none"}`,
+      );
       if (!newPassword || newPassword.length < 12) {
         console.error(
           "[admin] RESET_ADMIN_PASSWORD=1 but ADMIN_PASSWORD_RESET_TO is missing or too short (>=12 chars required). Reset aborted — no fallback to hardcoded default.",
@@ -47,7 +51,7 @@ async function ensureSeedAdmin(): Promise<void> {
           .set({ passwordHash })
           .where(eq(adminsTable.email, DEFAULT_ADMIN_EMAIL));
         console.log(
-          `[admin] Password reset for ${DEFAULT_ADMIN_EMAIL} — REMOVE RESET_ADMIN_PASSWORD and ADMIN_PASSWORD_RESET_TO env vars now.`,
+          `[admin] Password reset for ${DEFAULT_ADMIN_EMAIL} (used trimmed value, length=${newPassword.length}) — REMOVE RESET_ADMIN_PASSWORD and ADMIN_PASSWORD_RESET_TO env vars now.`,
         );
       }
     }
