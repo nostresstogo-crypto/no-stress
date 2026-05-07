@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   Alert,
   Image,
@@ -18,8 +18,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 
-import { C } from "@/constants/colors";
-import { useT, useApp } from "@/context/AppContext";
+import type { ColorPalette } from "@/constants/colors";
+import { useT, useApp, useColors } from "@/context/AppContext";
 import { CATEGORIES, MOCK_CITIES, CategoryKey } from "@/constants/data";
 import type { MyEvent } from "@/context/AppContext";
 import { API_BASE } from "@/lib/apiBase";
@@ -97,6 +97,10 @@ const INITIAL_FORM: FormData = {
 
 export default function CreateEventScreen() {
   const t = useT();
+  const C = useColors();
+  const styles = useMemo(() => makeStyles(C), [C]);
+  const sectionStyles = useMemo(() => makeSectionStyles(C), [C]);
+  const fieldStyles = useMemo(() => makeFieldStyles(C), [C]);
   const { lang, addMyEvent, updateMyEvent, user, authFetch, token } = useApp();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ editId?: string; localId?: string }>();
@@ -366,9 +370,9 @@ export default function CreateEventScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Section 1 — Informations générales */}
-        <SectionHeader icon="information-circle" label={t("formSectionInfo")} />
+        <SectionHeader icon="information-circle" label={t("formSectionInfo")} sectionStyles={sectionStyles} C={C} />
 
-        <Field label={t("titleFr")} required error={errors.titleFr}>
+        <Field label={t("titleFr")} required error={errors.titleFr} fieldStyles={fieldStyles}>
           <TextInput
             style={[styles.input, errors.titleFr && styles.inputError]}
             placeholder="Ex: Nuit Afrobeats Lomé"
@@ -378,7 +382,7 @@ export default function CreateEventScreen() {
           />
         </Field>
 
-        <Field label={t("titleEn")}>
+        <Field label={t("titleEn")} fieldStyles={fieldStyles}>
           <TextInput
             style={styles.input}
             placeholder="Ex: Afrobeats Night Lomé"
@@ -389,7 +393,7 @@ export default function CreateEventScreen() {
         </Field>
 
         {/* Category selector */}
-        <Field label={t("category")} required error={errors.category}>
+        <Field label={t("category")} required error={errors.category} fieldStyles={fieldStyles}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
             {CATEGORIES.map((cat) => {
               const label = lang === "fr" ? (cat.key === "liveMusic" ? "Musique live" : cat.key === "nightclubs" ? "Boîtes de nuit" : cat.key.charAt(0).toUpperCase() + cat.key.slice(1)) : cat.key.charAt(0).toUpperCase() + cat.key.slice(1);
@@ -409,7 +413,7 @@ export default function CreateEventScreen() {
         </Field>
 
         {/* City selector */}
-        <Field label={t("city")} required error={errors.city}>
+        <Field label={t("city")} required error={errors.city} fieldStyles={fieldStyles}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
             {MOCK_CITIES.map((c) => {
               const active = form.city === c.name;
@@ -427,7 +431,7 @@ export default function CreateEventScreen() {
           </ScrollView>
         </Field>
 
-        <Field label={t("selectVenue")} required error={errors.venue}>
+        <Field label={t("selectVenue")} required error={errors.venue} fieldStyles={fieldStyles}>
           {apiVenues.length === 0 ? (
             <View style={{ padding: 14, borderRadius: 12, backgroundColor: C.card, borderWidth: 1, borderColor: C.border }}>
               <Text style={{ color: C.textMuted, fontSize: 13, lineHeight: 18 }}>
@@ -486,7 +490,7 @@ export default function CreateEventScreen() {
         {/* Date & time row */}
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
-            <Field label={t("date")} required error={errors.date}>
+            <Field label={t("date")} required error={errors.date} fieldStyles={fieldStyles}>
               <DateField
                 style={[styles.input, errors.date && styles.inputError]}
                 placeholder="AAAA-MM-JJ"
@@ -502,7 +506,7 @@ export default function CreateEventScreen() {
             </Field>
           </View>
           <View style={{ flex: 1 }}>
-            <Field label={t("time")} required error={errors.time}>
+            <Field label={t("time")} required error={errors.time} fieldStyles={fieldStyles}>
               <TimeField
                 style={[styles.input, errors.time && styles.inputError]}
                 placeholder="22:00"
@@ -519,9 +523,9 @@ export default function CreateEventScreen() {
         </View>
 
         {/* Section 2 — Détails */}
-        <SectionHeader icon="information-circle" label={t("formSectionDetails")} />
+        <SectionHeader icon="information-circle" label={t("formSectionDetails")} sectionStyles={sectionStyles} C={C} />
 
-        <Field label={t("descriptionFr")} required error={errors.descriptionFr}>
+        <Field label={t("descriptionFr")} required error={errors.descriptionFr} fieldStyles={fieldStyles}>
           <TextInput
             style={[styles.input, styles.textarea, errors.descriptionFr && styles.inputError]}
             placeholder={lang === "fr" ? "Décrivez votre événement en français..." : "Describe your event in French..."}
@@ -534,7 +538,7 @@ export default function CreateEventScreen() {
           />
         </Field>
 
-        <Field label={t("descriptionEn")}>
+        <Field label={t("descriptionEn")} fieldStyles={fieldStyles}>
           <TextInput
             style={[styles.input, styles.textarea]}
             placeholder={lang === "fr" ? "Décrivez votre événement en anglais..." : "Describe your event in English..."}
@@ -550,9 +554,9 @@ export default function CreateEventScreen() {
         {/* Price field hidden by product decision — events are submitted with price=0 (free). */}
 
         {/* Section 3 — Médias */}
-        <SectionHeader icon="image" label={t("formSectionMedia")} />
+        <SectionHeader icon="image" label={t("formSectionMedia")} sectionStyles={sectionStyles} C={C} />
 
-        <Field label={lang === "fr" ? `Photos (max ${MAX_EVENT_IMAGES})` : `Photos (max ${MAX_EVENT_IMAGES})`}>
+        <Field label={lang === "fr" ? `Photos (max ${MAX_EVENT_IMAGES})` : `Photos (max ${MAX_EVENT_IMAGES})`} fieldStyles={fieldStyles}>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {form.images.map((uri, idx) => (
               <View key={`${idx}-${uri}`} style={{ position: "relative", width: "48%", aspectRatio: 16 / 9, borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: C.border }}>
@@ -676,7 +680,7 @@ export default function CreateEventScreen() {
   );
 }
 
-function SectionHeader({ icon, label }: { icon: string; label: string }) {
+function SectionHeader({ icon, label, sectionStyles, C }: { icon: string; label: string; sectionStyles: ReturnType<typeof makeSectionStyles>; C: ColorPalette }) {
   return (
     <View style={sectionStyles.row}>
       <Ionicons name={icon as any} size={18} color={C.lavender} />
@@ -690,11 +694,13 @@ function Field({
   required,
   error,
   children,
+  fieldStyles,
 }: {
   label: string;
   required?: boolean;
   error?: string;
   children: React.ReactNode;
+  fieldStyles: ReturnType<typeof makeFieldStyles>;
 }) {
   return (
     <View style={fieldStyles.wrap}>
@@ -708,7 +714,7 @@ function Field({
   );
 }
 
-const sectionStyles = StyleSheet.create({
+const makeSectionStyles = (C: ColorPalette) => StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -728,7 +734,7 @@ const sectionStyles = StyleSheet.create({
   },
 });
 
-const fieldStyles = StyleSheet.create({
+const makeFieldStyles = (C: ColorPalette) => StyleSheet.create({
   wrap: { gap: 6 },
   labelRow: { flexDirection: "row", alignItems: "center", gap: 4 },
   label: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textMuted },
@@ -736,7 +742,7 @@ const fieldStyles = StyleSheet.create({
   error: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.error },
 });
 
-const styles = StyleSheet.create({
+const makeStyles = (C: ColorPalette) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   header: {
     flexDirection: "row",

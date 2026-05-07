@@ -21,20 +21,20 @@ const DARK = {
   isDark:      true,
 };
 
-/* ── Light theme ─────────────────────────────────────────── */
+/* ── Light theme — soft pearl + champagne, premium & airy ─── */
 const LIGHT = {
-  bg:          "#F5F4FC",
-  card:        "#FFFFFF",
-  card2:       "#ECEAF8",
-  border:      "#D9D7EF",
-  lavender:    "#7B6FD4",
-  lavenderDim: "#5B50B0",
-  gold:        "#B8961E",
-  goldDim:     "#9A7A0C",
-  text:        "#12101E",
-  textMuted:   "#6B6890",
-  success:     "#2E8B5A",
-  error:       "#C0392B",
+  bg:          "#FBFAFE",  // soft pearl, very subtle lavender tint
+  card:        "#FFFFFF",  // pure white cards pop on the bg
+  card2:       "#F4F1FB",  // gentle lavender-pearl for nested surfaces
+  border:      "#E8E5F4",  // soft, low-contrast hairline
+  lavender:    "#6E5BD0",  // richer, more saturated primary
+  lavenderDim: "#4F3FAE",  // deep accent for hover/pressed
+  gold:        "#A07A14",  // warm bronze-champagne, readable as text on light surfaces (~5:1)
+  goldDim:     "#7E5F0E",
+  text:        "#1A1830",  // deep ink, easier on eyes than pure black
+  textMuted:   "#7B7898",  // balanced muted with adequate contrast
+  success:     "#1F9D5A",
+  error:       "#D14343",
   white:       "#FFFFFF",
   isDark:      false,
 };

@@ -16,7 +16,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { safePush } from "@/lib/navigation";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { C } from "@/constants/colors";
+import type { ColorPalette } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_VENUES, MOCK_EVENTS } from "@/constants/data";
 import { API_BASE } from "@/lib/apiBase";
@@ -52,6 +52,7 @@ export default function VenueDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const t = useT();
   const C = useColors();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const { lang, user, toggleFavoriteVenue, isFavoriteVenue } = useApp();
   const insets = useSafeAreaInsets();
 
@@ -426,7 +427,7 @@ function getMonthShort(dateStr: string, lang: string): string {
   return months[month] ?? "";
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: ColorPalette) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },
 

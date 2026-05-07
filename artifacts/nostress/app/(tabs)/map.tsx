@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Location from "expo-location";
 
-import { C } from "@/constants/colors";
+import type { ColorPalette } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { VENUE_TYPES, MOCK_CITIES } from "@/constants/data";
 import { MapWebView, type MapWebViewHandle } from "@/components/MapWebView";
@@ -452,6 +452,7 @@ function DistancePickerModal({
   onRequestLocation: () => void;
 }) {
   const C = useColors();
+  const modal = useMemo(() => makeModalStyles(C), [C]);
   const insets = useSafeAreaInsets();
 
   return (
@@ -530,6 +531,7 @@ function CityPickerModal({
   onSelect: (id: string) => void;
 }) {
   const C = useColors();
+  const modal = useMemo(() => makeModalStyles(C), [C]);
   const insets = useSafeAreaInsets();
   const items = [{ id: "", name: "Toutes les villes", emoji: "🌍" }, ...MOCK_CITIES];
 
@@ -564,7 +566,7 @@ function CityPickerModal({
   );
 }
 
-const modal = StyleSheet.create({
+const makeModalStyles = (C: ColorPalette) => StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.65)" },
   sheet: {
     borderTopLeftRadius: 22,
@@ -593,6 +595,7 @@ const modal = StyleSheet.create({
 export default function MapScreen() {
   const t = useT();
   const C = useColors();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const { lang, selectedCity, setSelectedCity } = useApp();
   const insets = useSafeAreaInsets();
   const topInset = Platform.OS === "web" ? 67 : insets.top;
@@ -1006,6 +1009,7 @@ function VenueList({
 }) {
   const [open, setOpen] = useState(false);
   const C = useColors();
+  const list = useMemo(() => makeListStyles(C), [C]);
 
   const title = hasUserLocation
     ? lang === "fr" ? "Près de vous" : "Nearby"
@@ -1060,7 +1064,7 @@ function VenueList({
   );
 }
 
-const list = StyleSheet.create({
+const makeListStyles = (C: ColorPalette) => StyleSheet.create({
   container: {
     position: "absolute", bottom: 12, left: 12,
     width: 220, borderRadius: 14, borderWidth: 1,
@@ -1086,7 +1090,7 @@ const list = StyleSheet.create({
   distText: { fontSize: 10, fontFamily: "Inter_700Bold", letterSpacing: 0.2 },
 });
 
-const styles = StyleSheet.create({
+const makeStyles = (C: ColorPalette) => StyleSheet.create({
   root: { flex: 1 },
   header: {
     paddingHorizontal: 20, paddingBottom: 12,

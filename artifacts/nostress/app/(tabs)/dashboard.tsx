@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -20,7 +20,7 @@ import { router, useFocusEffect } from "expo-router";
 import { safePush } from "@/lib/navigation";
 import * as ImagePicker from "expo-image-picker";
 
-import { C } from "@/constants/colors";
+import type { ColorPalette } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_SUBSCRIPTION_PLANS, MOCK_CITIES } from "@/constants/data";
 import { formatDateLocalized, formatDateTimeLocalized } from "@/lib/formatDate";
@@ -79,6 +79,8 @@ export default function DashboardScreen() {
   const { user, lang, myEvents, setUser, addNotification, updateMyEvent, removeMyEvent, syncMyEventsStatus, syncMyEventsFromBackend, refreshApiEvents, authFetch, token } = useApp();
   const insets = useSafeAreaInsets();
   const C = useColors();
+  const styles = useMemo(() => makeStyles(C), [C]);
+  const statStyles = useMemo(() => makeStatStyles(C), [C]);
 
   const [tab, setTab] = useState<DashTab>("events");
   const [eventStatusFilter, setEventStatusFilter] = useState<EventStatusFilter>("all");
@@ -596,9 +598,9 @@ export default function DashboardScreen() {
 
         {/* Stats */}
         <View style={styles.statsRow}>
-          <StatCard icon="calendar" value={myEvents.length} label={t("myEvents")} color={C.lavender} />
-          <StatCard icon="business" value={myVenues.length} label={t("myVenues")} color={C.gold} />
-          <StatCard icon="people" value={0} label="Participants" color={C.success} />
+          <StatCard icon="calendar" value={myEvents.length} label={t("myEvents")} color={C.lavender} statStyles={statStyles} />
+          <StatCard icon="business" value={myVenues.length} label={t("myVenues")} color={C.gold} statStyles={statStyles} />
+          <StatCard icon="people" value={0} label="Participants" color={C.success} statStyles={statStyles} />
         </View>
 
         {/* Tabs */}
@@ -874,9 +876,9 @@ export default function DashboardScreen() {
                       <View style={{ flexDirection: "row", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
                         <View style={[
                           styles.statusBadge,
-                          { backgroundColor: getStatusColor(event.status) + "22", borderColor: getStatusColor(event.status) }
+                          { backgroundColor: getStatusColor(event.status, C) + "22", borderColor: getStatusColor(event.status, C) }
                         ]}>
-                          <Text style={[styles.statusText, { color: getStatusColor(event.status) }]}>
+                          <Text style={[styles.statusText, { color: getStatusColor(event.status, C) }]}>
                             {isCancelled
                               ? (lang === "fr" ? "Annulé" : "Cancelled")
                               : t(event.status as "pending" | "approved" | "rejected")}
@@ -1382,7 +1384,7 @@ export default function DashboardScreen() {
   );
 }
 
-function StatCard({ icon, value, label, color }: { icon: string; value: number; label: string; color: string }) {
+function StatCard({ icon, value, label, color, statStyles }: { icon: string; value: number; label: string; color: string; statStyles: ReturnType<typeof makeStatStyles> }) {
   return (
     <View style={statStyles.card}>
       <Ionicons name={icon as any} size={20} color={color} />
@@ -1392,7 +1394,7 @@ function StatCard({ icon, value, label, color }: { icon: string; value: number; 
   );
 }
 
-function getStatusColor(status: string): string {
+function getStatusColor(status: string, C: ColorPalette): string {
   switch (status) {
     case "approved": return C.success;
     case "rejected": return C.error;
@@ -1400,7 +1402,7 @@ function getStatusColor(status: string): string {
   }
 }
 
-const statStyles = StyleSheet.create({
+const makeStatStyles = (C: ColorPalette) => StyleSheet.create({
   card: {
     flex: 1,
     backgroundColor: C.card,
@@ -1424,7 +1426,7 @@ const statStyles = StyleSheet.create({
   },
 });
 
-const styles = StyleSheet.create({
+const makeStyles = (C: ColorPalette) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   /* Gate screens */

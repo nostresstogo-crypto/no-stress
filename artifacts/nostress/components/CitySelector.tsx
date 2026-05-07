@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   FlatList,
   Modal,
@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { C } from "@/constants/colors";
+import type { ColorPalette } from "@/constants/colors";
 import { useT, useColors } from "@/context/AppContext";
 import { MOCK_CITIES } from "@/constants/data";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -22,6 +22,7 @@ interface CitySelectorProps {
 export function CitySelector({ value, onChange }: CitySelectorProps) {
   const t = useT();
   const C = useColors();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const [open, setOpen] = useState(false);
   const insets = useSafeAreaInsets();
   const cities = MOCK_CITIES;
@@ -73,76 +74,77 @@ export function CitySelector({ value, onChange }: CitySelectorProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  selector: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    backgroundColor: C.card,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  label: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    color: C.text,
-  },
-  activeDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    marginRight: 2,
-  },
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-  },
-  sheet: {
-    backgroundColor: C.card,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingTop: 12,
-    maxHeight: "60%",
-  },
-  handle: {
-    width: 36,
-    height: 4,
-    backgroundColor: C.border,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginBottom: 16,
-  },
-  sheetTitle: {
-    fontSize: 18,
-    fontFamily: "Inter_700Bold",
-    color: C.text,
-    paddingHorizontal: 20,
-    marginBottom: 12,
-  },
-  cityItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: C.border,
-    gap: 8,
-  },
-  selectedCity: {
-    backgroundColor: C.card2,
-  },
-  cityName: {
-    fontSize: 15,
-    fontFamily: "Inter_500Medium",
-    color: C.text,
-    flex: 1,
-  },
-  cityCountry: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    color: C.textMuted,
-  },
-});
+const makeStyles = (C: ColorPalette) =>
+  StyleSheet.create({
+    selector: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      backgroundColor: C.card,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 20,
+      borderWidth: 1,
+      borderColor: C.border,
+    },
+    label: {
+      fontSize: 13,
+      fontFamily: "Inter_600SemiBold",
+      color: C.text,
+    },
+    activeDot: {
+      width: 6,
+      height: 6,
+      borderRadius: 3,
+      marginRight: 2,
+    },
+    backdrop: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.6)",
+    },
+    sheet: {
+      backgroundColor: C.card,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      paddingTop: 12,
+      maxHeight: "60%",
+    },
+    handle: {
+      width: 36,
+      height: 4,
+      backgroundColor: C.border,
+      borderRadius: 2,
+      alignSelf: "center",
+      marginBottom: 16,
+    },
+    sheetTitle: {
+      fontSize: 18,
+      fontFamily: "Inter_700Bold",
+      color: C.text,
+      paddingHorizontal: 20,
+      marginBottom: 12,
+    },
+    cityItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingVertical: 14,
+      paddingHorizontal: 20,
+      borderBottomWidth: 1,
+      borderBottomColor: C.border,
+      gap: 8,
+    },
+    selectedCity: {
+      backgroundColor: C.card2,
+    },
+    cityName: {
+      fontSize: 15,
+      fontFamily: "Inter_500Medium",
+      color: C.text,
+      flex: 1,
+    },
+    cityCountry: {
+      fontSize: 13,
+      fontFamily: "Inter_400Regular",
+      color: C.textMuted,
+    },
+  });

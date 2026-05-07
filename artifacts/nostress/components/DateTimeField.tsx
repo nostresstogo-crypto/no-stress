@@ -9,9 +9,9 @@ import {
   StyleProp,
   TouchableOpacity,
   View,
-  ViewStyle,
 } from "react-native";
-import { C } from "@/constants/colors";
+import type { ColorPalette } from "@/constants/colors";
+import { useColors } from "@/context/AppContext";
 
 type CommonProps = {
   value: string;
@@ -76,7 +76,6 @@ function splitStyle(style: StyleProp<TextStyle>): { container: any; text: any } 
     if (TEXT_STYLE_KEYS.has(k)) text[k] = v;
     else container[k] = v;
   }
-  // color stays in text (not container)
   if (flat.color != null) text.color = flat.color;
   return { container, text };
 }
@@ -117,9 +116,11 @@ type StepperProps = {
   label?: string;
   width?: number;
   wrap?: boolean;
+  C: ColorPalette;
 };
 
-function Stepper({ items, selectedIndex, onChange, label, width = 100, wrap = true }: StepperProps) {
+function Stepper({ items, selectedIndex, onChange, label, width = 100, wrap = true, C }: StepperProps) {
+  const stepperStyles = useMemo(() => makeStepperStyles(C), [C]);
   const len = items.length;
   const safeIdx = Math.max(0, Math.min(selectedIndex, len - 1));
 
@@ -167,35 +168,37 @@ function Stepper({ items, selectedIndex, onChange, label, width = 100, wrap = tr
   );
 }
 
-const stepperStyles = StyleSheet.create({
-  col: { alignItems: "center", justifyContent: "center" },
-  label: { fontSize: 11, color: C.textMuted, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 },
-  btn: {
-    width: 44, height: 36,
-    alignItems: "center", justifyContent: "center",
-    borderRadius: 10,
-    backgroundColor: "rgba(124,106,247,0.12)",
-    marginVertical: 2,
-  },
-  btnText: { fontSize: 16, color: "#7c6af7", fontWeight: "700" },
-  neighbor: { fontSize: 13, color: C.textMuted, marginVertical: 1 },
-  valueBox: {
-    minWidth: 80,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: "#7c6af7",
-    backgroundColor: "rgba(124,106,247,0.08)",
-    alignItems: "center",
-    marginVertical: 2,
-  },
-  value: { fontSize: 20, fontWeight: "800", color: C.text },
-});
+const makeStepperStyles = (C: ColorPalette) =>
+  StyleSheet.create({
+    col: { alignItems: "center", justifyContent: "center" },
+    label: { fontSize: 11, color: C.textMuted, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 },
+    btn: {
+      width: 44, height: 36,
+      alignItems: "center", justifyContent: "center",
+      borderRadius: 10,
+      backgroundColor: C.lavender + "1F",
+      marginVertical: 2,
+    },
+    btnText: { fontSize: 16, color: C.lavender, fontWeight: "700" },
+    neighbor: { fontSize: 13, color: C.textMuted, marginVertical: 1 },
+    valueBox: {
+      minWidth: 80,
+      paddingHorizontal: 8,
+      paddingVertical: 8,
+      borderRadius: 10,
+      borderWidth: 1.5,
+      borderColor: C.lavender,
+      backgroundColor: C.lavender + "14",
+      alignItems: "center",
+      marginVertical: 2,
+    },
+    value: { fontSize: 20, fontWeight: "800", color: C.text },
+  });
 
 // ---- DateField --------------------------------------------------------------
 
 export function DateField(props: CommonProps) {
+  const C = useColors();
   const {
     value, onChange, placeholder, style, placeholderTextColor,
     hasError, errorBorderColor, textColor, min, max, lang = "fr",
@@ -225,7 +228,6 @@ export function DateField(props: CommonProps) {
     );
   }
 
-  // Native: button that opens a modal with 3 wheels (year/month/day).
   const [open, setOpen] = useState(false);
   const today = new Date();
   const minDate = min ? parseISO(min) : null;
@@ -269,7 +271,6 @@ export function DateField(props: CommonProps) {
     return arr;
   }, [dim]);
 
-  // Clamp day if month/year change reduces days available.
   useEffect(() => {
     if (pickD > dim) setPickD(dim);
   }, [dim, pickD]);
@@ -278,7 +279,6 @@ export function DateField(props: CommonProps) {
 
   const confirm = () => {
     let y = pickY, m = pickM, d = pickD;
-    // Enforce min/max
     const candidate = new Date(y, m - 1, d);
     if (minDate && candidate < new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate())) {
       const md = minDate;
@@ -317,6 +317,7 @@ export function DateField(props: CommonProps) {
         cancelLabel={lang === "fr" ? "Annuler" : "Cancel"}
         onCancel={() => setOpen(false)}
         onConfirm={confirm}
+        C={C}
       >
         <View style={{ flexDirection: "row", justifyContent: "center", gap: 12 }}>
           <Stepper
@@ -325,6 +326,7 @@ export function DateField(props: CommonProps) {
             onChange={(i) => setPickD(days[i])}
             label={lang === "fr" ? "Jour" : "Day"}
             width={90}
+            C={C}
           />
           <Stepper
             items={months}
@@ -332,6 +334,7 @@ export function DateField(props: CommonProps) {
             onChange={(i) => setPickM(i + 1)}
             label={lang === "fr" ? "Mois" : "Month"}
             width={130}
+            C={C}
           />
           <Stepper
             items={years.map(String)}
@@ -340,6 +343,7 @@ export function DateField(props: CommonProps) {
             label={lang === "fr" ? "Année" : "Year"}
             width={100}
             wrap={false}
+            C={C}
           />
         </View>
       </PickerModal>
@@ -366,6 +370,7 @@ function formatDisplayDate(value: string, lang: "fr" | "en"): string {
 // ---- TimeField --------------------------------------------------------------
 
 export function TimeField(props: Omit<CommonProps, "min" | "max">) {
+  const C = useColors();
   const {
     value, onChange, placeholder, style, placeholderTextColor,
     hasError, errorBorderColor, textColor, lang = "fr",
@@ -450,6 +455,7 @@ export function TimeField(props: Omit<CommonProps, "min" | "max">) {
         cancelLabel={lang === "fr" ? "Annuler" : "Cancel"}
         onCancel={() => setOpen(false)}
         onConfirm={confirm}
+        C={C}
       >
         <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 12 }}>
           <Stepper
@@ -458,6 +464,7 @@ export function TimeField(props: Omit<CommonProps, "min" | "max">) {
             onChange={setPickH}
             label={lang === "fr" ? "Heures" : "Hours"}
             width={100}
+            C={C}
           />
           <Text style={{ fontSize: 28, color: C.text, fontWeight: "800", marginTop: 18 }}>:</Text>
           <Stepper
@@ -466,6 +473,7 @@ export function TimeField(props: Omit<CommonProps, "min" | "max">) {
             onChange={setPickM}
             label={lang === "fr" ? "Minutes" : "Minutes"}
             width={100}
+            C={C}
           />
         </View>
       </PickerModal>
@@ -483,9 +491,11 @@ type PickerModalProps = {
   onCancel: () => void;
   onConfirm: () => void;
   children: React.ReactNode;
+  C: ColorPalette;
 };
 
-function PickerModal({ visible, title, confirmLabel, cancelLabel, onCancel, onConfirm, children }: PickerModalProps) {
+function PickerModal({ visible, title, confirmLabel, cancelLabel, onCancel, onConfirm, children, C }: PickerModalProps) {
+  const modalStyles = useMemo(() => makeModalStyles(C), [C]);
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
       <Pressable style={modalStyles.backdrop} onPress={onCancel}>
@@ -507,7 +517,7 @@ function PickerModal({ visible, title, confirmLabel, cancelLabel, onCancel, onCo
               accessibilityLabel={confirmLabel}
               style={[modalStyles.btn, modalStyles.btnPrimary]}
             >
-              <Text style={[modalStyles.btnText, { color: "#fff" }]}>{confirmLabel}</Text>
+              <Text style={[modalStyles.btnText, { color: C.white }]}>{confirmLabel}</Text>
             </TouchableOpacity>
           </View>
         </Pressable>
@@ -516,43 +526,44 @@ function PickerModal({ visible, title, confirmLabel, cancelLabel, onCancel, onCo
   );
 }
 
-const modalStyles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.55)",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-  },
-  sheet: {
-    width: "100%",
-    maxWidth: 380,
-    backgroundColor: C.bg,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: C.text,
-    textAlign: "center",
-  },
-  actions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 8,
-    marginTop: 8,
-  },
-  btn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-    minWidth: 90,
-    alignItems: "center",
-  },
-  btnGhost: { backgroundColor: "transparent" },
-  btnPrimary: { backgroundColor: "#7c6af7" },
-  btnText: { fontSize: 14, fontWeight: "700" },
-});
+const makeModalStyles = (C: ColorPalette) =>
+  StyleSheet.create({
+    backdrop: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.55)",
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 20,
+    },
+    sheet: {
+      width: "100%",
+      maxWidth: 380,
+      backgroundColor: C.card,
+      borderRadius: 16,
+      padding: 16,
+      borderWidth: 1,
+      borderColor: C.border,
+    },
+    title: {
+      fontSize: 16,
+      fontWeight: "700",
+      color: C.text,
+      textAlign: "center",
+    },
+    actions: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: 8,
+      marginTop: 8,
+    },
+    btn: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 10,
+      minWidth: 90,
+      alignItems: "center",
+    },
+    btnGhost: { backgroundColor: "transparent" },
+    btnPrimary: { backgroundColor: C.lavender },
+    btnText: { fontSize: 14, fontWeight: "700" },
+  });

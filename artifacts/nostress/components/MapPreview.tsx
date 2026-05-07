@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { C } from "@/constants/colors";
+import type { ColorPalette } from "@/constants/colors";
+import { useColors } from "@/context/AppContext";
 
 type Props = {
   latitude: number;
@@ -32,11 +33,13 @@ export default function MapPreview({
   borderRadius = 12,
   showOpenLink = true,
 }: Props) {
+  const C = useColors();
+  const styles = useMemo(() => makeStyles(C), [C]);
+
   if (latitude == null || longitude == null || isNaN(latitude) || isNaN(longitude)) {
     return null;
   }
 
-  // delta inversely proportional to zoom: zoom 16 ~ delta 0.005
   const delta = 0.005 * Math.pow(2, 16 - zoom);
   const embedUrl = osmEmbedUrl(latitude, longitude, delta);
   const fullUrl = osmFullUrl(latitude, longitude, zoom);
@@ -59,7 +62,6 @@ export default function MapPreview({
       />
     );
   } else {
-    // Lazy import WebView so web bundle never tries to resolve it.
     let WebView: any = null;
     try {
       WebView = require("react-native-webview").WebView;
@@ -104,32 +106,33 @@ export default function MapPreview({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: C.border,
-    backgroundColor: C.card,
-  },
-  mapWrap: {
-    overflow: "hidden",
-    width: "100%",
-  },
-  openLink: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    alignSelf: "flex-end",
-  },
-  openLinkText: { fontSize: 12, color: C.lavender, fontWeight: "600" },
-  fallback: {
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    backgroundColor: C.card,
-  },
-  fallbackText: { fontSize: 12, color: C.textMuted },
-});
+const makeStyles = (C: ColorPalette) =>
+  StyleSheet.create({
+    container: {
+      overflow: "hidden",
+      borderWidth: 1,
+      borderColor: C.border,
+      backgroundColor: C.card,
+    },
+    mapWrap: {
+      overflow: "hidden",
+      width: "100%",
+    },
+    openLink: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      alignSelf: "flex-end",
+    },
+    openLinkText: { fontSize: 12, color: C.lavender, fontWeight: "600" },
+    fallback: {
+      width: "100%",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 6,
+      backgroundColor: C.card,
+    },
+    fallbackText: { fontSize: 12, color: C.textMuted },
+  });

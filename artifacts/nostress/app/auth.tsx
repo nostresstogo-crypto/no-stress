@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   KeyboardAvoidingView,
   Modal,
@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { safeReplace, dismissAndReplace } from "@/lib/navigation";
 
-import { C } from "@/constants/colors";
+import type { ColorPalette } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_CITIES, COUNTRIES } from "@/constants/data";
 import { API_BASE } from "@/lib/apiBase";
@@ -40,6 +40,8 @@ export default function AuthScreen() {
   const { setUser, setSession, lang, addNotification } = useApp();
   const insets = useSafeAreaInsets();
   const C = useColors();
+  const styles = useMemo(() => makeStyles(C), [C]);
+  const modal = useMemo(() => makeModalStyles(C), [C]);
 
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
@@ -856,7 +858,7 @@ export default function AuthScreen() {
   );
 }
 
-const modal = StyleSheet.create({
+const makeModalStyles = (C: ColorPalette) => StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: C.bg,
@@ -912,7 +914,7 @@ const modal = StyleSheet.create({
   },
 });
 
-const styles = StyleSheet.create({
+const makeStyles = (C: ColorPalette) => StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: C.bg,

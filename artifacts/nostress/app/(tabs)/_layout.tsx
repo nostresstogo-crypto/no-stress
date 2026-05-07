@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 import { SymbolView } from "expo-symbols";
-import { C } from "@/constants/colors";
+import type { ColorPalette } from "@/constants/colors";
 import { useApp, useT, useColors } from "@/context/AppContext";
 
 /* ── Tab icon with active glow indicator ──────────────────────────────── */
@@ -89,77 +89,73 @@ const tabIcon = StyleSheet.create({
 function MapTabButton({
   onPress,
   accessibilityState,
-  children,
+  C,
 }: {
   onPress?: () => void;
   accessibilityState?: { selected?: boolean };
   children?: React.ReactNode;
+  C: ColorPalette;
 }) {
   const isSelected = accessibilityState?.selected;
+  const styles = makeCenterBtnStyles(C);
 
   return (
     <TouchableOpacity
-      style={centerBtn.wrap}
+      style={styles.wrap}
       onPress={onPress}
       activeOpacity={0.85}
       accessibilityRole="button"
     >
-      <View style={[centerBtn.circle, isSelected && centerBtn.circleActive]}>
-        <Ionicons
-          name="map"
-          size={26}
-          color={isSelected ? C.bg : C.bg}
-        />
+      <View style={[styles.circle, isSelected && styles.circleActive]}>
+        <Ionicons name="map" size={26} color={C.isDark ? C.bg : C.text} />
       </View>
-      <Text style={[centerBtn.label, isSelected && centerBtn.labelActive]}>
+      <Text style={[styles.label, isSelected && styles.labelActive]}>
         Carte
       </Text>
     </TouchableOpacity>
   );
 }
 
-const centerBtn = StyleSheet.create({
-  wrap: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "flex-end",
-    paddingBottom: Platform.OS === "ios" ? 6 : 8,
-  },
-  circle: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    backgroundColor: C.gold,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-    marginTop: -34,
-    /* iOS shadow */
-    shadowColor: C.gold,
-    shadowOpacity: 0.75,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: -4 },
-    /* Android elevation */
-    elevation: 14,
-    /* subtle ring */
-    borderWidth: 3,
-    borderColor: C.bg,
-  },
-  circleActive: {
-    backgroundColor: C.goldDim,
-    shadowOpacity: 0.9,
-    elevation: 14,
-  },
-  label: {
-    fontSize: 10,
-    fontFamily: "Inter_500Medium",
-    color: C.textMuted,
-  },
-  labelActive: {
-    color: C.gold,
-    fontFamily: "Inter_600SemiBold",
-  },
-});
+const makeCenterBtnStyles = (C: ColorPalette) =>
+  StyleSheet.create({
+    wrap: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "flex-end",
+      paddingBottom: Platform.OS === "ios" ? 6 : 8,
+    },
+    circle: {
+      width: 62,
+      height: 62,
+      borderRadius: 31,
+      backgroundColor: C.gold,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 4,
+      marginTop: -34,
+      shadowColor: C.gold,
+      shadowOpacity: C.isDark ? 0.75 : 0.45,
+      shadowRadius: 16,
+      shadowOffset: { width: 0, height: -4 },
+      elevation: 14,
+      borderWidth: 3,
+      borderColor: C.bg,
+    },
+    circleActive: {
+      backgroundColor: C.goldDim,
+      shadowOpacity: C.isDark ? 0.9 : 0.55,
+      elevation: 14,
+    },
+    label: {
+      fontSize: 10,
+      fontFamily: "Inter_500Medium",
+      color: C.textMuted,
+    },
+    labelActive: {
+      color: C.gold,
+      fontFamily: "Inter_600SemiBold",
+    },
+  });
 
 /* ── Tab layout ─────────────────────────────────────────────────────────── */
 function ClassicTabLayout() {
@@ -240,7 +236,7 @@ function ClassicTabLayout() {
         name="map"
         options={{
           title: "Carte",
-          tabBarButton: (props) => <MapTabButton {...(props as any)} />,
+          tabBarButton: (props) => <MapTabButton {...(props as any)} C={C} />,
         }}
       />
 

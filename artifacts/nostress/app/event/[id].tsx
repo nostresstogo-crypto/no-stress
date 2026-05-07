@@ -19,7 +19,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { safePush } from "@/lib/navigation";
 
-import { C as DARK_C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_EVENTS } from "@/constants/data";
 import { formatDateLocalized } from "@/lib/formatDate";
@@ -241,7 +240,7 @@ export default function EventDetailScreen() {
                 style={[
                   s.dot,
                   i === activeIdx
-                    ? { backgroundColor: DARK_C.gold, width: 18 }
+                    ? { backgroundColor: C.gold, width: 18 }
                     : { backgroundColor: "rgba(255,255,255,0.45)", width: 6 },
                 ]}
               />
@@ -341,7 +340,7 @@ export default function EventDetailScreen() {
                   style={[
                     s.thumb,
                     i === activeIdx && {
-                      borderColor: DARK_C.gold,
+                      borderColor: C.gold,
                       borderWidth: 2,
                     },
                   ]}
@@ -582,7 +581,7 @@ export default function EventDetailScreen() {
                 style={[
                   s.lbDot,
                   i === lightboxIdx
-                    ? { backgroundColor: DARK_C.gold, width: 20 }
+                    ? { backgroundColor: C.gold, width: 20 }
                     : { backgroundColor: "rgba(255,255,255,0.4)", width: 7 },
                 ]}
               />
@@ -741,7 +740,7 @@ const s = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: DARK_C.gold,
+    backgroundColor: "#E5C46B",
   },
   thumbOverlay: {
     ...StyleSheet.absoluteFillObject,

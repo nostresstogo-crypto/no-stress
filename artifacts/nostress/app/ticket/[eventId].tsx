@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -13,14 +13,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 
-import { C } from "@/constants/colors";
-import { useT, useApp } from "@/context/AppContext";
+import type { ColorPalette } from "@/constants/colors";
+import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_EVENTS } from "@/constants/data";
 
 type PaymentMethod = "flooz" | "tmoney" | "mix_yas";
 
 export default function TicketScreen() {
   const t = useT();
+  const C = useColors();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const { eventId } = useLocalSearchParams<{ eventId: string }>();
   const { lang, addNotification } = useApp();
   const insets = useSafeAreaInsets();
@@ -232,7 +234,7 @@ export default function TicketScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (C: ColorPalette) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   header: {
     flexDirection: "row",

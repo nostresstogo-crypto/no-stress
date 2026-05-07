@@ -1,7 +1,7 @@
-import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import React, { useMemo } from "react";
+import { StyleSheet, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { C } from "@/constants/colors";
+import type { ColorPalette } from "@/constants/colors";
 import { useT, useColors } from "@/context/AppContext";
 import { CategoryKey, CATEGORIES } from "@/constants/data";
 
@@ -15,10 +15,13 @@ interface CategoryPillProps {
 export function CategoryPill({ categoryKey, selected, onPress, label }: CategoryPillProps) {
   const t = useT();
   const C = useColors();
+  const styles = useMemo(() => makeStyles(C), [C]);
   const cat = CATEGORIES.find((c) => c.key === categoryKey);
   const color = cat?.color || C.lavender;
   const icon = cat?.icon || "apps";
   const text = label ?? (categoryKey ? t(categoryKey as CategoryKey) : t("allEvents"));
+  // Category colors are bright pastels — dark ink reads well on all of them in both themes.
+  const onSelectedFg = "#1A1830";
 
   return (
     <TouchableOpacity
@@ -29,28 +32,29 @@ export function CategoryPill({ categoryKey, selected, onPress, label }: Category
       <Ionicons
         name={icon as any}
         size={14}
-        color={selected ? C.bg : color}
+        color={selected ? onSelectedFg : color}
       />
-      <Text style={[styles.text, selected && { color: C.bg }]}>{text}</Text>
+      <Text style={[styles.text, selected && { color: onSelectedFg }]}>{text}</Text>
     </TouchableOpacity>
   );
 }
 
-const styles = StyleSheet.create({
-  pill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: C.border,
-    backgroundColor: C.card,
-  },
-  text: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    color: C.text,
-  },
-});
+const makeStyles = (C: ColorPalette) =>
+  StyleSheet.create({
+    pill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: C.border,
+      backgroundColor: C.card,
+    },
+    text: {
+      fontSize: 13,
+      fontFamily: "Inter_500Medium",
+      color: C.text,
+    },
+  });
