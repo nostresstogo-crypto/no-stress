@@ -56,15 +56,7 @@ const SLIDES: Slide[] = [
     titleKey: "onboarding2Title",
     subKey: "onboarding2Sub",
   },
-  {
-    key: "tickets",
-    icon: "ticket-outline",
-    iconColor: CYAN,
-    glowColor: CYAN,
-    accentColor: CYAN,
-    titleKey: "onboarding3Title",
-    subKey: "onboarding3Sub",
-  },
+  /* Tickets onboarding slide hidden — ticketing disabled. */
 ];
 
 export default function OnboardingScreen() {

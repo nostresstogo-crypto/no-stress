@@ -487,7 +487,7 @@ export default function CreateEventScreen() {
         </View>
 
         {/* Section 2 — Détails */}
-        <SectionHeader icon="ticket" label={t("formSectionDetails")} />
+        <SectionHeader icon="information-circle" label={t("formSectionDetails")} />
 
         <Field label={t("descriptionFr")} required error={errors.descriptionFr}>
           <TextInput

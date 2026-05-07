@@ -469,8 +469,8 @@ export default function EventDetailScreen() {
           </View>
         </View>
 
-        {/* Ticket types */}
-        {event.ticketTypes && event.ticketTypes.length > 0 && (
+        {/* Ticket types section hidden by product decision (ticketing disabled). */}
+        {false && event.ticketTypes && event.ticketTypes.length > 0 && (
           <View style={s.section}>
             <Text style={[s.sectionTitle, { color: C.text }]}>{t("ticketTypes")}</Text>
             {event.ticketTypes.map((tt) => {
@@ -500,23 +500,7 @@ export default function EventDetailScreen() {
         )}
       </ScrollView>
 
-      {/* ── Buy bar ──────────────────────────────────────── */}
-      <View
-        style={[
-          s.buyBar,
-          { paddingBottom: bottomInset + 12, backgroundColor: C.card, borderTopColor: C.border },
-        ]}
-      >
-        {/* Price summary hidden by product decision. */}
-        <View style={s.buyLeft} />
-        <TouchableOpacity
-          style={[s.buyBtn, { backgroundColor: C.lavender }]}
-          onPress={() => safePush(`/ticket/${event.id}`)}
-        >
-          <Text style={[s.buyBtnText, { color: C.bg }]}>{t("buyTicket")}</Text>
-          <Ionicons name="arrow-forward" size={16} color={C.bg} />
-        </TouchableOpacity>
-      </View>
+      {/* Ticket purchase bar hidden by product decision (ticketing disabled). */}
 
       {/* ── Fullscreen Lightbox Modal ─────────────────────── */}
       <Modal
