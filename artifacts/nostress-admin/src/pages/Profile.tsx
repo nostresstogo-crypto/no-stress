@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Shield, KeyRound, Mail, User as UserIcon, Eye, EyeOff } from "lucide-react";
 
 export default function Profile() {
-  const { admin } = useAuth();
+  const { admin, logout } = useAuth();
   const { toast } = useToast();
 
   const [currentPassword, setCurrentPassword] = useState("");
@@ -52,10 +52,16 @@ export default function Profile() {
     setSubmitting(true);
     try {
       await api.admin.changePassword(currentPassword, newPassword);
-      toast({ title: "Mot de passe modifié", description: "Votre mot de passe a été mis à jour." });
+      toast({
+        title: "Mot de passe modifié",
+        description: "Vous allez être déconnecté. Reconnectez-vous avec votre nouveau mot de passe.",
+      });
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      setTimeout(() => {
+        logout();
+      }, 1500);
     } catch (err: any) {
       toast({
         title: "Erreur",
