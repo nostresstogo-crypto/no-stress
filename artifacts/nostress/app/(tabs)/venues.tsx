@@ -16,7 +16,7 @@ import * as Location from "expo-location";
 import { safePush } from "@/lib/navigation";
 
 import { useT, useApp, useColors } from "@/context/AppContext";
-import { VENUE_TYPES } from "@/constants/data";
+import { VENUE_TYPES, COUNTRIES, MOCK_CITIES } from "@/constants/data";
 import { VenueCard } from "@/components/VenueCard";
 import { API_BASE } from "@/lib/apiBase";
 
@@ -93,28 +93,51 @@ export default function VenuesScreen() {
       <View style={[styles.header, { paddingTop: topInset + 12 }]}>
         <Text style={styles.headerTitle}>{t("venues")}</Text>
 
-        <View style={styles.row}>
-          <View style={styles.inputWrap}>
-            <Ionicons name="location-outline" size={16} color={C.textMuted} />
-            <TextInput
-              style={styles.input}
-              placeholder={t("city" as any) || "Ville"}
-              placeholderTextColor={C.textMuted}
-              value={city}
-              onChangeText={setCity}
-            />
-          </View>
-          <View style={styles.inputWrap}>
-            <Ionicons name="flag-outline" size={16} color={C.textMuted} />
-            <TextInput
-              style={styles.input}
-              placeholder={t("country" as any) || "Pays"}
-              placeholderTextColor={C.textMuted}
-              value={country}
-              onChangeText={setCountry}
-            />
-          </View>
-        </View>
+        <Text style={styles.filterLabel}>Pays</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 4 }}>
+          <TouchableOpacity
+            onPress={() => { setCountry(""); setCity(""); }}
+            style={[styles.chip, country === "" && styles.chipActive]}
+          >
+            <Text style={[styles.chipText, country === "" && styles.chipTextActive]}>Tous</Text>
+          </TouchableOpacity>
+          {COUNTRIES.map((co) => (
+            <TouchableOpacity
+              key={co.code}
+              onPress={() => {
+                const next = country === co.name ? "" : co.name;
+                setCountry(next);
+                setCity("");
+              }}
+              style={[styles.chip, country === co.name && styles.chipActive]}
+            >
+              <Text style={[styles.chipText, country === co.name && styles.chipTextActive]}>
+                {co.emoji} {co.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        <Text style={styles.filterLabel}>Ville</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 4 }}>
+          <TouchableOpacity
+            onPress={() => setCity("")}
+            style={[styles.chip, city === "" && styles.chipActive]}
+          >
+            <Text style={[styles.chipText, city === "" && styles.chipTextActive]}>Toutes</Text>
+          </TouchableOpacity>
+          {MOCK_CITIES.filter((ci) => !country || ci.country === country).map((ci) => (
+            <TouchableOpacity
+              key={ci.id}
+              onPress={() => setCity(city === ci.name ? "" : ci.name)}
+              style={[styles.chip, city === ci.name && styles.chipActive]}
+            >
+              <Text style={[styles.chipText, city === ci.name && styles.chipTextActive]}>
+                {ci.emoji} {ci.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
           <TouchableOpacity
@@ -196,6 +219,7 @@ const makeStyles = (C: any) => StyleSheet.create({
     gap: 10,
   },
   headerTitle: { fontSize: 28, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 4 },
+  filterLabel: { fontSize: 11, color: C.textMuted, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5, marginTop: 6 },
   row: { flexDirection: "row", gap: 8 },
   inputWrap: {
     flex: 1, flexDirection: "row", alignItems: "center", gap: 6,

@@ -58,6 +58,14 @@ export default function EventDetailScreen() {
     return () => { cancelled = true; };
   }, [id]);
 
+  const scrollCarouselTo = useCallback(
+    (idx: number) => {
+      setActiveIdx(idx);
+      carouselRef.current?.scrollToIndex({ index: idx, animated: true });
+    },
+    []
+  );
+
   const lookupVenueName: string | undefined = apiEvent?.venue || undefined;
   const lookupVenueCity: string | undefined = apiEvent?.city || undefined;
   useEffect(() => {
@@ -173,17 +181,9 @@ export default function EventDetailScreen() {
   };
 
   const price =
-    event.price === 0
+    !event || event.price === 0
       ? t("free")
       : `${event.price.toLocaleString()} ${event.currency || "FCFA"}`;
-
-  const scrollCarouselTo = useCallback(
-    (idx: number) => {
-      setActiveIdx(idx);
-      carouselRef.current?.scrollToIndex({ index: idx, animated: true });
-    },
-    []
-  );
 
   const openLightbox = (idx: number) => {
     setLightboxIdx(idx);

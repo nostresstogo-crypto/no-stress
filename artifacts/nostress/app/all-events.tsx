@@ -16,7 +16,7 @@ import { router } from "expo-router";
 import * as Location from "expo-location";
 import { safePush } from "@/lib/navigation";
 import { useApp, useColors, useT } from "@/context/AppContext";
-import { CATEGORIES } from "@/constants/data";
+import { CATEGORIES, COUNTRIES, MOCK_CITIES } from "@/constants/data";
 import { EventCard } from "@/components/EventCard";
 import { API_BASE } from "@/lib/apiBase";
 
@@ -108,22 +108,55 @@ export default function AllEventsScreen() {
       </View>
 
       <View style={styles.filterCard}>
-        <View style={styles.row}>
-          <TextInput
-            value={city}
-            onChangeText={setCity}
-            placeholder={isFr ? "Ville" : "City"}
-            placeholderTextColor={C.textMuted}
-            style={[styles.input, { flex: 1 }]}
-          />
-          <TextInput
-            value={country}
-            onChangeText={setCountry}
-            placeholder={isFr ? "Pays" : "Country"}
-            placeholderTextColor={C.textMuted}
-            style={[styles.input, { flex: 1 }]}
-          />
-        </View>
+        <Text style={styles.filterLabel}>{isFr ? "Pays" : "Country"}</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 6 }}>
+          <TouchableOpacity
+            onPress={() => { setCountry(""); setCity(""); }}
+            style={[styles.chip, country === "" && styles.chipActive]}
+          >
+            <Text style={[styles.chipText, country === "" && styles.chipTextActive]}>
+              {isFr ? "Tous" : "All"}
+            </Text>
+          </TouchableOpacity>
+          {COUNTRIES.map((co) => (
+            <TouchableOpacity
+              key={co.code}
+              onPress={() => {
+                const next = country === co.name ? "" : co.name;
+                setCountry(next);
+                setCity("");
+              }}
+              style={[styles.chip, country === co.name && styles.chipActive]}
+            >
+              <Text style={[styles.chipText, country === co.name && styles.chipTextActive]}>
+                {co.emoji} {co.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        <Text style={styles.filterLabel}>{isFr ? "Ville" : "City"}</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 6 }}>
+          <TouchableOpacity
+            onPress={() => setCity("")}
+            style={[styles.chip, city === "" && styles.chipActive]}
+          >
+            <Text style={[styles.chipText, city === "" && styles.chipTextActive]}>
+              {isFr ? "Toutes" : "All"}
+            </Text>
+          </TouchableOpacity>
+          {MOCK_CITIES.filter((ci) => !country || ci.country === country).map((ci) => (
+            <TouchableOpacity
+              key={ci.id}
+              onPress={() => setCity(city === ci.name ? "" : ci.name)}
+              style={[styles.chip, city === ci.name && styles.chipActive]}
+            >
+              <Text style={[styles.chipText, city === ci.name && styles.chipTextActive]}>
+                {ci.emoji} {ci.name}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 8 }}>
           <TouchableOpacity
@@ -209,7 +242,8 @@ const makeStyles = (C: any) => StyleSheet.create({
   },
   iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 16, fontFamily: "Inter_700Bold", color: C.text, flex: 1, textAlign: "center" },
-  filterCard: { padding: 12, gap: 10, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.card },
+  filterCard: { padding: 12, gap: 6, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.card },
+  filterLabel: { fontSize: 11, color: C.textMuted, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5, marginTop: 4 },
   row: { flexDirection: "row", gap: 8 },
   input: {
     backgroundColor: C.bg, color: C.text, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,

@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
-import { eq, and, ilike, gte, lt } from "drizzle-orm";
-import { db, eventsTable, venuesTable } from "@workspace/db";
+import { eq, and, ilike, gte, lt, desc } from "drizzle-orm";
+import { db, eventsTable, venuesTable, partnersTable } from "@workspace/db";
+import { sendNewEventAdminNotification } from "../email.js";
 import { requireAuth } from "../lib/auth-utils.js";
 import { requireAdmin } from "./admin.js";
 import { notifyEventApproved } from "../lib/pushNotifications.js";
@@ -76,8 +77,8 @@ router.get("/events", async (req, res) => {
     conds.push(gte(eventsTable.date, cutoff));
   }
   let rows = conds.length
-    ? await db.select().from(eventsTable).where(and(...conds))
-    : await db.select().from(eventsTable);
+    ? await db.select().from(eventsTable).where(and(...conds)).orderBy(desc(eventsTable.createdAt))
+    : await db.select().from(eventsTable).orderBy(desc(eventsTable.createdAt));
 
   // Country & distance via venue lookup (events store city only)
   const wantCountry = country ? String(country).toLowerCase() : "";
@@ -184,10 +185,15 @@ router.post("/partners/me/events", requireAuth, async (req: any, res) => {
       latitude: latitude != null ? Number(latitude) : (venue.latitude ?? null),
       longitude: longitude != null ? Number(longitude) : (venue.longitude ?? null),
       ticketTypes: ticketTypes ?? null,
-      status: "pending",
+      status: "approved",
     })
     .returning();
   res.status(201).json(serialize(event));
+
+  // Notify admin about the auto-approved event (best-effort, after response)
+  db.select().from(partnersTable).where(eq(partnersTable.id, partnerId)).then(([p]) => {
+    if (p) sendNewEventAdminNotification(event, venue, p).catch(() => {});
+  }).catch(() => {});
 });
 
 router.patch("/partners/me/events/:id", requireAuth, async (req: any, res) => {
@@ -237,8 +243,8 @@ router.patch("/partners/me/events/:id", requireAuth, async (req: any, res) => {
     allowed.images = imgs;
     allowed.imageUrl = imgs[0];
   }
-  // Re-edited event goes back to moderation.
-  allowed.status = "pending";
+  // Auto-approbation : les événements édités restent visibles immédiatement.
+  allowed.status = "approved";
   const [event] = await db.update(eventsTable).set(allowed).where(eq(eventsTable.id, id)).returning();
   res.json(serialize(event));
 });

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, ilike, gte } from "drizzle-orm";
+import { eq, and, ilike, gte, desc } from "drizzle-orm";
 import { db, venuesTable, venueSpecialtiesTable, eventsTable, partnersTable } from "@workspace/db";
 import { requireAuth } from "../lib/auth-utils.js";
 import { requireAdmin } from "./admin.js";
@@ -85,7 +85,7 @@ router.get("/venues", async (req, res) => {
   if (city) conds.push(ilike(venuesTable.city, `%${String(city)}%`));
   if (country) conds.push(ilike(venuesTable.country as any, `%${String(country)}%`));
   if (type) conds.push(eq(venuesTable.type, String(type)));
-  let rows = await db.select().from(venuesTable).where(and(...conds));
+  let rows = await db.select().from(venuesTable).where(and(...conds)).orderBy(desc(venuesTable.createdAt));
 
   const latNum = parseFloat(String(lat));
   const lngNum = parseFloat(String(lng));

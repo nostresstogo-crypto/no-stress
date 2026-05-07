@@ -248,6 +248,47 @@ export async function sendNewVenueAdminNotification(
   });
 }
 
+export async function sendNewEventAdminNotification(
+  event: { id: number; title: string; date: string | Date; time?: string | null; city?: string | null; category?: string | null; description?: string | null },
+  venue: { id: number; name: string; city?: string | null; country?: string | null },
+  partner: { id: number; businessName: string; contactName: string; email: string },
+) {
+  const adminLink = `${ADMIN_BASE_URL}/publications?id=${event.id}`;
+  const dateStr = typeof event.date === "string" ? event.date : new Date(event.date).toISOString().slice(0, 10);
+  await sendMail({
+    to: ADMIN_EMAIL,
+    subject: `🎉 Nouvel événement publié : ${event.title}`,
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml("Nouvel événement publié")}
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 0 0 16px;">
+          Un partenaire vient de publier un nouvel événement. Il est <strong style="color:#e8e8f0;">déjà visible</strong> dans l'application. Vous pouvez le rejeter depuis l'admin si nécessaire.
+        </p>
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px; width: 40%;">Événement</td><td style="padding: 6px 0; color: #e8e8f0; font-weight: 600;">${event.title}</td></tr>
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Date</td><td style="padding: 6px 0; color: #e8e8f0;">${dateStr}${event.time ? ` à ${event.time}` : ""}</td></tr>
+            ${event.category ? `<tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Catégorie</td><td style="padding: 6px 0; color: #e8e8f0;">${event.category}</td></tr>` : ""}
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Lieu</td><td style="padding: 6px 0; color: #e8e8f0;">${venue.name}</td></tr>
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Ville</td><td style="padding: 6px 0; color: #e8e8f0;">${event.city || venue.city || "—"}${venue.country ? `, ${venue.country}` : ""}</td></tr>
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Partenaire</td><td style="padding: 6px 0; color: #e8e8f0;">${partner.businessName}</td></tr>
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Contact</td><td style="padding: 6px 0;"><a href="mailto:${partner.email}" style="color: #7c6af7;">${partner.contactName} (${partner.email})</a></td></tr>
+          </table>
+        </div>
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${adminLink}" style="display: inline-block; background: #7c6af7; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 600; font-size: 14px;">
+            Voir / Modérer cet événement
+          </a>
+        </div>
+        <p style="color: #6b6d8a; line-height: 1.5; margin: 16px 0 0; font-size: 12px; text-align: center;">
+          Lien direct : <a href="${adminLink}" style="color: #7c6af7; word-break: break-all;">${adminLink}</a>
+        </p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}
+
 export async function sendPartnerApprovalEmail(to: string, contactName: string, businessName: string, password: string) {
   const safeEmail = escapeHtml(to);
   const safePassword = escapeHtml(password);
