@@ -85,7 +85,11 @@ function makeStyles(C: ColorPalette) {
       width: 60, height: 60, borderRadius: 30,
       backgroundColor: C.lavender,
       alignItems: "center", justifyContent: "center",
+      overflow: "hidden",
+      borderWidth: 2,
+      borderColor: C.card2,
     },
+    avatarImage: { width: 60, height: 60, borderRadius: 30 },
     avatarText: { fontSize: 24, fontFamily: "Inter_700Bold", color: C.bg },
     profileInfo: { flex: 1, gap: 2 },
     profileName: { fontSize: 18, fontFamily: "Inter_700Bold", color: C.text },
@@ -284,14 +288,20 @@ export default function AccountScreen() {
       showsVerticalScrollIndicator={false}
     >
       {/* Profile header */}
-      <TouchableOpacity style={styles.profile} onPress={() => safePush("/edit-profile")} activeOpacity={0.85}>
-        <View style={styles.avatar}>
-          {(user as any).avatarUrl ? (
-            <Image source={{ uri: (user as any).avatarUrl }} style={{ width: 60, height: 60 }} />
-          ) : (
-            <Text style={styles.avatarText}>{user.name.charAt(0).toUpperCase()}</Text>
-          )}
-        </View>
+      {(() => {
+        const rawAvatar = user.avatarUrl || (user as any).profileImage || "";
+        const avatarUri = rawAvatar
+          ? (rawAvatar.startsWith("http") || rawAvatar.startsWith("data:") ? rawAvatar : `${API_BASE}${rawAvatar.startsWith("/") ? "" : "/"}${rawAvatar}`)
+          : "";
+        return (
+          <TouchableOpacity style={styles.profile} onPress={() => safePush("/edit-profile")} activeOpacity={0.85}>
+            <View style={styles.avatar}>
+              {avatarUri ? (
+                <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+              ) : (
+                <Text style={styles.avatarText}>{user.name.charAt(0).toUpperCase()}</Text>
+              )}
+            </View>
         <View style={styles.profileInfo}>
           <Text style={styles.profileName}>{user.name}</Text>
           <Text style={styles.profileEmail}>{user.email}</Text>
@@ -299,8 +309,10 @@ export default function AccountScreen() {
             <Text style={styles.roleText}>{user.role}</Text>
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={22} color={C.textMuted} />
-      </TouchableOpacity>
+            <Ionicons name="chevron-forward" size={22} color={C.textMuted} />
+          </TouchableOpacity>
+        );
+      })()}
       <TouchableOpacity
         style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: C.lavender }}
         onPress={() => safePush("/edit-profile")}
