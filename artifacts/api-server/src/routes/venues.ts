@@ -213,10 +213,26 @@ router.delete("/partners/me/venues/:id", requireAuth, async (req: any, res) => {
 // ── Admin moderation ──────────────────────────────────────────────────────
 router.get("/admin/venues", requireAdmin, async (req: any, res) => {
   const { status } = req.query;
+  // Left-join partner so the admin UI can show the business name (and a contact
+  // fallback) rather than a raw numeric ID. Partner may be null for legacy rows.
+  const baseQuery = db
+    .select({
+      v: venuesTable,
+      partnerBusinessName: partnersTable.businessName,
+      partnerContactName: partnersTable.contactName,
+      partnerEmail: partnersTable.email,
+    })
+    .from(venuesTable)
+    .leftJoin(partnersTable, eq(partnersTable.id, venuesTable.partnerId));
   const rows = status
-    ? await db.select().from(venuesTable).where(eq(venuesTable.status, String(status)))
-    : await db.select().from(venuesTable);
-  res.json({ venues: rows.map(serialize), total: rows.length });
+    ? await baseQuery.where(eq(venuesTable.status, String(status)))
+    : await baseQuery;
+  const venues = rows.map((r: any) => ({
+    ...serialize(r.v),
+    partnerName: r.partnerBusinessName || r.partnerContactName || null,
+    partnerEmail: r.partnerEmail || null,
+  }));
+  res.json({ venues, total: venues.length });
 });
 
 router.post("/admin/venues/:id/approve", requireAdmin, async (req: any, res) => {

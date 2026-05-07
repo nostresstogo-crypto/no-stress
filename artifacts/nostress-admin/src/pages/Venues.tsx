@@ -206,8 +206,18 @@ export default function Venues() {
                     <tr key={v.id} className="hover:bg-muted/20 transition-colors align-top">
                       <td className="px-4 py-3">
                         <div className="flex gap-3">
-                          {v.imageUrl ? (
-                            <img src={v.imageUrl} alt={v.name} className="w-14 h-14 rounded-md object-cover bg-muted flex-shrink-0" />
+                          {v.imageUrl && /^https?:\/\//i.test(v.imageUrl) && !v.imageUrl.startsWith("blob:") ? (
+                            <img
+                              src={v.imageUrl}
+                              alt={v.name}
+                              className="w-14 h-14 rounded-md object-cover bg-muted flex-shrink-0"
+                              referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                // Hide broken thumbnails (e.g. expired blob: URIs from old uploads)
+                                // and let the placeholder beside the image element show through.
+                                (e.currentTarget as HTMLImageElement).style.display = "none";
+                              }}
+                            />
                           ) : (
                             <div className="w-14 h-14 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
                               <MapPin className="w-5 h-5 text-muted-foreground" />
@@ -240,8 +250,16 @@ export default function Venues() {
                                   Site web
                                 </a>
                               )}
-                              {v.partnerId && (
-                                <span className="text-[11px] text-muted-foreground/70">Partenaire #{v.partnerId}</span>
+                              {(v.partnerName || v.partnerId) && (
+                                <span className="text-[11px] text-muted-foreground/70">
+                                  Partenaire :{" "}
+                                  <span className="text-foreground/90 font-medium">
+                                    {v.partnerName || `#${v.partnerId}`}
+                                  </span>
+                                  {v.partnerEmail && (
+                                    <span className="opacity-70"> · {v.partnerEmail}</span>
+                                  )}
+                                </span>
                               )}
                             </div>
                             {v.status === "rejected" && v.rejectionReason && (

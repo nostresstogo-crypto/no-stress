@@ -232,10 +232,17 @@ export default function DashboardScreen() {
       const uploaded: string[] = [];
       for (const uri of venueImages.slice(0, MAX_VENUE_IMAGES)) {
         if (!uri) continue;
-        if (uri.startsWith("file:") || uri.startsWith("content:") || uri.startsWith("ph:") || uri.startsWith("/")) {
-          try { uploaded.push(await uploadVenueImage(uri, API_BASE)); } catch (e: any) { console.warn("venue upload failed", e?.message); }
-        } else {
+        // Detect already-uploaded URLs vs local picker results that need upload.
+        // Anything http(s):// pointing to our API is already persisted; everything
+        // else (file:, content:, ph:, blob:, data:, plain "/path") MUST be uploaded
+        // — blob: URIs in particular only live in the current web session and become
+        // dead links the moment the page is reloaded.
+        const isPersisted = /^https?:\/\//i.test(uri) && !uri.startsWith("blob:");
+        if (isPersisted) {
           uploaded.push(uri);
+        } else {
+          try { uploaded.push(await uploadVenueImage(uri, API_BASE)); }
+          catch (e: any) { console.warn("venue upload failed", e?.message); }
         }
       }
       const isEdit = !!editingVenueId;

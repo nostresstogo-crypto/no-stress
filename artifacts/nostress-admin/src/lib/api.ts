@@ -195,6 +195,8 @@ export interface PartnerEvent {
 export interface Venue {
   id: string;
   partnerId: string | null;
+  partnerName: string | null;
+  partnerEmail: string | null;
   name: string;
   type: string | null;
   city: string | null;
