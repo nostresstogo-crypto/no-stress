@@ -298,6 +298,49 @@ export async function sendPartnerApprovalEmail(to: string, contactName: string, 
   });
 }
 
+export async function sendPasswordResetEmail(
+  to: string,
+  name: string,
+  password: string,
+  isPartner: boolean,
+) {
+  const safeEmail = escapeHtml(to);
+  const safePassword = escapeHtml(password);
+  const safeName = escapeHtml(name || (isPartner ? "Partenaire" : "Utilisateur"));
+  const audience = isPartner ? "partenaire" : "utilisateur";
+  await sendMailOrThrow({
+    to,
+    subject: "🔑 Nouveau mot de passe – NoStress",
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml(`Bonjour ${safeName},`)}
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 0 0 16px;">
+          Vous avez demandé la réinitialisation de votre mot de passe ${audience} sur NoStress.
+          Voici votre nouveau mot de passe temporaire.
+        </p>
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #7c6af7;">
+          <p style="margin: 0 0 12px; font-size: 13px; color: #6b6d8a; text-transform: uppercase; letter-spacing: 0.5px;">Vos identifiants</p>
+          <p style="margin: 0 0 8px; font-size: 14px; color: #b0b2cc;">
+            <strong style="color: #e8e8f0;">Email :</strong> ${safeEmail}
+          </p>
+          <p style="margin: 0 0 12px; font-size: 14px; color: #b0b2cc;">
+            <strong style="color: #e8e8f0;">Nouveau mot de passe :</strong>
+            <span style="display: inline-block; font-family: 'Courier New', monospace; font-size: 18px; background: #0f1020; color: #f0c040; padding: 6px 14px; border-radius: 6px; letter-spacing: 2px; margin-left: 6px;">${safePassword}</span>
+          </p>
+          <p style="margin: 0; font-size: 12px; color: #8a8caa; line-height: 1.5;">
+            🔒 Connectez-vous avec ce mot de passe puis modifiez-le dès que possible depuis votre profil.
+          </p>
+        </div>
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 16px 0 0;">
+          Si vous n'êtes pas à l'origine de cette demande, contactez-nous immédiatement.<br><br>
+          <strong style="color: #e8e8f0;">L'équipe NoStress</strong>
+        </p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}
+
 export async function sendPublicationWarningEmail(to: string, partnerName: string, publicationTitle: string, reason: string) {
   const safeName = escapeHtml(partnerName);
   const safeTitle = escapeHtml(publicationTitle);

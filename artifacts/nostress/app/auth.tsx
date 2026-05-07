@@ -503,6 +503,16 @@ export default function AuthScreen() {
                   </Text>
                 )}
               </View>
+              {mode === "login" && (
+                <TouchableOpacity
+                  onPress={() => router.push("/forgot-password")}
+                  style={{ alignSelf: "flex-end", marginTop: 8 }}
+                >
+                  <Text style={{ color: C.lavender, fontSize: 13, fontFamily: "Inter_600SemiBold" }}>
+                    {lang === "fr" ? "Mot de passe oublié ?" : "Forgot password?"}
+                  </Text>
+                </TouchableOpacity>
+              )}
               {mode === "register" && (
                 <View style={styles.field}>
                   <Text style={styles.fieldLabel}>{lang === "fr" ? "Confirmer le mot de passe *" : "Confirm password *"}</Text>

@@ -9,14 +9,9 @@ import {
   issueRefreshToken,
   requireAuth,
   generateVerificationCode,
+  generateRandomPassword,
   verificationCodeExpiry,
 } from "../lib/auth-utils.js";
-
-function generateRandomPassword(): string {
-  // 12 characters, easy-to-read base64url (no ambiguous chars), strong entropy
-  const buf = crypto.randomBytes(9);
-  return buf.toString("base64").replace(/[+/=]/g, "").slice(0, 12);
-}
 
 const partnerRegisterLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, key: "partner-register" });
 import {
@@ -27,7 +22,53 @@ import {
   sendPublicationWarningEmail,
   sendAccountDeletedEmail,
   sendVerificationCodeEmail,
+  sendPasswordResetEmail,
 } from "../email.js";
+
+const partnerForgotLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, key: "partner-forgot" });
+
+// Forgot-password: regenerates a 6-char password, hashes & saves it, revokes
+// existing refresh tokens, and emails the new password. Always returns 200 with
+// a generic message — never reveals whether the email exists (no enumeration).
+async function handlePartnerForgotPassword(req: any, res: any) {
+  const email = normEmail(req.body?.email);
+  const generic = {
+    message:
+      "Si un compte partenaire correspond à cet email, un nouveau mot de passe vient d'être envoyé.",
+  };
+  if (!email) return res.status(200).json(generic);
+  const [partner] = await db
+    .select()
+    .from(partnersTable)
+    .where(eq(partnersTable.email, email));
+  if (!partner) return res.status(200).json(generic);
+  const newPassword = generateRandomPassword();
+  const passwordHash = await hashPassword(newPassword);
+  await db
+    .update(partnersTable)
+    .set({ passwordHash, updatedAt: new Date() })
+    .where(eq(partnersTable.id, partner.id));
+  // Revoke active sessions so the old password (and any stolen tokens) become
+  // useless immediately.
+  try {
+    await db
+      .update(refreshTokensTable)
+      .set({ revokedAt: new Date() })
+      .where(
+        and(
+          eq(refreshTokensTable.subject, String(partner.id)),
+          isNull(refreshTokensTable.revokedAt),
+        ),
+      );
+  } catch {}
+  try {
+    await sendPasswordResetEmail(partner.email, partner.contactName, newPassword, true);
+  } catch (err) {
+    console.error("[partners][forgot-password] email send failed:", err);
+    // Still return generic — operator can resend manually if needed.
+  }
+  return res.status(200).json(generic);
+}
 import { requireAdmin } from "./admin.js";
 
 const router: IRouter = Router();
@@ -211,6 +252,8 @@ router.post("/partners/verify-email", partnerVerifyLimiter, async (req, res) => 
   // Notify partner + admin only after email verification (avoids spam from fake registrations)
   sendPartnerRegistrationEmailToPartner(updated.email, updated.contactName, updated.businessName).catch(() => {});
 });
+
+router.post("/partners/forgot-password", partnerForgotLimiter, handlePartnerForgotPassword);
 
 router.post("/partners/resend-verification", partnerResendLimiter, async (req, res) => {
   const email = normEmail(req.body?.email);

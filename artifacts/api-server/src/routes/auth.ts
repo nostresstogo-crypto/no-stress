@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, partnersTable, usersTable, adminsTable } from "@workspace/db";
-import { sendWelcomeEmail, sendAccountDeletedEmail, sendVerificationCodeEmail } from "../email.js";
+import { sendWelcomeEmail, sendAccountDeletedEmail, sendVerificationCodeEmail, sendPasswordResetEmail } from "../email.js";
 import { requireAdmin } from "./admin.js";
 import {
   hashPassword,
@@ -10,11 +10,14 @@ import {
   rateLimit,
   requireAuth,
   generateVerificationCode,
+  generateRandomPassword,
   verificationCodeExpiry,
   issueRefreshToken,
   rotateRefreshToken,
   revokeRefreshToken,
 } from "../lib/auth-utils.js";
+import { and, isNull } from "drizzle-orm";
+import { refreshTokensTable } from "@workspace/db";
 
 const router: IRouter = Router();
 
@@ -54,6 +57,45 @@ const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: "login"
 const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, key: "register" });
 const verifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: "verify" });
 const resendLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, key: "resend" });
+const forgotLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, key: "forgot" });
+
+// Forgot-password (user accounts). Always returns 200 with a generic message
+// to prevent email-enumeration. When an account matches, generates a 6-char
+// password, hashes & saves it, revokes refresh tokens, and emails the new pwd.
+router.post("/auth/forgot-password", forgotLimiter, async (req, res) => {
+  const email = normEmail(req.body?.email);
+  const generic = {
+    message:
+      "Si un compte utilisateur correspond à cet email, un nouveau mot de passe vient d'être envoyé.",
+  };
+  if (!email) return res.status(200).json(generic);
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+  if (!user) return res.status(200).json(generic);
+  const newPassword = generateRandomPassword();
+  const passwordHash = await hashPassword(newPassword);
+  await db
+    .update(usersTable)
+    .set({ passwordHash, updatedAt: new Date() })
+    .where(eq(usersTable.id, user.id));
+  try {
+    await db
+      .update(refreshTokensTable)
+      .set({ revokedAt: new Date() })
+      .where(
+        and(
+          eq(refreshTokensTable.subject, String(user.id)),
+          isNull(refreshTokensTable.revokedAt),
+        ),
+      );
+  } catch {}
+  try {
+    const displayName = user.name || user.firstName || "Utilisateur";
+    await sendPasswordResetEmail(user.email, displayName, newPassword, false);
+  } catch (err) {
+    console.error("[auth][forgot-password] email send failed:", err);
+  }
+  return res.status(200).json(generic);
+});
 
 router.post("/auth/login", loginLimiter, async (req, res) => {
   const email = normEmail(req.body?.email);

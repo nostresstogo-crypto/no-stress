@@ -29,6 +29,29 @@ export function generateVerificationCode(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
 
+// Auto-generated password sent by email (partner approval, forgot-password).
+// Exactly 6 chars: 3 letters + 3 digits, shuffled. Avoids ambiguous glyphs
+// (no 0/O/o, 1/l/I) so users can retype it from the email without confusion.
+// Always contains at least one letter and one digit (matches isStrongPassword
+// requirements except the >=8 length bar — auto-passwords are intentionally short
+// to "alléger le temps de saisie" and the user is expected to change it).
+export function generateRandomPassword(): string {
+  const LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz";
+  const DIGITS = "23456789";
+  const pick = (alphabet: string) =>
+    alphabet[crypto.randomBytes(1)[0] % alphabet.length];
+  const chars = [
+    pick(LETTERS), pick(LETTERS), pick(LETTERS),
+    pick(DIGITS), pick(DIGITS), pick(DIGITS),
+  ];
+  // Fisher-Yates shuffle with crypto bytes
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = crypto.randomBytes(1)[0] % (i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join("");
+}
+
 export function verificationCodeExpiry(): Date {
   return new Date(Date.now() + 15 * 60 * 1000);
 }
