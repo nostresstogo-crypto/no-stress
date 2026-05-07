@@ -14,10 +14,7 @@ import { Lang } from "@/constants/i18n";
 import { getThemeColors, ColorPalette } from "@/constants/colors";
 import { MOCK_CITIES, MOCK_EVENTS } from "@/constants/data";
 import { registerPushPreferences } from "@/lib/pushNotifications";
-
-const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
-  : "http://localhost:8080/api";
+import { API_BASE } from "@/lib/apiBase";
 
 export interface ApiEvent {
   id: string | number;

@@ -23,10 +23,7 @@ import { C as DARK_C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_EVENTS } from "@/constants/data";
 import { formatDateLocalized } from "@/lib/formatDate";
-
-const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
-  : "/api";
+import { API_BASE } from "@/lib/apiBase";
 
 const { width: SW, height: SH } = Dimensions.get("window");
 const HERO_H = SH * 0.38;

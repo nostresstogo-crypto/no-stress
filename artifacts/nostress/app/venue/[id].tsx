@@ -19,10 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_VENUES, MOCK_EVENTS } from "@/constants/data";
-
-const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
-  : "/api";
+import { API_BASE } from "@/lib/apiBase";
 
 type Venue = {
   id: string;

@@ -18,10 +18,7 @@ import * as ImagePicker from "expo-image-picker";
 
 import { useApp, useColors, useT } from "@/context/AppContext";
 import { ColorPalette } from "@/constants/colors";
-
-const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
-  : "http://localhost:8080/api";
+import { API_BASE } from "@/lib/apiBase";
 
 async function uploadImage(uri: string): Promise<string> {
   const lower = uri.toLowerCase();

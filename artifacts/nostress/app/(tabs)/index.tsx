@@ -25,10 +25,7 @@ import { CategoryPill } from "@/components/CategoryPill";
 import { CitySelector } from "@/components/CitySelector";
 import { EventCard } from "@/components/EventCard";
 import { VenueCard } from "@/components/VenueCard";
-
-const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
-  : "/api";
+import { API_BASE } from "@/lib/apiBase";
 
 type ApiEvent = {
   id: string | number;

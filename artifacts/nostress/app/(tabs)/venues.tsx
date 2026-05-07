@@ -18,10 +18,7 @@ import { useT, useApp, useColors } from "@/context/AppContext";
 import { VENUE_TYPES, MOCK_CITIES } from "@/constants/data";
 import { VenueCard } from "@/components/VenueCard";
 import { CitySelector } from "@/components/CitySelector";
-
-const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
-  : "/api";
+import { API_BASE } from "@/lib/apiBase";
 
 export default function VenuesScreen() {
   const t = useT();

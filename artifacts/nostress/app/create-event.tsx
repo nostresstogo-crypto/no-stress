@@ -22,10 +22,7 @@ import { C } from "@/constants/colors";
 import { useT, useApp } from "@/context/AppContext";
 import { CATEGORIES, MOCK_CITIES, CategoryKey } from "@/constants/data";
 import type { MyEvent } from "@/context/AppContext";
-
-const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
-  : "/api";
+import { API_BASE } from "@/lib/apiBase";
 
 async function uploadImageToBackend(uri: string): Promise<string> {
   const lowerUri = uri.toLowerCase();

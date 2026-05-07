@@ -21,12 +21,10 @@ import { EventCard } from "@/components/EventCard";
 import { ColorPalette } from "@/constants/colors";
 import { LANG_LABELS, type Lang } from "@/constants/i18n";
 import { formatDateTimeLocalized } from "@/lib/formatDate";
+import { API_BASE, WEB_BASE } from "@/lib/apiBase";
 
 const SUPPORT_WHATSAPP = "+13197774884";
 const SUPPORT_WHATSAPP_URL = `https://wa.me/${SUPPORT_WHATSAPP.replace(/[^0-9]/g, "")}?text=${encodeURIComponent("Bonjour NoStress, j'ai besoin d'aide.")}`;
-const WEB_BASE = process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/nostress-web`
-  : "https://nostress.tg";
 const PRIVACY_URL = `${WEB_BASE}/politique-confidentialite`;
 const TERMS_URL = `${WEB_BASE}/conditions-utilisation`;
 
@@ -40,10 +38,6 @@ const DELETION_REASONS = [
   { key: "found_alternative", labelFr: "J'ai trouvé une alternative", labelEn: "I found an alternative" },
   { key: "other", labelFr: "Autre raison", labelEn: "Other reason" },
 ] as const;
-
-const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
-  : "/api";
 
 function makeStyles(C: ColorPalette) {
   return StyleSheet.create({

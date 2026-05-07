@@ -18,10 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { EventCard } from "@/components/EventCard";
 import { ColorPalette } from "@/constants/colors";
-
-const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
-  : "/api";
+import { API_BASE } from "@/lib/apiBase";
 
 interface PartnerPublic {
   id: string;

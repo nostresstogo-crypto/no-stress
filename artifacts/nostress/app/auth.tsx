@@ -18,6 +18,7 @@ import { safeReplace, dismissAndReplace } from "@/lib/navigation";
 import { C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_CITIES, COUNTRIES } from "@/constants/data";
+import { API_BASE } from "@/lib/apiBase";
 
 type Mode = "login" | "register";
 type RegisterRole = "user" | "structure";
@@ -73,10 +74,6 @@ export default function AuthScreen() {
     setLongitude(c.longitude.toString());
     setCityModalVisible(false);
   };
-
-  const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
-    ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
-    : "/api";
 
   const handleSubmit = async () => {
     const isPartnerRegister = mode === "register" && registerRole === "structure";

@@ -6,6 +6,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { safeReplace } from "@/lib/navigation";
 
 import { useApp, useColors } from "@/context/AppContext";
+import { API_BASE } from "@/lib/apiBase";
 
 type VerifyRole = "user" | "partner";
 
@@ -22,10 +23,6 @@ export default function VerifyEmailScreen() {
   const [resending, setResending] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
-
-  const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
-    ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
-    : "/api";
 
   const fr = lang === "fr";
   const styles = makeStyles(C);

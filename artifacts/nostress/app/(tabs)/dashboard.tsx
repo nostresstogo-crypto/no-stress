@@ -24,6 +24,7 @@ import { C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_SUBSCRIPTION_PLANS, MOCK_CITIES } from "@/constants/data";
 import { formatDateLocalized, formatDateTimeLocalized } from "@/lib/formatDate";
+import { API_BASE } from "@/lib/apiBase";
 
 interface MyVenue {
   id: string;
@@ -69,10 +70,6 @@ const NS_MY_VENUES_KEY = "ns_my_venues";
 type DashTab = "events" | "venues" | "plan";
 type PartnerCheckStatus = "loading" | "pending" | "approved" | "rejected" | null;
 type EventStatusFilter = "all" | "pending" | "approved" | "rejected";
-
-const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
-  : "/api";
 
 export default function DashboardScreen() {
   const t = useT();

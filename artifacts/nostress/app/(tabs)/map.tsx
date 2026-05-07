@@ -21,10 +21,7 @@ import { VENUE_TYPES, MOCK_CITIES } from "@/constants/data";
 import { MapWebView, type MapWebViewHandle } from "@/components/MapWebView";
 import { router } from "expo-router";
 import { safePush } from "@/lib/navigation";
-
-const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
-  ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
-  : "/api";
+import { API_BASE } from "@/lib/apiBase";
 
 type Venue = {
   id: string;

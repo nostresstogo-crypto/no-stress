@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import * as Location from "expo-location";
 import { useApp, useColors } from "@/context/AppContext";
+import { API_BASE } from "@/lib/apiBase";
 
 export default function SetVenueLocationScreen() {
   const { user, lang, token, authFetch, addNotification } = useApp();
@@ -21,10 +22,6 @@ export default function SetVenueLocationScreen() {
   const [coords, setCoords] = useState<{ latitude: number; longitude: number; accuracy: number | null } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-
-  const API_BASE = process.env.EXPO_PUBLIC_DOMAIN
-    ? `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
-    : "/api";
 
   const requestAndCapture = async () => {
     setError("");
