@@ -25,6 +25,7 @@ import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_SUBSCRIPTION_PLANS, MOCK_CITIES } from "@/constants/data";
 import { formatDateLocalized, formatDateTimeLocalized } from "@/lib/formatDate";
 import { API_BASE } from "@/lib/apiBase";
+import { TimeField } from "@/components/DateTimeField";
 
 interface MyVenue {
   id: string;
@@ -219,6 +220,21 @@ export default function DashboardScreen() {
   };
 
   const saveVenue = async () => {
+    const timeRe = /^([01]\d|2[0-3]):[0-5]\d$/;
+    if (venueOpening.trim() && !timeRe.test(venueOpening.trim())) {
+      Alert.alert(
+        lang === "fr" ? "Heure invalide" : "Invalid time",
+        lang === "fr" ? "Heure d'ouverture : format attendu HH:MM (24h)." : "Opening time: expected format HH:MM (24h).",
+      );
+      return;
+    }
+    if (venueClosing.trim() && !timeRe.test(venueClosing.trim())) {
+      Alert.alert(
+        lang === "fr" ? "Heure invalide" : "Invalid time",
+        lang === "fr" ? "Heure de fermeture : format attendu HH:MM (24h)." : "Closing time: expected format HH:MM (24h).",
+      );
+      return;
+    }
     if (!venueName.trim()) {
       Alert.alert(lang === "fr" ? "Nom requis" : "Name required", lang === "fr" ? "Veuillez entrer un nom pour le lieu." : "Please enter a name for the venue.");
       return;
@@ -1192,24 +1208,24 @@ export default function DashboardScreen() {
                 <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>{lang === "fr" ? "Ouverture" : "Opening"}</Text>
-                    <TextInput
+                    <TimeField
                       style={[styles.modalInput, { backgroundColor: C.bg, borderColor: C.border, color: C.text }]}
                       placeholder="08:00"
                       placeholderTextColor={C.textMuted}
+                      textColor={C.text}
                       value={venueOpening}
-                      onChangeText={(v) => setVenueOpening(v.replace(/[^0-9:]/g, "").slice(0, 5))}
-                      maxLength={5}
+                      onChange={setVenueOpening}
                     />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 11, color: C.textMuted, marginBottom: 4 }}>{lang === "fr" ? "Fermeture" : "Closing"}</Text>
-                    <TextInput
+                    <TimeField
                       style={[styles.modalInput, { backgroundColor: C.bg, borderColor: C.border, color: C.text }]}
                       placeholder="22:00"
                       placeholderTextColor={C.textMuted}
+                      textColor={C.text}
                       value={venueClosing}
-                      onChangeText={(v) => setVenueClosing(v.replace(/[^0-9:]/g, "").slice(0, 5))}
-                      maxLength={5}
+                      onChange={setVenueClosing}
                     />
                   </View>
                 </View>

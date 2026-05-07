@@ -23,6 +23,7 @@ import { useT, useApp } from "@/context/AppContext";
 import { CATEGORIES, MOCK_CITIES, CategoryKey } from "@/constants/data";
 import type { MyEvent } from "@/context/AppContext";
 import { API_BASE } from "@/lib/apiBase";
+import { DateField, TimeField, todayISO } from "@/components/DateTimeField";
 
 async function uploadImageToBackend(uri: string): Promise<string> {
   const lowerUri = uri.toLowerCase();
@@ -209,7 +210,12 @@ export default function CreateEventScreen() {
         }
       }
     }
-    if (!form.time.trim()) newErrors.time = t("requiredField");
+    const trimmedTime = form.time.trim();
+    if (!trimmedTime) {
+      newErrors.time = t("requiredField");
+    } else if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(trimmedTime)) {
+      newErrors.time = lang === "fr" ? "Format attendu : HH:MM (24h)" : "Expected format: HH:MM (24h)";
+    }
     // Price field removed from UI — no validation needed (always submitted as 0/free).
     if (!form.descriptionFr.trim()) newErrors.descriptionFr = t("requiredField");
     setErrors(newErrors);
@@ -486,27 +492,30 @@ export default function CreateEventScreen() {
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
             <Field label={t("date")} required error={errors.date}>
-              <TextInput
+              <DateField
                 style={[styles.input, errors.date && styles.inputError]}
                 placeholder="AAAA-MM-JJ"
                 placeholderTextColor={C.textMuted}
+                textColor={C.text}
                 value={form.date}
-                onChangeText={(v) => setField("date", v)}
-                keyboardType="numbers-and-punctuation"
-                maxLength={10}
+                onChange={(v) => setField("date", v)}
+                min={todayISO()}
+                hasError={!!errors.date}
+                errorBorderColor={C.error || "#e54848"}
               />
             </Field>
           </View>
           <View style={{ flex: 1 }}>
             <Field label={t("time")} required error={errors.time}>
-              <TextInput
+              <TimeField
                 style={[styles.input, errors.time && styles.inputError]}
                 placeholder="22:00"
                 placeholderTextColor={C.textMuted}
+                textColor={C.text}
                 value={form.time}
-                onChangeText={(v) => setField("time", v)}
-                keyboardType="numbers-and-punctuation"
-                maxLength={5}
+                onChange={(v) => setField("time", v)}
+                hasError={!!errors.time}
+                errorBorderColor={C.error || "#e54848"}
               />
             </Field>
           </View>
