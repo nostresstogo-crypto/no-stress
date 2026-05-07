@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   Platform,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -31,6 +32,7 @@ export default function VenuesScreen() {
 
   const [apiVenues, setApiVenues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
@@ -63,6 +65,11 @@ export default function VenuesScreen() {
   }, [city, country, selectedType, radiusKm, coords]);
 
   useEffect(() => { load(); }, [load]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try { await load(); } finally { setRefreshing(false); }
+  }, [load]);
 
   const requestLocation = async () => {
     setLocating(true);
@@ -193,6 +200,9 @@ export default function VenuesScreen() {
           keyExtractor={(v) => v.id}
           contentContainerStyle={[styles.list, { paddingBottom: Platform.OS === "web" ? 118 : 100 }]}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.lavender} />
+          }
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="business-outline" size={48} color={C.border} />
