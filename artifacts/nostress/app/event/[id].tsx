@@ -24,6 +24,7 @@ import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_EVENTS } from "@/constants/data";
 import { formatDateLocalized } from "@/lib/formatDate";
 import { API_BASE } from "@/lib/apiBase";
+import ReportButton from "@/components/ReportButton";
 
 const { width: SW, height: SH } = Dimensions.get("window");
 const HERO_H = SH * 0.38;
@@ -274,6 +275,7 @@ export default function EventDetailScreen() {
             <TouchableOpacity style={s.iconBtn} onPress={handleShare}>
               <Ionicons name="share-outline" size={22} color="#fff" />
             </TouchableOpacity>
+            <ReportButton itemType="event" itemId={event.id} variant="icon" />
           </View>
         </View>
 
@@ -287,14 +289,6 @@ export default function EventDetailScreen() {
           </View>
         )}
 
-        {event.isSponsored && (
-          <View style={[s.sponsoredBadge, { backgroundColor: DARK_C.gold }]}>
-            <Ionicons name="star" size={10} color={DARK_C.bg} />
-            <Text style={[s.sponsoredText, { color: DARK_C.bg }]}>
-              {t("sponsored")}
-            </Text>
-          </View>
-        )}
       </View>
 
       {/* ── Scrollable content ────────────────────────────── */}

@@ -333,7 +333,6 @@ function RootLayoutNav() {
         <Stack.Screen name="venue/[id]" options={{ headerShown: false, presentation: "card" }} />
         <Stack.Screen name="legal/terms" options={{ headerShown: false, presentation: "card" }} />
         <Stack.Screen name="legal/privacy" options={{ headerShown: false, presentation: "card" }} />
-        <Stack.Screen name="set-location" options={{ headerShown: false, presentation: "modal" }} />
         <Stack.Screen name="set-venue-location" options={{ headerShown: false, presentation: "modal" }} />
         <Stack.Screen name="verify-email" options={{ headerShown: false, presentation: "card", gestureEnabled: false }} />
         <Stack.Screen name="forgot-password" options={{ headerShown: false, presentation: "card" }} />

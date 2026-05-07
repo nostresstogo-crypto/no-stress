@@ -53,7 +53,6 @@ const DEFAULT_FILTERS = {
   dateRange: "all" as DateRange,
   priceMode: "all" as PriceMode,
   maxPrice: 50000,
-  sponsoredOnly: false,
   sort: "dateAsc" as SortKey,
 };
 
@@ -158,18 +157,33 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [venueModal, setVenueModal] = useState<any | null>(null);
   const [apiEvents, setApiEvents] = useState<ApiEvent[]>([]);
+  const [apiVenues, setApiVenues] = useState<any[]>([]);
 
   const loadEvents = useCallback(async () => {
     try {
-      const r = await fetch(`${API_BASE}/events`);
-      if (!r.ok) return;
-      const data = await r.json();
-      setApiEvents(Array.isArray(data?.events) ? data.events : []);
+      const [r, rv] = await Promise.all([
+        fetch(`${API_BASE}/events`),
+        fetch(`${API_BASE}/venues`),
+      ]);
+      if (r.ok) {
+        const data = await r.json();
+        setApiEvents(Array.isArray(data?.events) ? data.events : []);
+      }
+      if (rv.ok) {
+        const data = await rv.json();
+        setApiVenues(Array.isArray(data?.venues) ? data.venues : []);
+      }
     } catch {}
   }, []);
 
   useEffect(() => { loadEvents(); }, [loadEvents]);
   useFocusEffect(useCallback(() => { loadEvents(); }, [loadEvents]));
+
+  const recentVenues = useMemo(() => {
+    return [...apiVenues]
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+      .slice(0, 5);
+  }, [apiVenues]);
   const [filterOpen, setFilterOpen] = useState(false);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [draftFilters, setDraftFilters] = useState(DEFAULT_FILTERS);
@@ -180,7 +194,6 @@ export default function HomeScreen() {
     if (filters.dateRange !== "all") n++;
     if (filters.priceMode !== "all") n++;
     if (filters.maxPrice !== DEFAULT_FILTERS.maxPrice) n++;
-    if (filters.sponsoredOnly) n++;
     if (filters.sort !== "dateAsc") n++;
     return n;
   }, [filters]);
@@ -261,9 +274,7 @@ export default function HomeScreen() {
         matchPrice = (e.priceFCFA ?? 0) <= filters.maxPrice;
       }
 
-      const matchSponsored = !filters.sponsoredOnly || !!e.isSponsored;
-
-      return matchCity && matchCat && matchSearch && matchDate && matchPrice && matchSponsored;
+      return matchCity && matchCat && matchSearch && matchDate && matchPrice;
     });
 
     out.sort((a, b) => {
@@ -276,9 +287,16 @@ export default function HomeScreen() {
     return out;
   }, [allEvents, selectedCity, selectedCategory, search, filters]);
 
-  const featuredEvents = filteredEvents.filter((e) => e.isSponsored);
-  const regularEvents = filteredEvents.filter((e) => !e.isSponsored);
-  const popularVenues: any[] = [];
+  // Top section: 5 most-recently-created events (across system, ignoring filters except city/category lightweight context)
+  const recentEvents = useMemo(() => {
+    const sorted = [...allEvents].sort((a, b) => {
+      const ta = new Date((a as any).createdAt || a.date || 0).getTime();
+      const tb = new Date((b as any).createdAt || b.date || 0).getTime();
+      return tb - ta;
+    });
+    return sorted.slice(0, 5);
+  }, [allEvents]);
+  const regularEvents = filteredEvents;
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -363,18 +381,25 @@ export default function HomeScreen() {
           />
         }
       >
-        {/* Featured / Sponsored Events */}
-        {featuredEvents.length > 0 && (
+        {/* 5 derniers événements créés */}
+        {recentEvents.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <View style={styles.sectionTitleRow}>
                 <View style={styles.goldDot} />
-                <Text style={styles.sectionTitle}>{t("upcomingEvents")}</Text>
+                <Text style={styles.sectionTitle}>
+                  {lang === "fr" ? "Derniers événements" : "Latest events"}
+                </Text>
               </View>
+              <TouchableOpacity onPress={() => safePush("/all-events")} hitSlop={8}>
+                <Text style={{ color: C.lavender, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
+                  {lang === "fr" ? "Voir tout →" : "See all →"}
+                </Text>
+              </TouchableOpacity>
             </View>
             <FlatList
               horizontal
-              data={featuredEvents}
+              data={recentEvents}
               keyExtractor={(e) => e.id}
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalList}
@@ -384,6 +409,54 @@ export default function HomeScreen() {
                   horizontal
                   onPress={() => safePush(`/event/${item.id}`)}
                 />
+              )}
+            />
+          </View>
+        )}
+
+        {/* 5 derniers lieux approuvés */}
+        {recentVenues.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <View style={[styles.goldDot, { backgroundColor: C.gold }]} />
+                <Text style={styles.sectionTitle}>
+                  {lang === "fr" ? "Derniers lieux" : "Latest venues"}
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => safePush("/(tabs)/venues")} hitSlop={8}>
+                <Text style={{ color: C.lavender, fontFamily: "Inter_600SemiBold", fontSize: 13 }}>
+                  {lang === "fr" ? "Voir tout →" : "See all →"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              horizontal
+              data={recentVenues}
+              keyExtractor={(v) => String(v.id)}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => safePush(`/venue/api_${item.id}`)}
+                  style={{ width: 220, marginRight: 12, backgroundColor: C.card, borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: C.border }}
+                  activeOpacity={0.85}
+                >
+                  {item.imageUrl ? (
+                    // eslint-disable-next-line jsx-a11y/alt-text
+                    <Image source={{ uri: item.imageUrl }} style={{ width: "100%", height: 110 }} />
+                  ) : (
+                    <View style={{ width: "100%", height: 110, backgroundColor: C.border, alignItems: "center", justifyContent: "center" }}>
+                      <Ionicons name="business" size={28} color={C.textMuted} />
+                    </View>
+                  )}
+                  <View style={{ padding: 10 }}>
+                    <Text numberOfLines={1} style={{ color: C.text, fontFamily: "Inter_700Bold", fontSize: 14 }}>{item.name}</Text>
+                    <Text numberOfLines={1} style={{ color: C.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
+                      {item.type ? `${item.type} · ` : ""}{item.city}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
               )}
             />
           </View>
@@ -417,20 +490,6 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Popular Venues */}
-        {popularVenues.length > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionTitleRow}>
-                <View style={[styles.goldDot, { backgroundColor: C.gold }]} />
-                <Text style={styles.sectionTitle}>{t("popularVenues")}</Text>
-              </View>
-            </View>
-            {popularVenues.map((venue) => (
-              <VenueCard key={venue.id} venue={venue} compact onPress={() => setVenueModal(venue)} />
-            ))}
-          </View>
-        )}
       </ScrollView>
 
       {/* Filters Modal */}
@@ -495,19 +554,6 @@ export default function HomeScreen() {
                 })}
               </View>
 
-              <TouchableOpacity
-                style={styles.toggleRow}
-                onPress={() => setDraftFilters({ ...draftFilters, sponsoredOnly: !draftFilters.sponsoredOnly })}
-              >
-                <Text style={styles.toggleLabel}>
-                  {lang === "fr" ? "✨ Événements sponsorisés uniquement" : "✨ Sponsored events only"}
-                </Text>
-                <Ionicons
-                  name={draftFilters.sponsoredOnly ? "checkbox" : "square-outline"}
-                  size={24}
-                  color={draftFilters.sponsoredOnly ? C.lavender : C.textMuted}
-                />
-              </TouchableOpacity>
             </ScrollView>
 
             <View style={styles.sheetActions}>

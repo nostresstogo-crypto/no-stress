@@ -140,12 +140,6 @@ export function EventCard({ event, onPress, horizontal = false }: EventCardProps
             <Ionicons name="musical-notes" size={32} color={C.lavender} />
           </View>
         )}
-        {event.isSponsored && (
-          <View style={styles.sponsoredBadge}>
-            <Ionicons name="star" size={10} color={C.bg} />
-            <Text style={styles.sponsoredText}>{t("sponsored")}</Text>
-          </View>
-        )}
         <TouchableOpacity
           style={styles.favBtn}
           onPress={() => toggleFavorite(event.id)}

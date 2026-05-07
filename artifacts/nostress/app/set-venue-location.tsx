@@ -6,6 +6,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import * as Location from "expo-location";
 import { useApp, useColors } from "@/context/AppContext";
 import { API_BASE } from "@/lib/apiBase";
+import MapPreview from "@/components/MapPreview";
 
 export default function SetVenueLocationScreen() {
   const { user, lang, token, authFetch, addNotification } = useApp();
@@ -163,6 +164,14 @@ export default function SetVenueLocationScreen() {
                 {isFr ? "Précision" : "Accuracy"} : ±{Math.round(coords.accuracy)} m
               </Text>
             )}
+            <View style={{ marginTop: 12 }}>
+              <MapPreview latitude={coords.latitude} longitude={coords.longitude} height={200} />
+              <Text style={styles.mapHint}>
+                {isFr
+                  ? "Pincez pour zoomer. Touchez « OpenStreetMap » pour ouvrir en plein écran."
+                  : "Pinch to zoom. Tap “OpenStreetMap” to open full screen."}
+              </Text>
+            </View>
           </View>
         )}
 
@@ -238,6 +247,7 @@ const makeStyles = (C: any) => StyleSheet.create({
   coordTitle: { fontSize: 14, fontFamily: "Inter_700Bold", color: C.success },
   coordValue: { fontSize: 14, color: C.text, fontFamily: "Inter_400Regular", marginBottom: 4 },
   accuracy: { fontSize: 12, color: C.textMuted, marginTop: 6, fontFamily: "Inter_400Regular" },
+  mapHint: { fontSize: 11, color: C.textMuted, marginTop: 6, fontFamily: "Inter_400Regular", textAlign: "center" },
   errorRow: {
     flexDirection: "row", alignItems: "center", gap: 8,
     backgroundColor: C.error + "22", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, marginTop: 14,

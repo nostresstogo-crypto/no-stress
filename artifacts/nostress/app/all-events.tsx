@@ -1,0 +1,233 @@
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router } from "expo-router";
+import * as Location from "expo-location";
+import { safePush } from "@/lib/navigation";
+import { useApp, useColors, useT } from "@/context/AppContext";
+import { CATEGORIES } from "@/constants/data";
+import { EventCard } from "@/components/EventCard";
+import { API_BASE } from "@/lib/apiBase";
+
+const DISTANCE_OPTIONS = [2, 5, 10, 25, 50];
+
+export default function AllEventsScreen() {
+  const C = useColors();
+  const { lang } = useApp();
+  const t = useT();
+  const insets = useSafeAreaInsets();
+  const isFr = lang === "fr";
+  const styles = useMemo(() => makeStyles(C), [C]);
+
+  const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [city, setCity] = useState("");
+  const [country, setCountry] = useState("");
+  const [category, setCategory] = useState("");
+  const [radiusKm, setRadiusKm] = useState<number | null>(null);
+  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (city.trim()) params.set("city", city.trim());
+    if (country.trim()) params.set("country", country.trim());
+    if (category) params.set("category", category);
+    if (radiusKm && coords) {
+      params.set("lat", String(coords.lat));
+      params.set("lng", String(coords.lng));
+      params.set("radiusKm", String(radiusKm));
+    }
+    try {
+      const r = await fetch(`${API_BASE}/events?${params.toString()}`);
+      const data = await r.json();
+      setEvents(Array.isArray(data?.events) ? data.events : []);
+    } catch {
+      setEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [city, country, category, radiusKm, coords]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const requestLocation = async () => {
+    setLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") return;
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      if (!radiusKm) setRadiusKm(5);
+    } catch {} finally {
+      setLocating(false);
+    }
+  };
+
+  const mapped = useMemo(() => events.map((e: any) => ({
+    id: String(e.id),
+    title: e.title || "",
+    titleFr: e.titleFr || e.title || "",
+    category: e.category || "",
+    city: e.city || "",
+    venue: e.venue || "",
+    date: e.date,
+    time: e.time || "",
+    description: e.description || "",
+    descriptionFr: e.descriptionFr || e.description || "",
+    priceFCFA: typeof e.price === "number" ? e.price : 0,
+    isFree: !e.price || e.price === 0,
+    isSponsored: false,
+    imageUrl: e.imageUrl || undefined,
+    status: "approved" as const,
+  })), [events]);
+
+  return (
+    <View style={[styles.root, { paddingTop: Platform.OS === "web" ? 67 : insets.top }]}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn} hitSlop={8}>
+          <Ionicons name="chevron-back" size={24} color={C.text} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>
+          {isFr ? "Tous les événements" : "All events"}
+        </Text>
+        <View style={{ width: 32 }} />
+      </View>
+
+      <View style={styles.filterCard}>
+        <View style={styles.row}>
+          <TextInput
+            value={city}
+            onChangeText={setCity}
+            placeholder={isFr ? "Ville" : "City"}
+            placeholderTextColor={C.textMuted}
+            style={[styles.input, { flex: 1 }]}
+          />
+          <TextInput
+            value={country}
+            onChangeText={setCountry}
+            placeholder={isFr ? "Pays" : "Country"}
+            placeholderTextColor={C.textMuted}
+            style={[styles.input, { flex: 1 }]}
+          />
+        </View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 8 }}>
+          <TouchableOpacity
+            onPress={() => setCategory("")}
+            style={[styles.chip, category === "" && styles.chipActive]}
+          >
+            <Text style={[styles.chipText, category === "" && styles.chipTextActive]}>
+              {isFr ? "Toutes catégories" : "All categories"}
+            </Text>
+          </TouchableOpacity>
+          {CATEGORIES.map((c) => (
+            <TouchableOpacity
+              key={c.key}
+              onPress={() => setCategory(category === c.key ? "" : c.key)}
+              style={[styles.chip, category === c.key && styles.chipActive]}
+            >
+              <Text style={[styles.chipText, category === c.key && styles.chipTextActive]}>
+                {t(c.key as any)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        <View style={styles.distanceRow}>
+          <TouchableOpacity onPress={requestLocation} style={styles.locBtn} disabled={locating}>
+            {locating ? (
+              <ActivityIndicator color={C.lavender} size="small" />
+            ) : (
+              <Ionicons name={coords ? "locate" : "locate-outline"} size={16} color={C.lavender} />
+            )}
+            <Text style={styles.locText}>
+              {coords
+                ? (isFr ? "Position activée" : "Location on")
+                : (isFr ? "Filtrer par distance" : "Filter by distance")}
+            </Text>
+          </TouchableOpacity>
+          {coords && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+              {DISTANCE_OPTIONS.map((km) => (
+                <TouchableOpacity
+                  key={km}
+                  onPress={() => setRadiusKm(radiusKm === km ? null : km)}
+                  style={[styles.chip, radiusKm === km && styles.chipActive]}
+                >
+                  <Text style={[styles.chipText, radiusKm === km && styles.chipTextActive]}>{km} km</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+        </View>
+      </View>
+
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={C.lavender} />
+        </View>
+      ) : mapped.length === 0 ? (
+        <View style={styles.center}>
+          <Ionicons name="calendar-outline" size={32} color={C.textMuted} />
+          <Text style={[styles.emptyText, { color: C.textMuted }]}>
+            {isFr ? "Aucun événement trouvé." : "No events found."}
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={mapped}
+          keyExtractor={(e) => e.id}
+          contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 100, gap: 12 }}
+          renderItem={({ item }) => (
+            <EventCard event={item as any} onPress={() => safePush(`/event/${item.id}`)} />
+          )}
+        />
+      )}
+    </View>
+  );
+}
+
+const makeStyles = (C: any) => StyleSheet.create({
+  root: { flex: 1, backgroundColor: C.bg },
+  header: {
+    flexDirection: "row", alignItems: "center", paddingHorizontal: 12, paddingVertical: 10,
+    borderBottomWidth: 1, borderBottomColor: C.border, justifyContent: "space-between",
+  },
+  iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  headerTitle: { fontSize: 16, fontFamily: "Inter_700Bold", color: C.text, flex: 1, textAlign: "center" },
+  filterCard: { padding: 12, gap: 10, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.card },
+  row: { flexDirection: "row", gap: 8 },
+  input: {
+    backgroundColor: C.bg, color: C.text, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
+    borderWidth: 1, borderColor: C.border, fontSize: 14,
+  },
+  chip: {
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 18,
+    backgroundColor: C.bg, borderWidth: 1, borderColor: C.border,
+  },
+  chipActive: { backgroundColor: C.lavender, borderColor: C.lavender },
+  chipText: { fontSize: 12, color: C.text, fontFamily: "Inter_600SemiBold" },
+  chipTextActive: { color: "#fff" },
+  distanceRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
+  locBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 8,
+    borderRadius: 18, borderWidth: 1, borderColor: C.lavender, backgroundColor: C.lavender + "10",
+  },
+  locText: { fontSize: 12, color: C.lavender, fontFamily: "Inter_600SemiBold" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 8, padding: 32 },
+  emptyText: { fontSize: 14 },
+});

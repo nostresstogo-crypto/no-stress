@@ -207,6 +207,20 @@ export const pushTokensTable = pgTable("push_tokens", {
 export type PushToken = typeof pushTokensTable.$inferSelect;
 export type InsertPushToken = typeof pushTokensTable.$inferInsert;
 
+export const reportsTable = pgTable("reports", {
+  id: serial("id").primaryKey(),
+  itemType: text("item_type").notNull(), // 'event' | 'venue'
+  itemId: integer("item_id").notNull(),
+  reporterUserId: integer("reporter_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+  reporterEmail: text("reporter_email"),
+  reason: text("reason").notNull(),
+  status: text("status").notNull().default("open"), // 'open' | 'reviewed' | 'dismissed'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Report = typeof reportsTable.$inferSelect;
+export type InsertReport = typeof reportsTable.$inferInsert;
+
 export const contactMessagesTable = pgTable("contact_messages", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),

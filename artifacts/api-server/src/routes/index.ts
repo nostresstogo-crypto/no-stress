@@ -13,6 +13,7 @@ import contactRouter from "./contact";
 import storageRouter from "./storage.js";
 import pushRouter from "./push.js";
 import meRouter from "./me";
+import reportsRouter from "./reports";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(contactRouter);
 router.use(storageRouter);
 router.use(pushRouter);
 router.use(meRouter);
+router.use(reportsRouter);
 
 export default router;

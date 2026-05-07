@@ -49,9 +49,19 @@ function partnerIdFromAuth(auth: any): number | null {
 }
 
 // ── Public read ────────────────────────────────────────────────────────────
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
 router.get("/events", async (req, res) => {
-  const { city, category, partnerId, includeArchived, archivedOnly, page = 1, limit = 20 } = req.query;
-  // Public listing: ALWAYS approved-only. Partners use /partners/me/events for their own listing.
+  const { city, country, category, partnerId, includeArchived, archivedOnly, page = 1, limit = 20, lat, lng, radiusKm } = req.query;
   const conds: any[] = [eq(eventsTable.status, "approved")];
   if (partnerId) {
     const pid = parseInt(String(partnerId), 10);
@@ -65,9 +75,37 @@ router.get("/events", async (req, res) => {
   } else if (String(includeArchived) !== "1" && String(includeArchived) !== "true") {
     conds.push(gte(eventsTable.date, cutoff));
   }
-  const rows = conds.length
+  let rows = conds.length
     ? await db.select().from(eventsTable).where(and(...conds))
     : await db.select().from(eventsTable);
+
+  // Country & distance via venue lookup (events store city only)
+  const wantCountry = country ? String(country).toLowerCase() : "";
+  const latNum = parseFloat(String(lat));
+  const lngNum = parseFloat(String(lng));
+  const radius = parseFloat(String(radiusKm));
+  const wantDistance = Number.isFinite(latNum) && Number.isFinite(lngNum) && Number.isFinite(radius) && radius > 0;
+
+  if (wantCountry || wantDistance) {
+    const venueIds = Array.from(new Set(rows.map((r: any) => r.venueId).filter((v: any) => v != null)));
+    let venueMap = new Map<number, { latitude: number | null; longitude: number | null; country: string | null }>();
+    if (venueIds.length) {
+      const venues = await db.select().from(venuesTable);
+      for (const v of venues) venueMap.set(v.id, { latitude: v.latitude, longitude: v.longitude, country: v.country });
+    }
+    rows = rows.filter((r: any) => {
+      const v = r.venueId != null ? venueMap.get(r.venueId) : null;
+      if (wantCountry) {
+        if (!v || !v.country || !v.country.toLowerCase().includes(wantCountry)) return false;
+      }
+      if (wantDistance) {
+        if (!v || v.latitude == null || v.longitude == null) return false;
+        if (haversineKm(latNum, lngNum, v.latitude, v.longitude) > radius) return false;
+      }
+      return true;
+    });
+  }
+
   res.json({ events: rows.map(serialize), total: rows.length, page: Number(page), limit: Number(limit) });
 });
 

@@ -20,6 +20,8 @@ import { C } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_VENUES, MOCK_EVENTS } from "@/constants/data";
 import { API_BASE } from "@/lib/apiBase";
+import ReportButton from "@/components/ReportButton";
+import MapPreview from "@/components/MapPreview";
 
 type Specialty = {
   id: string;
@@ -199,19 +201,22 @@ export default function VenueDetailScreen() {
             <Ionicons name="arrow-back" size={20} color={C.text} />
           </TouchableOpacity>
 
-          {user?.role === "user" && isApi && (
-            <TouchableOpacity
-              style={[styles.navBtn, { top: (insets.top || 20) + 8, right: 16, left: undefined }]}
-              onPress={() => toggleFavoriteVenue(venue.id)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Ionicons
-                name={isFavoriteVenue(venue.id) ? "heart" : "heart-outline"}
-                size={20}
-                color={isFavoriteVenue(venue.id) ? "#ef4444" : C.text}
-              />
-            </TouchableOpacity>
-          )}
+          <View style={{ position: "absolute", top: (insets.top || 20) + 8, right: 16, flexDirection: "row", gap: 8 }}>
+            {user?.role === "user" && isApi && (
+              <TouchableOpacity
+                style={styles.navBtn}
+                onPress={() => toggleFavoriteVenue(venue.id)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons
+                  name={isFavoriteVenue(venue.id) ? "heart" : "heart-outline"}
+                  size={20}
+                  color={isFavoriteVenue(venue.id) ? "#ef4444" : C.text}
+                />
+              </TouchableOpacity>
+            )}
+            {isApi && <ReportButton itemType="venue" itemId={venue.id} variant="icon" />}
+          </View>
 
           {venue.isVerified && (
             <View style={styles.verifiedHero}>
@@ -310,6 +315,19 @@ export default function VenueDetailScreen() {
                   </View>
                 </View>
               ))}
+            </View>
+          ) : null}
+
+          {hasCoords ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>
+                {lang === "fr" ? "Position" : "Location"}
+              </Text>
+              <MapPreview
+                latitude={venue.latitude as number}
+                longitude={venue.longitude as number}
+                height={200}
+              />
             </View>
           ) : null}
 

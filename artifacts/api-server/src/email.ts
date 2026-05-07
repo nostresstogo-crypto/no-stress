@@ -615,3 +615,53 @@ export async function sendDeletionConfirmedEmail(to: string, name: string) {
     `,
   });
 }
+
+export async function sendReportToAdmin(opts: {
+  reportId: number;
+  itemType: "event" | "venue";
+  itemId: number;
+  itemTitle: string;
+  itemCity: string;
+  reporterName: string;
+  reporterEmail: string;
+  reason: string;
+}) {
+  const safeTitle = escapeHtml(opts.itemTitle);
+  const safeCity = escapeHtml(opts.itemCity);
+  const safeReporter = escapeHtml(opts.reporterName);
+  const safeEmail = escapeHtml(opts.reporterEmail);
+  const safeReason = escapeHtml(opts.reason).replace(/\n/g, "<br>");
+  const kind = opts.itemType === "event" ? "événement" : "lieu";
+  const adminPath = opts.itemType === "event" ? "events" : "venues";
+  const link = `${ADMIN_BASE_URL}/${adminPath}`;
+  await sendMail({
+    to: ADMIN_EMAIL,
+    subject: `🚩 Signalement #${opts.reportId} — ${kind} « ${opts.itemTitle} »`,
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml(`Nouveau signalement (${kind})`)}
+        <p style="color:#b0b2cc;line-height:1.7;margin:0 0 16px;">
+          Un utilisateur vient de signaler un ${kind} sur NoStress.
+        </p>
+        <div style="background:#1a1c2e;border-radius:12px;padding:20px;margin:20px 0;border-left:4px solid #E26B6B;">
+          <p style="margin:0 0 8px;font-size:13px;color:#7c6af7;text-transform:uppercase;letter-spacing:0.5px;">${kind}</p>
+          <p style="margin:0 0 4px;font-size:18px;color:#fff;font-weight:700;">${safeTitle}</p>
+          <p style="margin:0;font-size:13px;color:#8c8ea8;">${safeCity} · #${opts.itemId}</p>
+        </div>
+        <div style="background:#1a1c2e;border-radius:12px;padding:20px;margin:20px 0;">
+          <p style="margin:0 0 6px;font-size:13px;color:#7c6af7;">Raison du signalement</p>
+          <p style="margin:0;color:#e8e8f0;line-height:1.6;font-size:14px;">${safeReason}</p>
+        </div>
+        <div style="background:#0f1120;border-radius:12px;padding:16px;margin:0 0 20px;">
+          <p style="margin:0;font-size:12px;color:#8c8ea8;">
+            Signalé par <strong style="color:#fff;">${safeReporter}</strong> · <a href="mailto:${safeEmail}" style="color:#7c6af7;text-decoration:none;">${safeEmail}</a>
+          </p>
+        </div>
+        <a href="${link}" style="display:inline-block;background:#7c6af7;color:#fff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">
+          Ouvrir l'admin
+        </a>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}

@@ -68,12 +68,35 @@ function todayISO(): string {
 
 // ── Public ─────────────────────────────────────────────────────────────────
 // Only approved venues are exposed publicly.
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const R = 6371;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
 router.get("/venues", async (req, res) => {
-  const { city, type } = req.query;
+  const { city, country, type, lat, lng, radiusKm } = req.query;
   const conds: any[] = [eq(venuesTable.status, "approved")];
   if (city) conds.push(ilike(venuesTable.city, `%${String(city)}%`));
+  if (country) conds.push(ilike(venuesTable.country as any, `%${String(country)}%`));
   if (type) conds.push(eq(venuesTable.type, String(type)));
-  const rows = await db.select().from(venuesTable).where(and(...conds));
+  let rows = await db.select().from(venuesTable).where(and(...conds));
+
+  const latNum = parseFloat(String(lat));
+  const lngNum = parseFloat(String(lng));
+  const radius = parseFloat(String(radiusKm));
+  if (Number.isFinite(latNum) && Number.isFinite(lngNum) && Number.isFinite(radius) && radius > 0) {
+    rows = rows.filter((r: any) =>
+      r.latitude != null && r.longitude != null &&
+      haversineKm(latNum, lngNum, r.latitude, r.longitude) <= radius,
+    );
+  }
+
   res.json({ venues: rows.map(serialize), total: rows.length });
 });
 
