@@ -298,6 +298,74 @@ export async function sendPartnerApprovalEmail(to: string, contactName: string, 
   });
 }
 
+export async function sendVenueApprovedEmail(
+  to: string,
+  contactName: string,
+  venueName: string,
+) {
+  const safeName = escapeHtml(contactName || "Partenaire");
+  const safeVenue = escapeHtml(venueName);
+  await sendMail({
+    to,
+    subject: `✅ Votre lieu "${venueName}" a été approuvé – NoStress`,
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml(`Bonjour ${safeName},`)}
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 0 0 16px;">
+          Bonne nouvelle ! Votre lieu <strong style="color: #e8e8f0;">${safeVenue}</strong> vient d'être
+          <strong style="color: #4caf8a;">approuvé</strong> par notre équipe.
+        </p>
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #4caf8a;">
+          <p style="margin: 0 0 8px; font-size: 14px; color: #b0b2cc; line-height: 1.6;">
+            🎉 Votre lieu est désormais visible publiquement sur NoStress.<br>
+            📅 Vous pouvez créer des événements rattachés à ce lieu depuis votre tableau de bord.<br>
+            📍 Pensez à vérifier que sa géolocalisation est bien renseignée pour qu'il apparaisse sur la carte.
+          </p>
+        </div>
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 16px 0 0;">
+          Merci pour votre confiance,<br><br>
+          <strong style="color: #e8e8f0;">L'équipe NoStress</strong>
+        </p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}
+
+export async function sendVenueRejectedEmail(
+  to: string,
+  contactName: string,
+  venueName: string,
+  reason: string,
+) {
+  const safeName = escapeHtml(contactName || "Partenaire");
+  const safeVenue = escapeHtml(venueName);
+  const safeReason = escapeHtml(reason);
+  await sendMail({
+    to,
+    subject: `❌ Votre lieu "${venueName}" n'a pas été validé – NoStress`,
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml(`Bonjour ${safeName},`)}
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 0 0 16px;">
+          Votre demande de validation pour le lieu <strong style="color: #e8e8f0;">${safeVenue}</strong>
+          n'a malheureusement pas pu être acceptée en l'état.
+        </p>
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #f0c040;">
+          <p style="margin: 0 0 8px; font-size: 13px; color: #6b6d8a; text-transform: uppercase; letter-spacing: 0.5px;">Motif communiqué par notre équipe</p>
+          <p style="margin: 0; font-size: 14px; color: #e8e8f0; line-height: 1.6; white-space: pre-line;">${safeReason}</p>
+        </div>
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 16px 0 0;">
+          Vous pouvez modifier les informations du lieu depuis votre tableau de bord puis le re-soumettre à validation.
+          Si vous avez la moindre question, répondez simplement à cet email.<br><br>
+          <strong style="color: #e8e8f0;">L'équipe NoStress</strong>
+        </p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}
+
 export async function sendPasswordResetEmail(
   to: string,
   name: string,

@@ -3,7 +3,11 @@ import { eq, and, ilike, gte } from "drizzle-orm";
 import { db, venuesTable, venueSpecialtiesTable, eventsTable, partnersTable } from "@workspace/db";
 import { requireAuth } from "../lib/auth-utils.js";
 import { requireAdmin } from "./admin.js";
-import { sendNewVenueAdminNotification } from "../email.js";
+import {
+  sendNewVenueAdminNotification,
+  sendVenueApprovedEmail,
+  sendVenueRejectedEmail,
+} from "../email.js";
 
 const MAX_GALLERY = 3;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -244,6 +248,18 @@ router.post("/admin/venues/:id/approve", requireAdmin, async (req: any, res) => 
     .where(eq(venuesTable.id, id))
     .returning();
   if (!v) return res.status(404).json({ error: "Lieu introuvable." });
+  // Notify partner — fire-and-forget, never block the admin response on SMTP.
+  if (v.partnerId != null) {
+    db.select({ email: partnersTable.email, contactName: partnersTable.contactName })
+      .from(partnersTable)
+      .where(eq(partnersTable.id, v.partnerId))
+      .then(([p]) => {
+        if (p?.email) {
+          return sendVenueApprovedEmail(p.email, p.contactName, v.name);
+        }
+      })
+      .catch((err) => console.error("[admin][venue-approve] notify failed:", err));
+  }
   res.json(serialize(v));
 });
 
@@ -260,6 +276,17 @@ router.post("/admin/venues/:id/reject", requireAdmin, async (req: any, res) => {
     .where(eq(venuesTable.id, id))
     .returning();
   if (!v) return res.status(404).json({ error: "Lieu introuvable." });
+  if (v.partnerId != null) {
+    db.select({ email: partnersTable.email, contactName: partnersTable.contactName })
+      .from(partnersTable)
+      .where(eq(partnersTable.id, v.partnerId))
+      .then(([p]) => {
+        if (p?.email) {
+          return sendVenueRejectedEmail(p.email, p.contactName, v.name, reason);
+        }
+      })
+      .catch((err) => console.error("[admin][venue-reject] notify failed:", err));
+  }
   res.json(serialize(v));
 });
 
