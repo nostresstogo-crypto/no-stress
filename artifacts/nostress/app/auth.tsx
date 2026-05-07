@@ -134,7 +134,11 @@ export default function AuthScreen() {
         const loginRes = await fetch(`${API_BASE}/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: cleanEmail, password }),
+          body: JSON.stringify({
+            email: cleanEmail,
+            password,
+            accountType: registerRole === "structure" ? "partner" : "user",
+          }),
         });
         const data = await loginRes.json().catch(() => ({}));
         if (!loginRes.ok) {
@@ -317,51 +321,51 @@ export default function AuthScreen() {
         </View>
 
         <View style={styles.form}>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>{t("accountType")}</Text>
+            <View style={styles.roleRow}>
+              <TouchableOpacity
+                style={[styles.roleCard, registerRole === "user" && styles.roleCardActive]}
+                onPress={() => setRegisterRole("user")}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.roleIconWrap, { backgroundColor: C.lavender + "22" }]}>
+                  <Ionicons name="person" size={22} color={C.lavender} />
+                </View>
+                <Text style={[styles.roleTitle, registerRole === "user" && styles.roleTitleActive]}>
+                  {t("accountTypeUser")}
+                </Text>
+                <Text style={styles.roleSub}>{t("accountTypeUserSub")}</Text>
+                {registerRole === "user" && (
+                  <View style={styles.roleCheck}>
+                    <Ionicons name="checkmark-circle" size={18} color={C.lavender} />
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.roleCard, registerRole === "structure" && styles.roleCardPartner]}
+                onPress={() => setRegisterRole("structure")}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.roleIconWrap, { backgroundColor: C.gold + "22" }]}>
+                  <Ionicons name="business" size={22} color={C.gold} />
+                </View>
+                <Text style={[styles.roleTitle, registerRole === "structure" && { color: C.gold }]}>
+                  {t("accountTypePartner")}
+                </Text>
+                <Text style={styles.roleSub}>{t("accountTypePartnerSub")}</Text>
+                {registerRole === "structure" && (
+                  <View style={styles.roleCheck}>
+                    <Ionicons name="checkmark-circle" size={18} color={C.gold} />
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+
           {mode === "register" && (
             <>
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>{t("accountType")}</Text>
-                <View style={styles.roleRow}>
-                  <TouchableOpacity
-                    style={[styles.roleCard, registerRole === "user" && styles.roleCardActive]}
-                    onPress={() => setRegisterRole("user")}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.roleIconWrap, { backgroundColor: C.lavender + "22" }]}>
-                      <Ionicons name="person" size={22} color={C.lavender} />
-                    </View>
-                    <Text style={[styles.roleTitle, registerRole === "user" && styles.roleTitleActive]}>
-                      {t("accountTypeUser")}
-                    </Text>
-                    <Text style={styles.roleSub}>{t("accountTypeUserSub")}</Text>
-                    {registerRole === "user" && (
-                      <View style={styles.roleCheck}>
-                        <Ionicons name="checkmark-circle" size={18} color={C.lavender} />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[styles.roleCard, registerRole === "structure" && styles.roleCardPartner]}
-                    onPress={() => setRegisterRole("structure")}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[styles.roleIconWrap, { backgroundColor: C.gold + "22" }]}>
-                      <Ionicons name="business" size={22} color={C.gold} />
-                    </View>
-                    <Text style={[styles.roleTitle, registerRole === "structure" && { color: C.gold }]}>
-                      {t("accountTypePartner")}
-                    </Text>
-                    <Text style={styles.roleSub}>{t("accountTypePartnerSub")}</Text>
-                    {registerRole === "structure" && (
-                      <View style={styles.roleCheck}>
-                        <Ionicons name="checkmark-circle" size={18} color={C.gold} />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </View>
-
               {registerRole === "user" ? (
                 <>
                   <View style={styles.field}>

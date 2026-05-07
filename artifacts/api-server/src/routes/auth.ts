@@ -58,12 +58,23 @@ const resendLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, key: "resend
 router.post("/auth/login", loginLimiter, async (req, res) => {
   const email = normEmail(req.body?.email);
   const { password } = req.body || {};
+  // Optional discriminator when the same email exists as both a user and a partner.
+  // Accepted values: "user" | "partner" | "structure". Anything else is ignored.
+  const rawAccountType = String(req.body?.accountType || "").toLowerCase();
+  const accountType: "user" | "partner" | null =
+    rawAccountType === "partner" || rawAccountType === "structure"
+      ? "partner"
+      : rawAccountType === "user"
+      ? "user"
+      : null;
   if (!email || !password) {
     return res.status(400).json({ error: "Email et mot de passe requis." });
   }
 
-  // Try partner first
-  const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.email, email));
+  // Try partner first (skipped if caller explicitly asked for "user")
+  const [partner] = accountType === "user"
+    ? [undefined as any]
+    : await db.select().from(partnersTable).where(eq(partnersTable.email, email));
   if (partner) {
     const ok = partner.passwordHash ? await verifyPassword(password, partner.passwordHash) : false;
     if (!ok) {
@@ -116,6 +127,10 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
     });
   }
 
+  // If caller explicitly asked for "partner" but no partner row matched, do NOT fall back to user.
+  if (accountType === "partner") {
+    return res.status(401).json({ error: "Email ou mot de passe incorrect." });
+  }
   const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
   if (!user) {
     return res.status(401).json({ error: "Email ou mot de passe incorrect." });
@@ -178,13 +193,8 @@ router.post("/auth/register", registerLimiter, async (req, res) => {
     }
     return res.status(409).json({ error: "Un compte existe déjà avec cet email." });
   }
-  const [existingPartner] = await db
-    .select({ id: partnersTable.id })
-    .from(partnersTable)
-    .where(eq(partnersTable.email, email));
-  if (existingPartner) {
-    return res.status(409).json({ error: "Cet email est déjà associé à un compte partenaire. Utilisez la connexion." });
-  }
+  // Note: a same email may coexist as a "user" and as a "partner" account.
+  // Only duplicate-within-the-same-role is forbidden (handled above).
   if (phone) {
     const [partnerByPhone] = await db
       .select({ id: partnersTable.id })

@@ -103,14 +103,8 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
   }
   // Password is auto-generated and emailed only upon admin approval.
   const tempPassword = generateRandomPassword();
-  // Cross-check: same email should not exist as a regular user
-  const [existingUser] = await db
-    .select({ id: usersTable.id })
-    .from(usersTable)
-    .where(eq(usersTable.email, email));
-  if (existingUser) {
-    return res.status(409).json({ error: "Cet email est déjà utilisé pour un compte personnel. Utilisez un autre email ou supprimez l'ancien compte." });
-  }
+  // Note: a same email may coexist as a "user" and as a "partner" account.
+  // Only duplicate-within-the-same-role is forbidden (checked just below).
   // If a partner with same email exists → friendly 409 telling user to log in (no data leaked).
   const [existingByEmail] = await db
     .select({ id: partnersTable.id })
