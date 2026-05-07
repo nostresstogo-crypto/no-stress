@@ -750,11 +750,7 @@ export default function DashboardScreen() {
                           {formatDateTimeLocalized(event.createdAt, lang)}
                         </Text>
                       ) : null}
-                      <Text style={styles.eventPrice}>
-                        {event.isFree
-                          ? t("free")
-                          : `${event.priceFCFA.toLocaleString()} FCFA`}
-                      </Text>
+                      {/* Event price hidden by product decision. */}
                       <View style={{ flexDirection: "row", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
                         <View style={[
                           styles.statusBadge,

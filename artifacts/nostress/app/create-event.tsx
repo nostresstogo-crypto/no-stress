@@ -184,7 +184,7 @@ export default function CreateEventScreen() {
     if (!form.venueId) newErrors.venue = t("requiredField");
     if (!form.date.trim()) newErrors.date = t("requiredField");
     if (!form.time.trim()) newErrors.time = t("requiredField");
-    if (!form.isFree && !form.priceFCFA.trim()) newErrors.priceFCFA = t("requiredField");
+    // Price field removed from UI — no validation needed (always submitted as 0/free).
     if (!form.descriptionFr.trim()) newErrors.descriptionFr = t("requiredField");
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -515,40 +515,7 @@ export default function CreateEventScreen() {
           />
         </Field>
 
-        {/* Free toggle */}
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleLabel}>
-            <Ionicons name="gift-outline" size={18} color={form.isFree ? C.success : C.textMuted} />
-            <Text style={[styles.toggleText, form.isFree && { color: C.success }]}>{t("isFree")}</Text>
-          </View>
-          <Switch
-            value={form.isFree}
-            onValueChange={(v) => {
-              setField("isFree", v);
-              if (v) setField("priceFCFA", "0");
-            }}
-            trackColor={{ false: C.border, true: C.success + "88" }}
-            thumbColor={form.isFree ? C.success : C.card2}
-          />
-        </View>
-
-        {!form.isFree && (
-          <Field label={t("priceFCFA")} required error={errors.priceFCFA}>
-            <View style={styles.priceRow}>
-              <TextInput
-                style={[styles.input, styles.priceInput, errors.priceFCFA && styles.inputError]}
-                placeholder="15000"
-                placeholderTextColor={C.textMuted}
-                value={form.priceFCFA}
-                onChangeText={(v) => setField("priceFCFA", v.replace(/[^0-9]/g, ""))}
-                keyboardType="numeric"
-              />
-              <View style={styles.priceSuffix}>
-                <Text style={styles.priceSuffixText}>FCFA</Text>
-              </View>
-            </View>
-          </Field>
-        )}
+        {/* Price field hidden by product decision — events are submitted with price=0 (free). */}
 
         {/* Sponsored toggle */}
         <View style={styles.toggleRow}>

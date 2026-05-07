@@ -183,9 +183,7 @@ export function EventCard({ event, onPress, horizontal = false }: EventCardProps
             <Text style={styles.meta} numberOfLines={1}>{safeLocation}</Text>
           </View>
         ) : null}
-        <View style={styles.footer}>
-          <Text style={styles.price}>{price}</Text>
-        </View>
+        {/* Price hidden by product decision. */}
       </View>
     </TouchableOpacity>
   );

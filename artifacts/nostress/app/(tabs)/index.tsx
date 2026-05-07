@@ -472,59 +472,13 @@ export default function HomeScreen() {
                 })}
               </View>
 
-              <Text style={styles.sectionLabel}>{lang === "fr" ? "Prix" : "Price"}</Text>
-              <View style={styles.chipRow}>
-                {([
-                  { key: "all", labelFr: "Tous", labelEn: "All" },
-                  { key: "free", labelFr: "Gratuit", labelEn: "Free" },
-                  { key: "paid", labelFr: "Payant", labelEn: "Paid" },
-                ] as const).map((opt) => {
-                  const active = draftFilters.priceMode === opt.key;
-                  return (
-                    <TouchableOpacity
-                      key={opt.key}
-                      onPress={() => setDraftFilters({ ...draftFilters, priceMode: opt.key })}
-                      style={[styles.chip, active && styles.chipActive]}
-                    >
-                      <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                        {lang === "fr" ? opt.labelFr : opt.labelEn}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {draftFilters.priceMode !== "free" && (
-                <>
-                  <Text style={styles.sectionLabel}>
-                    {lang === "fr" ? `Prix max : ${draftFilters.maxPrice.toLocaleString("fr-FR")} FCFA` : `Max price: ${draftFilters.maxPrice.toLocaleString("en-US")} FCFA`}
-                  </Text>
-                  <View style={styles.chipRow}>
-                    {[2000, 5000, 10000, 25000, 50000].map((v) => {
-                      const active = draftFilters.maxPrice === v;
-                      return (
-                        <TouchableOpacity
-                          key={v}
-                          onPress={() => setDraftFilters({ ...draftFilters, maxPrice: v })}
-                          style={[styles.chip, active && styles.chipActive]}
-                        >
-                          <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                            ≤ {v.toLocaleString("fr-FR")}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </>
-              )}
+              {/* Price filter + price sort hidden by product decision. */}
 
               <Text style={styles.sectionLabel}>{lang === "fr" ? "Trier par" : "Sort by"}</Text>
               <View style={styles.chipRow}>
                 {([
                   { key: "dateAsc", labelFr: "Date ↑", labelEn: "Date ↑" },
                   { key: "dateDesc", labelFr: "Date ↓", labelEn: "Date ↓" },
-                  { key: "priceAsc", labelFr: "Prix ↑", labelEn: "Price ↑" },
-                  { key: "priceDesc", labelFr: "Prix ↓", labelEn: "Price ↓" },
                 ] as const).map((opt) => {
                   const active = draftFilters.sort === opt.key;
                   return (

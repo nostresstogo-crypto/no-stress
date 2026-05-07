@@ -313,17 +313,7 @@ export default function VenueDetailScreen() {
                       </Text>
                     </View>
                     <View style={styles.eventPriceWrap}>
-                      {isFree ? (
-                        <View style={styles.freeBadge}>
-                          <Text style={styles.freeBadgeText}>{t("free")}</Text>
-                        </View>
-                      ) : (
-                        <Text style={styles.eventPrice}>
-                          {(event.price ?? 0).toLocaleString()}
-                          {"\n"}
-                          <Text style={styles.eventPriceSub}>FCFA</Text>
-                        </Text>
-                      )}
+                      {/* Event price hidden by product decision. */}
                       <Ionicons
                         name="chevron-forward"
                         size={14}

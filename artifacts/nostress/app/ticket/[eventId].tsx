@@ -131,7 +131,7 @@ export default function TicketScreen() {
                   <Text style={[styles.ttName, selected && { color: C.lavender }]}>{ttName}</Text>
                   {tt.description && <Text style={styles.ttDesc}>{tt.description}</Text>}
                 </View>
-                <Text style={[styles.ttPrice, selected && { color: C.lavender }]}>{ttPrice}</Text>
+                {/* Ticket price hidden by product decision. */}
               </TouchableOpacity>
             );
           })}

@@ -492,7 +492,7 @@ export default function EventDetailScreen() {
                       </Text>
                     )}
                   </View>
-                  <Text style={[s.ticketTypePrice, { color: C.gold }]}>{ttPrice}</Text>
+                  {/* Ticket price hidden by product decision. */}
                 </View>
               );
             })}
@@ -507,12 +507,8 @@ export default function EventDetailScreen() {
           { paddingBottom: bottomInset + 12, backgroundColor: C.card, borderTopColor: C.border },
         ]}
       >
-        <View style={s.buyLeft}>
-          <Text style={[s.buyFromLabel, { color: C.textMuted }]}>
-            {lang === "fr" ? "À partir de" : "From"}
-          </Text>
-          <Text style={[s.buyPrice, { color: C.gold }]}>{price}</Text>
-        </View>
+        {/* Price summary hidden by product decision. */}
+        <View style={s.buyLeft} />
         <TouchableOpacity
           style={[s.buyBtn, { backgroundColor: C.lavender }]}
           onPress={() => safePush(`/ticket/${event.id}`)}
