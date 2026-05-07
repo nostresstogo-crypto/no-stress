@@ -203,35 +203,41 @@ export default function AccountScreen() {
   const styles = useMemo(() => makeStyles(C), [C]);
 
   const handleOpenDeletionPage = () => {
-    if (!user) return;
-    const accountType = user.role === "structure" ? "partner" : "user";
+    const accountType = user?.role === "structure" ? "partner" : "user";
     const params = new URLSearchParams({
-      email: user.email,
-      name: user.name,
+      email: user?.email || "",
+      name: user?.name || "",
       type: accountType,
     });
     const url = `${WEB_BASE}/suppression-compte?${params.toString()}`;
-    Alert.alert(
-      lang === "fr" ? "Suppression de compte" : "Account deletion",
-      lang === "fr"
-        ? "Vous allez être redirigé vers notre site web pour soumettre votre demande de suppression. Elle sera traitée sous 30 jours et toutes vos données seront définitivement effacées."
-        : "You will be redirected to our website to submit your deletion request. It will be processed within 30 days and all your data will be permanently erased.",
-      [
-        { text: lang === "fr" ? "Annuler" : "Cancel", style: "cancel" },
-        {
-          text: lang === "fr" ? "Continuer" : "Continue",
-          style: "destructive",
-          onPress: () => {
-            Linking.openURL(url).catch(() =>
-              Alert.alert(
-                t("error"),
-                lang === "fr" ? "Impossible d'ouvrir le navigateur." : "Could not open browser.",
-              ),
-            );
-          },
-        },
-      ],
-    );
+    const title = lang === "fr" ? "Suppression de compte" : "Account deletion";
+    const message = lang === "fr"
+      ? "Vous allez être redirigé vers notre site web pour soumettre votre demande de suppression. Elle sera traitée sous 30 jours et toutes vos données seront définitivement effacées.\n\nContinuer ?"
+      : "You will be redirected to our website to submit your deletion request. It will be processed within 30 days and all your data will be permanently erased.\n\nContinue?";
+
+    const open = () => {
+      if (Platform.OS === "web") {
+        try { window.open(url, "_blank", "noopener,noreferrer"); return; } catch {}
+      }
+      Linking.openURL(url).catch(() =>
+        Alert.alert(
+          t("error"),
+          lang === "fr" ? "Impossible d'ouvrir le navigateur." : "Could not open browser.",
+        ),
+      );
+    };
+
+    if (Platform.OS === "web") {
+      // Alert.alert on react-native-web ignores the buttons array, so use window.confirm.
+      const ok = typeof window !== "undefined" && window.confirm(`${title}\n\n${message}`);
+      if (ok) open();
+      return;
+    }
+
+    Alert.alert(title, message, [
+      { text: lang === "fr" ? "Annuler" : "Cancel", style: "cancel" },
+      { text: lang === "fr" ? "Continuer" : "Continue", style: "destructive", onPress: open },
+    ]);
   };
 
   const favoriteEvents = apiEvents
