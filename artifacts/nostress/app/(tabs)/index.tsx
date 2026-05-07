@@ -225,7 +225,6 @@ export default function HomeScreen() {
       descriptionFr: e.descriptionFr || e.description || "",
       priceFCFA: typeof e.price === "number" ? e.price : 0,
       isFree: !e.price || e.price === 0,
-      isSponsored: false,
       imageUrl: e.imageUrl || undefined,
       status: "approved" as const,
     }));

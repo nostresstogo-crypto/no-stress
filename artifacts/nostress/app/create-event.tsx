@@ -72,7 +72,6 @@ type FormData = {
   descriptionEn: string;
   priceFCFA: string;
   isFree: boolean;
-  isSponsored: boolean;
   images: string[];
 };
 
@@ -93,7 +92,6 @@ const INITIAL_FORM: FormData = {
   descriptionEn: "",
   priceFCFA: "",
   isFree: false,
-  isSponsored: false,
   images: [],
 };
 
@@ -138,7 +136,6 @@ export default function CreateEventScreen() {
           descriptionEn: ev.description || "",
           priceFCFA: ev.price != null ? String(ev.price) : "",
           isFree: !ev.price || Number(ev.price) === 0,
-          isSponsored: false,
           images: evImages,
         });
       } catch {
@@ -292,7 +289,6 @@ export default function CreateEventScreen() {
           descriptionEn: form.descriptionEn.trim(),
           priceFCFA,
           isFree: form.isFree,
-          isSponsored: form.isSponsored,
           imageUrl: finalImageUrl || undefined,
           status: "pending",
         });
@@ -310,7 +306,6 @@ export default function CreateEventScreen() {
           descriptionEn: form.descriptionEn.trim(),
           priceFCFA,
           isFree: form.isFree,
-          isSponsored: form.isSponsored,
           imageUrl: finalImageUrl || "",
         });
       }
@@ -553,20 +548,6 @@ export default function CreateEventScreen() {
         </Field>
 
         {/* Price field hidden by product decision — events are submitted with price=0 (free). */}
-
-        {/* Sponsored toggle */}
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleLabel}>
-            <Ionicons name="star-outline" size={18} color={form.isSponsored ? C.gold : C.textMuted} />
-            <Text style={[styles.toggleText, form.isSponsored && { color: C.gold }]}>{t("isSponsored")}</Text>
-          </View>
-          <Switch
-            value={form.isSponsored}
-            onValueChange={(v) => setField("isSponsored", v)}
-            trackColor={{ false: C.border, true: C.gold + "88" }}
-            thumbColor={form.isSponsored ? C.gold : C.card2}
-          />
-        </View>
 
         {/* Section 3 — Médias */}
         <SectionHeader icon="image" label={t("formSectionMedia")} />

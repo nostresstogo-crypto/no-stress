@@ -15,7 +15,6 @@ const baseTranslations = {
     allEvents: "Tous les événements",
     searchPlaceholder: "Rechercher un événement...",
     allCities: "Toutes les villes",
-    sponsored: "Sponsorisé",
     free: "Gratuit",
     seeAll: "Voir tout",
     upcomingEvents: "Événements à venir",
@@ -148,7 +147,6 @@ const baseTranslations = {
     formSectionDetails: "Détails et billetterie",
     formSectionMedia: "Médias",
     isFree: "Événement gratuit",
-    isSponsored: "Événement sponsorisé",
 
     // Subscriptions
     choosePlan: "Choisir un abonnement",
@@ -232,7 +230,6 @@ const baseTranslations = {
     allEvents: "All events",
     searchPlaceholder: "Search for an event...",
     allCities: "All cities",
-    sponsored: "Sponsored",
     free: "Free",
     seeAll: "See all",
     upcomingEvents: "Upcoming Events",
@@ -365,7 +362,6 @@ const baseTranslations = {
     formSectionDetails: "Details & ticketing",
     formSectionMedia: "Media",
     isFree: "Free event",
-    isSponsored: "Sponsored event",
 
     // Subscriptions
     choosePlan: "Choose a Plan",

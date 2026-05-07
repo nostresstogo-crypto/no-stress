@@ -390,8 +390,6 @@ components:
           type: number
         currency:
           type: string
-        isSponsored:
-          type: boolean
         status:
           type: string
           enum: [pending, approved, rejected]
@@ -463,8 +461,6 @@ components:
           type: number
         currency:
           type: string
-        isSponsored:
-          type: boolean
         ticketTypes:
           type: array
           items:
@@ -510,8 +506,6 @@ components:
           type: number
         currency:
           type: string
-        isSponsored:
-          type: boolean
         status:
           type: string
           enum: [pending, approved, rejected]

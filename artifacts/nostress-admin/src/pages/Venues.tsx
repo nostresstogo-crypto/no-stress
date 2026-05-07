@@ -274,7 +274,7 @@ export default function Venues() {
                       <td className="px-4 py-3 hidden lg:table-cell">
                         {v.latitude != null && v.longitude != null ? (
                           <a
-                            href={`https://www.google.com/maps/search/?api=1&query=${v.latitude},${v.longitude}`}
+                            href={`https://www.openstreetmap.org/?mlat=${v.latitude}&mlon=${v.longitude}#map=17/${v.latitude}/${v.longitude}`}
                             target="_blank"
                             rel="noreferrer noopener"
                             className="text-xs text-primary hover:underline"

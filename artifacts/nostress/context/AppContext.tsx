@@ -49,7 +49,6 @@ export interface MyEvent {
   descriptionEn: string;
   priceFCFA: number;
   isFree: boolean;
-  isSponsored: boolean;
   imageUrl: string;
   status: "pending" | "approved" | "rejected" | "cancelled";
   createdAt: string;
@@ -545,7 +544,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
             descriptionEn: ev.descriptionEn || ev.description || "",
             priceFCFA: Number(ev.price ?? 0) || 0,
             isFree: !ev.price || Number(ev.price) === 0,
-            isSponsored: false,
             imageUrl: ev.imageUrl || "",
             status: (ev.status as MyEvent["status"]) || "pending",
             createdAt: ev.createdAt || new Date().toISOString(),

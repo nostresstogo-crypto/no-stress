@@ -171,6 +171,8 @@ export interface Partner {
   websiteUrl: string | null;
   status: "pending" | "approved" | "rejected" | "archived";
   rejectionReason: string | null;
+  subscriptionUntil?: string | null;
+  subscription?: { active: boolean; subscriptionUntil: string | null; daysRemaining: number };
   createdAt: string;
   updatedAt: string;
 }

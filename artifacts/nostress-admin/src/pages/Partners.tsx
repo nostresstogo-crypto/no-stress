@@ -28,6 +28,7 @@ import {
   AlertTriangle,
   Trash2,
   KeyRound,
+  CalendarClock,
 } from "lucide-react";
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
@@ -74,6 +75,35 @@ function formatDate(iso: string) {
   if (isNaN(d.getTime())) return iso;
   const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
   return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} à ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function formatDateShort(iso?: string | null) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "—";
+  const pad = (n: number) => (n < 10 ? `0${n}` : String(n));
+  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+
+function SubscriptionBadge({ partner }: { partner: Partner }) {
+  if (partner.status !== "approved") {
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+  const until = partner.subscription?.subscriptionUntil ?? partner.subscriptionUntil ?? null;
+  const active = partner.subscription?.active ?? (until ? new Date(until).getTime() > Date.now() : false);
+  const days = partner.subscription?.daysRemaining ?? (until ? Math.max(0, Math.ceil((new Date(until).getTime() - Date.now()) / 86_400_000)) : 0);
+  if (!until) return <span className="text-xs text-muted-foreground">Aucun</span>;
+  const cls = !active
+    ? "text-destructive bg-destructive/10"
+    : days <= 14
+      ? "text-yellow-400 bg-yellow-400/10"
+      : "text-green-400 bg-green-400/10";
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium ${cls}`} title={`Expire le ${formatDateShort(until)}`}>
+      <CalendarClock className="w-3 h-3" />
+      {active ? `${days} j` : "Expiré"}
+    </span>
+  );
 }
 
 export default function Partners() {
@@ -245,6 +275,7 @@ export default function Partners() {
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden md:table-cell">Type</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden lg:table-cell">Ville</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">Statut</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden md:table-cell">Abonnement</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide hidden lg:table-cell">Inscrit le</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wide">Actions</th>
                 </tr>
@@ -266,6 +297,9 @@ export default function Partners() {
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={partner.status} />
+                    </td>
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      <SubscriptionBadge partner={partner} />
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
                       <span className="text-sm text-muted-foreground">{formatDate(partner.createdAt)}</span>
@@ -385,6 +419,20 @@ export default function Partners() {
                   </div>
                 )}
               </div>
+
+              {selected.status === "approved" && (
+                <div className="bg-muted/30 rounded-lg p-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-0.5">Abonnement (3 mois gratuits depuis l'approbation)</p>
+                    <p className="text-sm text-foreground">
+                      {selected.subscription?.subscriptionUntil || selected.subscriptionUntil
+                        ? `Expire le ${formatDateShort(selected.subscription?.subscriptionUntil || selected.subscriptionUntil)}`
+                        : "Aucun abonnement actif"}
+                    </p>
+                  </div>
+                  <SubscriptionBadge partner={selected} />
+                </div>
+              )}
 
               {selected.description && (
                 <div className="bg-muted/30 rounded-lg p-3">

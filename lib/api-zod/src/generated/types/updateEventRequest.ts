@@ -22,7 +22,6 @@ export interface UpdateEventRequest {
   imageUrl?: string;
   price?: number;
   currency?: string;
-  isSponsored?: boolean;
   status?: UpdateEventRequestStatus;
   ticketTypes?: TicketType[];
 }

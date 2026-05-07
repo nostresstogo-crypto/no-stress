@@ -23,7 +23,6 @@ export interface Event {
   imageUrl?: string;
   price: number;
   currency?: string;
-  isSponsored?: boolean;
   status: EventStatus;
   ticketTypes?: TicketType[];
   latitude?: number;

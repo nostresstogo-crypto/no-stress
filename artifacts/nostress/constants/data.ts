@@ -145,7 +145,6 @@ export const MOCK_EVENTS = [
     ],
     price: 5000,
     currency: "FCFA",
-    isSponsored: true,
     status: "approved",
     ticketTypes: [
       { id: "t1", name: "VIP", nameFr: "VIP", price: 20000, currency: "FCFA", available: 50 },
@@ -176,7 +175,6 @@ export const MOCK_EVENTS = [
     ],
     price: 3000,
     currency: "FCFA",
-    isSponsored: false,
     status: "approved",
     ticketTypes: [
       { id: "t3", name: "VIP Gold", nameFr: "VIP Or", price: 15000, currency: "FCFA", available: 20 },
@@ -208,7 +206,6 @@ export const MOCK_EVENTS = [
     ],
     price: 2000,
     currency: "FCFA",
-    isSponsored: false,
     status: "approved",
     ticketTypes: [
       { id: "t6", name: "VIP", nameFr: "VIP", price: 6000, currency: "FCFA", available: 30 },
@@ -241,7 +238,6 @@ export const MOCK_EVENTS = [
     ],
     price: 0,
     currency: "FCFA",
-    isSponsored: true,
     status: "approved",
     ticketTypes: [
       { id: "t8", name: "Free", nameFr: "Gratuit", price: 0, currency: "FCFA", available: 5000 },
@@ -272,7 +268,6 @@ export const MOCK_EVENTS = [
     ],
     price: 3000,
     currency: "FCFA",
-    isSponsored: true,
     status: "approved",
     ticketTypes: [
       { id: "t9", name: "VIP Table", nameFr: "Table VIP", price: 25000, currency: "FCFA", available: 10 },
@@ -303,7 +298,6 @@ export const MOCK_EVENTS = [
     ],
     price: 0,
     currency: "FCFA",
-    isSponsored: false,
     status: "approved",
     ticketTypes: [
       { id: "t11", name: "Free", nameFr: "Gratuit", price: 0, currency: "FCFA", available: 2000 },
@@ -333,7 +327,6 @@ export const MOCK_EVENTS = [
     ],
     price: 1000,
     currency: "FCFA",
-    isSponsored: false,
     status: "approved",
     ticketTypes: [
       { id: "t12", name: "Standard", nameFr: "Standard", price: 1000, currency: "FCFA", available: 300 },
@@ -364,7 +357,6 @@ export const MOCK_EVENTS = [
     ],
     price: 1000,
     currency: "FCFA",
-    isSponsored: true,
     status: "approved",
     ticketTypes: [
       { id: "t13", name: "Tribune VIP", nameFr: "Tribune VIP", price: 5000, currency: "FCFA", available: 200 },
@@ -530,7 +522,6 @@ export const MOCK_SUBSCRIPTION_PLANS = [
     features: [
       "Unlimited events",
       "Full analytics suite",
-      "Sponsored badge",
       "Dedicated account manager",
       "Custom branding",
       "API access",
@@ -538,7 +529,6 @@ export const MOCK_SUBSCRIPTION_PLANS = [
     featuresFr: [
       "Événements illimités",
       "Suite d'analyses complète",
-      "Badge sponsorisé",
       "Account manager dédié",
       "Branding personnalisé",
       "Accès API",

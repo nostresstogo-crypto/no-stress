@@ -46,6 +46,7 @@ export const partnersTable = pgTable("partners", {
   emailVerified: timestamp("email_verified"),
   verificationCode: text("verification_code"),
   verificationCodeExpires: timestamp("verification_code_expires"),
+  subscriptionUntil: timestamp("subscription_until"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -57,6 +58,7 @@ export const insertPartnerSchema = createInsertSchema(partnersTable).omit({
   status: true,
   rejectionReason: true,
   userId: true,
+  subscriptionUntil: true,
 });
 export type InsertPartner = z.infer<typeof insertPartnerSchema>;
 export type Partner = typeof partnersTable.$inferSelect;
@@ -127,7 +129,6 @@ export const eventsTable = pgTable("events", {
   images: jsonb("images"),
   price: integer("price"),
   currency: text("currency").default("FCFA"),
-  isSponsored: text("is_sponsored").default("false"),
   status: text("status").notNull().default("pending"),
   ticketTypes: jsonb("ticket_types"),
   latitude: doublePrecision("latitude"),

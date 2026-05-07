@@ -84,6 +84,7 @@ export default function DashboardScreen() {
   const [eventStatusFilter, setEventStatusFilter] = useState<EventStatusFilter>("all");
   const [openEventActionsId, setOpenEventActionsId] = useState<string | null>(null);
   const [partnerCheck, setPartnerCheck] = useState<PartnerCheckStatus>(null);
+  const [subscription, setSubscription] = useState<{ active: boolean; subscriptionUntil: string | null; daysRemaining: number } | null>(null);
   const [partnerRejectReason, setPartnerRejectReason] = useState<string | null>(null);
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
@@ -384,6 +385,7 @@ export default function DashboardScreen() {
         const status: PartnerCheckStatus = data.status ?? "pending";
         setPartnerCheck(status);
         setPartnerRejectReason(data.rejectionReason ?? null);
+        setSubscription(data.subscription ?? null);
         if (status !== user.partnerStatus && (status === "pending" || status === "approved" || status === "rejected")) {
           setUser({ ...user, partnerStatus: status });
           if (status === "approved" && user.partnerStatus !== "approved") {
@@ -622,6 +624,47 @@ export default function DashboardScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
+
+        {/* ── Subscription banner ── */}
+        {user.role === "structure" && partnerCheck === "approved" && subscription && (() => {
+          const expired = !subscription.active;
+          const warning = !expired && subscription.daysRemaining <= 14;
+          if (!expired && !warning) return null;
+          const color = expired ? C.error : "#F59E0B";
+          const icon = expired ? "alert-circle" : "time-outline";
+          const untilStr = subscription.subscriptionUntil
+            ? new Date(subscription.subscriptionUntil).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US")
+            : null;
+          const title = expired
+            ? (lang === "fr" ? "Abonnement expiré" : "Subscription expired")
+            : (lang === "fr" ? `Abonnement bientôt expiré (${subscription.daysRemaining} j)` : `Subscription expiring soon (${subscription.daysRemaining} d)`);
+          const desc = expired
+            ? (lang === "fr"
+                ? "Vos lieux et événements ne sont plus visibles sur la plateforme et vous ne pouvez plus les modifier. Contactez NoStress pour renouveler."
+                : "Your venues and events are no longer visible and cannot be edited. Contact NoStress to renew.")
+            : (lang === "fr"
+                ? `Votre abonnement gratuit prend fin le ${untilStr}. Pensez à le renouveler pour rester visible.`
+                : `Your free subscription ends on ${untilStr}. Renew to stay visible.`);
+          return (
+            <View style={{
+              marginHorizontal: 16,
+              marginBottom: 12,
+              padding: 14,
+              borderRadius: 12,
+              backgroundColor: color + "11",
+              borderWidth: 1,
+              borderColor: color + "55",
+              flexDirection: "row",
+              gap: 12,
+            }}>
+              <Ionicons name={icon as any} size={22} color={color} style={{ marginTop: 2 }} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color, fontWeight: "700", fontSize: 14, marginBottom: 4 }}>{title}</Text>
+                <Text style={{ color: C.text, fontSize: 12, lineHeight: 18 }}>{desc}</Text>
+              </View>
+            </View>
+          );
+        })()}
 
         {/* ── Events tab ── */}
         {tab === "events" && (

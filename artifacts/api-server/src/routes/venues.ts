@@ -1,8 +1,9 @@
 import { Router, type IRouter } from "express";
-import { eq, and, ilike, gte, desc } from "drizzle-orm";
+import { eq, and, ilike, gte, desc, inArray } from "drizzle-orm";
 import { db, venuesTable, venueSpecialtiesTable, eventsTable, partnersTable } from "@workspace/db";
 import { requireAuth } from "../lib/auth-utils.js";
 import { requireAdmin } from "./admin.js";
+import { ensurePartnerSubscriptionActive, getActivePartnerIds } from "../lib/subscriptions.js";
 import {
   sendNewVenueAdminNotification,
   sendVenueApprovedEmail,
@@ -81,7 +82,9 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 
 router.get("/venues", async (req, res) => {
   const { city, country, type, lat, lng, radiusKm } = req.query;
-  const conds: any[] = [eq(venuesTable.status, "approved")];
+  const activeIds = await getActivePartnerIds();
+  if (activeIds.length === 0) return res.json({ venues: [], total: 0 });
+  const conds: any[] = [eq(venuesTable.status, "approved"), inArray(venuesTable.partnerId, activeIds)];
   if (city) conds.push(ilike(venuesTable.city, `%${String(city)}%`));
   if (country) conds.push(ilike(venuesTable.country as any, `%${String(country)}%`));
   if (type) conds.push(eq(venuesTable.type, String(type)));
@@ -105,6 +108,14 @@ router.get("/venues/:id", async (req, res) => {
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Lieu introuvable." });
   const [v] = await db.select().from(venuesTable).where(eq(venuesTable.id, id));
   if (!v || v.status !== "approved") return res.status(404).json({ error: "Lieu introuvable." });
+  // Hide venues whose owner partner has an inactive subscription.
+  if (v.partnerId != null) {
+    const [p] = await db.select({ subscriptionUntil: partnersTable.subscriptionUntil, status: partnersTable.status })
+      .from(partnersTable).where(eq(partnersTable.id, v.partnerId));
+    if (!p || p.status !== "approved" || !p.subscriptionUntil || new Date(p.subscriptionUntil).getTime() <= Date.now()) {
+      return res.status(404).json({ error: "Lieu introuvable." });
+    }
+  }
   const specs = await db.select().from(venueSpecialtiesTable).where(eq(venueSpecialtiesTable.venueId, id));
   res.json({ ...serialize(v), specialties: specs.map(serializeSpecialty) });
 });
@@ -123,6 +134,7 @@ router.get("/partners/me/venues", requireAuth, async (req: any, res) => {
 router.post("/partners/me/venues", requireAuth, async (req: any, res) => {
   const partnerId = partnerIdFromAuth(req.auth);
   if (!partnerId) return res.status(403).json({ error: "Réservé aux comptes partenaires." });
+  if (!(await ensurePartnerSubscriptionActive(partnerId, res))) return;
   const { name, type, city, country, address, description, imageUrl, images, latitude, longitude, openingTime, closingTime } = req.body || {};
   if (!name || !city) {
     return res.status(400).json({ error: "Le nom et la ville sont obligatoires." });
@@ -161,6 +173,7 @@ router.post("/partners/me/venues", requireAuth, async (req: any, res) => {
 router.patch("/partners/me/venues/:id", requireAuth, async (req: any, res) => {
   const partnerId = partnerIdFromAuth(req.auth);
   if (!partnerId) return res.status(403).json({ error: "Réservé aux comptes partenaires." });
+  if (!(await ensurePartnerSubscriptionActive(partnerId, res))) return;
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Lieu introuvable." });
   const [existing] = await db.select().from(venuesTable).where(eq(venuesTable.id, id));
@@ -194,6 +207,7 @@ router.patch("/partners/me/venues/:id", requireAuth, async (req: any, res) => {
 router.patch("/partners/me/venues/:id/location", requireAuth, async (req: any, res) => {
   const partnerId = partnerIdFromAuth(req.auth);
   if (!partnerId) return res.status(403).json({ error: "Réservé aux comptes partenaires." });
+  if (!(await ensurePartnerSubscriptionActive(partnerId, res))) return;
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Lieu introuvable." });
   const lat = Number(req.body?.latitude);
@@ -334,6 +348,7 @@ router.get("/partners/me/venues/:id/specialties", requireAuth, async (req: any, 
 router.post("/partners/me/venues/:id/specialties", requireAuth, async (req: any, res) => {
   const partnerId = partnerIdFromAuth(req.auth);
   if (!partnerId) return res.status(403).json({ error: "Réservé aux comptes partenaires." });
+  if (!(await ensurePartnerSubscriptionActive(partnerId, res))) return;
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id) || !(await ownsVenue(partnerId, id))) {
     return res.status(404).json({ error: "Lieu introuvable." });
@@ -361,6 +376,7 @@ router.post("/partners/me/venues/:id/specialties", requireAuth, async (req: any,
 router.patch("/partners/me/venues/:id/specialties/:specId", requireAuth, async (req: any, res) => {
   const partnerId = partnerIdFromAuth(req.auth);
   if (!partnerId) return res.status(403).json({ error: "Réservé aux comptes partenaires." });
+  if (!(await ensurePartnerSubscriptionActive(partnerId, res))) return;
   const id = parseInt(req.params.id, 10);
   const specId = parseInt(req.params.specId, 10);
   if (!Number.isFinite(id) || !Number.isFinite(specId) || !(await ownsVenue(partnerId, id))) {

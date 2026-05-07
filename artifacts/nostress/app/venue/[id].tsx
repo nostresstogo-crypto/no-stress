@@ -380,9 +380,6 @@ export default function VenueDetailScreen() {
                       </Text>
                       <Text style={styles.eventTime}>
                         {event.time}
-                        {event.isSponsored
-                          ? ` · ${lang === "fr" ? "Sponsorisé" : "Sponsored"}`
-                          : ""}
                       </Text>
                     </View>
                     <View style={styles.eventPriceWrap}>

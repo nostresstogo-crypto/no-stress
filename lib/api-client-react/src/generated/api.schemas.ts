@@ -42,7 +42,6 @@ export interface Event {
   imageUrl?: string;
   price: number;
   currency?: string;
-  isSponsored?: boolean;
   status: EventStatus;
   ticketTypes?: TicketType[];
   latitude?: number;
@@ -71,7 +70,6 @@ export interface CreateEventRequest {
   imageUrl?: string;
   price: number;
   currency?: string;
-  isSponsored?: boolean;
   ticketTypes?: TicketType[];
   latitude?: number;
   longitude?: number;
@@ -100,7 +98,6 @@ export interface UpdateEventRequest {
   imageUrl?: string;
   price?: number;
   currency?: string;
-  isSponsored?: boolean;
   status?: UpdateEventRequestStatus;
   ticketTypes?: TicketType[];
 }

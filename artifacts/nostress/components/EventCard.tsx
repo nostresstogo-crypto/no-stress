@@ -37,7 +37,6 @@ interface Event {
   price?: number | null;
   priceFCFA?: number | null;
   currency?: string | null;
-  isSponsored?: boolean;
   status?: string;
   ticketTypes?: TicketType[];
 }
@@ -65,19 +64,6 @@ function makeStyles(C: ColorPalette) {
       alignItems: "center",
       justifyContent: "center",
     },
-    sponsoredBadge: {
-      position: "absolute",
-      top: 10,
-      left: 10,
-      backgroundColor: C.gold,
-      borderRadius: 8,
-      flexDirection: "row",
-      alignItems: "center",
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      gap: 4,
-    },
-    sponsoredText: { color: C.bg, fontSize: 10, fontFamily: "Inter_700Bold" },
     favBtn: {
       position: "absolute",
       top: 10,

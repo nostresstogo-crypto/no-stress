@@ -109,7 +109,6 @@ export default function EventDetailScreen() {
         venueId: apiEvent.venueId ? String(apiEvent.venueId) : null,
         price: apiEvent.price ?? 0,
         currency: "FCFA",
-        isSponsored: false,
         status: apiEvent.status || "approved",
       }
     : partnerEvent
@@ -128,7 +127,6 @@ export default function EventDetailScreen() {
         gallery: partnerEvent.imageUrl ? [partnerEvent.imageUrl] : [],
         price: partnerEvent.priceFCFA,
         currency: "FCFA",
-        isSponsored: partnerEvent.isSponsored,
         status: partnerEvent.status,
       }
     : mockEvent;
@@ -656,19 +654,6 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  sponsoredBadge: {
-    position: "absolute",
-    bottom: 16,
-    left: 20,
-    borderRadius: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    gap: 4,
-  },
-  sponsoredText: { fontSize: 11, fontFamily: "Inter_700Bold" },
-
   /* Dots */
   dotsRow: {
     position: "absolute",

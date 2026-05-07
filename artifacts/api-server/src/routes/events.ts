@@ -1,10 +1,11 @@
 import { Router, type IRouter } from "express";
-import { eq, and, ilike, gte, lt, desc } from "drizzle-orm";
+import { eq, and, ilike, gte, lt, desc, inArray } from "drizzle-orm";
 import { db, eventsTable, venuesTable, partnersTable } from "@workspace/db";
 import { sendNewEventAdminNotification } from "../email.js";
 import { requireAuth } from "../lib/auth-utils.js";
 import { requireAdmin } from "./admin.js";
 import { notifyEventApproved } from "../lib/pushNotifications.js";
+import { ensurePartnerSubscriptionActive, getActivePartnerIds } from "../lib/subscriptions.js";
 
 const router: IRouter = Router();
 
@@ -63,7 +64,9 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 
 router.get("/events", async (req, res) => {
   const { city, country, category, partnerId, includeArchived, archivedOnly, page = 1, limit = 20, lat, lng, radiusKm } = req.query;
-  const conds: any[] = [eq(eventsTable.status, "approved")];
+  const activeIds = await getActivePartnerIds();
+  if (activeIds.length === 0) return res.json({ events: [], total: 0, page: Number(page), limit: Number(limit) });
+  const conds: any[] = [eq(eventsTable.status, "approved"), inArray(eventsTable.partnerId, activeIds)];
   if (partnerId) {
     const pid = parseInt(String(partnerId), 10);
     if (Number.isFinite(pid)) conds.push(eq(eventsTable.partnerId, pid));
@@ -119,6 +122,14 @@ router.get("/events/:id", async (req, res) => {
   if (event.status !== "approved") {
     return res.status(404).json({ error: "Événement introuvable." });
   }
+  // Hide events whose owner partner has an inactive subscription.
+  if (event.partnerId != null) {
+    const [p] = await db.select({ status: partnersTable.status, subscriptionUntil: partnersTable.subscriptionUntil })
+      .from(partnersTable).where(eq(partnersTable.id, event.partnerId));
+    if (!p || p.status !== "approved" || !p.subscriptionUntil || new Date(p.subscriptionUntil).getTime() <= Date.now()) {
+      return res.status(404).json({ error: "Événement introuvable." });
+    }
+  }
   res.json(serialize(event));
 });
 
@@ -136,6 +147,7 @@ router.get("/partners/me/events", requireAuth, async (req: any, res) => {
 router.post("/partners/me/events", requireAuth, async (req: any, res) => {
   const partnerId = partnerIdFromAuth(req.auth);
   if (!partnerId) return res.status(403).json({ error: "Réservé aux comptes partenaires." });
+  if (!(await ensurePartnerSubscriptionActive(partnerId, res))) return;
   const {
     title, titleFr, description, descriptionFr, date, time, city, category,
     imageUrl, images, price, currency, latitude, longitude, ticketTypes, venueId,
@@ -199,6 +211,10 @@ router.post("/partners/me/events", requireAuth, async (req: any, res) => {
 router.patch("/partners/me/events/:id", requireAuth, async (req: any, res) => {
   const partnerId = partnerIdFromAuth(req.auth);
   if (!partnerId) return res.status(403).json({ error: "Réservé aux comptes partenaires." });
+  // Allow cancellation even if subscription expired (cleanup), but block other edits.
+  const isCancelOnly = req.body && req.body.status === "cancelled" &&
+    Object.keys(req.body).every((k) => k === "status");
+  if (!isCancelOnly && !(await ensurePartnerSubscriptionActive(partnerId, res))) return;
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Événement introuvable." });
   const [existing] = await db.select().from(eventsTable).where(eq(eventsTable.id, id));
@@ -217,9 +233,6 @@ router.patch("/partners/me/events/:id", requireAuth, async (req: any, res) => {
     return res.status(400).json({ error: "La nouvelle date doit être dans le futur." });
   }
   // Partner can cancel an event without resubmitting it for moderation.
-  const isCancelOnly =
-    req.body && req.body.status === "cancelled" &&
-    Object.keys(req.body).every((k) => k === "status");
   if (isCancelOnly) {
     const [event] = await db.update(eventsTable).set({ status: "cancelled" }).where(eq(eventsTable.id, id)).returning();
     return res.json(serialize(event));

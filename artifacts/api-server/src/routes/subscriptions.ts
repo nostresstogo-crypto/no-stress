@@ -26,8 +26,8 @@ const plans = [
     name: "Premium",
     nameFr: "Premium",
     monthlyPriceFCFA: 45000,
-    features: ["Unlimited events", "Full analytics suite", "Sponsored badge", "Dedicated account manager", "Custom branding", "API access"],
-    featuresFr: ["Événements illimités", "Suite d'analyses complète", "Badge sponsorisé", "Account manager dédié", "Branding personnalisé", "Accès API"],
+    features: ["Unlimited events", "Full analytics suite", "Dedicated account manager", "Custom branding", "API access"],
+    featuresFr: ["Événements illimités", "Suite d'analyses complète", "Account manager dédié", "Branding personnalisé", "Accès API"],
     isPopular: false,
   },
 ];

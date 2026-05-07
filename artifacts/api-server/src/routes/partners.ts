@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import crypto from "node:crypto";
-import { eq, and, gte, sql, isNull } from "drizzle-orm";
+import { eq, and, gte, gt, sql, isNull } from "drizzle-orm";
 import { db, partnersTable, usersTable, eventsTable, registrationLogTable, refreshTokensTable } from "@workspace/db";
 import {
   hashPassword,
@@ -70,6 +70,7 @@ async function handlePartnerForgotPassword(req: any, res: any) {
   return res.status(200).json(generic);
 }
 import { requireAdmin } from "./admin.js";
+import { computeNewSubscriptionUntil, subscriptionInfo } from "../lib/subscriptions.js";
 
 const router: IRouter = Router();
 
@@ -83,7 +84,7 @@ function normPhone(s: string) {
 function serializePartner(p: any) {
   if (!p) return p;
   const { passwordHash: _ph, ...rest } = p;
-  return { ...rest, id: String(p.id) };
+  return { ...rest, id: String(p.id), subscription: subscriptionInfo(p) };
 }
 
 router.get("/partners", async (req, res) => {
@@ -110,6 +111,7 @@ router.get("/partners/status", async (req, res) => {
     partnerId: String(partner.id),
     latitude: partner.latitude,
     longitude: partner.longitude,
+    subscription: subscriptionInfo(partner),
   });
 });
 
@@ -117,7 +119,7 @@ router.get("/partners/approved-map", async (_req, res) => {
   const approved = await db
     .select()
     .from(partnersTable)
-    .where(eq(partnersTable.status, "approved"));
+    .where(and(eq(partnersTable.status, "approved"), gt(partnersTable.subscriptionUntil, new Date())));
   res.json(
     approved
       .filter((p) => p.latitude != null && p.longitude != null)
@@ -270,31 +272,12 @@ router.post("/partners/resend-verification", partnerResendLimiter, async (req, r
   sendVerificationCodeEmail(partner.email, partner.contactName, code).catch(() => {});
 });
 
-// Authenticated partner sets their own GPS location (replaces lat/lng at register time).
-// Only approved partners may set their location (pending/rejected accounts cannot appear on the map).
-router.patch("/partners/me/location", requireAuth, async (req: any, res) => {
-  const sub: string = req.auth?.sub || "";
-  if (!sub.startsWith("p_")) {
-    return res.status(403).json({ error: "Réservé aux comptes partenaires." });
-  }
-  const id = parseInt(sub.slice(2), 10);
-  if (!Number.isFinite(id)) return res.status(400).json({ error: "Identifiant invalide." });
-  const lat = parseFloat(req.body?.latitude);
-  const lng = parseFloat(req.body?.longitude);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-    return res.status(400).json({ error: "Coordonnées invalides." });
-  }
-  const [existing] = await db.select().from(partnersTable).where(eq(partnersTable.id, id));
-  if (!existing) return res.status(404).json({ error: "Partenaire introuvable." });
-  if (existing.status !== "approved") {
-    return res.status(403).json({ error: "Votre compte doit être approuvé avant de définir une position." });
-  }
-  const [partner] = await db
-    .update(partnersTable)
-    .set({ latitude: lat, longitude: lng, updatedAt: new Date() })
-    .where(eq(partnersTable.id, id))
-    .returning();
-  res.json({ message: "Position enregistrée.", partner: serializePartner(partner) });
+// Deprecated: partner-level GPS location has been removed.
+// Locations are now defined per venue via /partners/me/venues/:id/location.
+router.patch("/partners/me/location", requireAuth, async (_req, res) => {
+  res.status(410).json({
+    error: "Endpoint déprécié. Définissez la position de chaque lieu individuellement.",
+  });
 });
 
 router.get("/partners/:id", async (req, res) => {
@@ -310,6 +293,10 @@ router.get("/partners/:id/public", async (req, res) => {
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Partenaire introuvable." });
   const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.id, id));
   if (!partner || partner.status !== "approved") {
+    return res.status(404).json({ error: "Partenaire introuvable." });
+  }
+  // Hide the partner page entirely when their subscription has lapsed.
+  if (!partner.subscriptionUntil || new Date(partner.subscriptionUntil).getTime() <= Date.now()) {
     return res.status(404).json({ error: "Partenaire introuvable." });
   }
   const archiveCutoff = (() => {
@@ -356,7 +343,15 @@ router.post("/admin/partners/:id/approve", requireAdmin, async (req: any, res) =
   const newHash = await hashPassword(newPassword);
   const [partner] = await db
     .update(partnersTable)
-    .set({ status: "approved", rejectionReason: null, passwordHash: newHash, updatedAt: new Date() })
+    .set({
+      status: "approved",
+      rejectionReason: null,
+      passwordHash: newHash,
+      // Grant 3 months of free subscription starting at approval. Reset on each approve
+      // so re-approving a previously-rejected partner restarts the trial cleanly.
+      subscriptionUntil: computeNewSubscriptionUntil(),
+      updatedAt: new Date(),
+    })
     .where(eq(partnersTable.id, id))
     .returning();
   if (!partner) return res.status(404).json({ error: "Partenaire introuvable." });

@@ -43,7 +43,6 @@ interface PartnerEvent {
   category: string;
   imageUrl?: string;
   price: number;
-  isSponsored?: boolean;
 }
 
 function makeStyles(C: ColorPalette) {
@@ -258,7 +257,6 @@ export default function PartnerPublicPage() {
                 category: e.category || "event",
                 imageUrl: e.imageUrl,
                 price: e.price ?? 0,
-                isSponsored: e.isSponsored,
               }}
               onPress={() => safePush(`/event/${e.id}`)}
             />

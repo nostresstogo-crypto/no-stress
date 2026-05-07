@@ -44,7 +44,6 @@ export const GetEventsResponse = zod.object({
       imageUrl: zod.string().optional(),
       price: zod.number(),
       currency: zod.string().optional(),
-      isSponsored: zod.boolean().optional(),
       status: zod.enum(["pending", "approved", "rejected"]),
       ticketTypes: zod
         .array(
@@ -86,7 +85,6 @@ export const CreateEventBody = zod.object({
   imageUrl: zod.string().optional(),
   price: zod.number(),
   currency: zod.string().optional(),
-  isSponsored: zod.boolean().optional(),
   ticketTypes: zod
     .array(
       zod.object({
@@ -126,7 +124,6 @@ export const GetEventResponse = zod.object({
   imageUrl: zod.string().optional(),
   price: zod.number(),
   currency: zod.string().optional(),
-  isSponsored: zod.boolean().optional(),
   status: zod.enum(["pending", "approved", "rejected"]),
   ticketTypes: zod
     .array(
@@ -167,7 +164,6 @@ export const UpdateEventBody = zod.object({
   imageUrl: zod.string().optional(),
   price: zod.number().optional(),
   currency: zod.string().optional(),
-  isSponsored: zod.boolean().optional(),
   status: zod.enum(["pending", "approved", "rejected"]).optional(),
   ticketTypes: zod
     .array(
@@ -199,7 +195,6 @@ export const UpdateEventResponse = zod.object({
   imageUrl: zod.string().optional(),
   price: zod.number(),
   currency: zod.string().optional(),
-  isSponsored: zod.boolean().optional(),
   status: zod.enum(["pending", "approved", "rejected"]),
   ticketTypes: zod
     .array(
@@ -417,7 +412,6 @@ export const ApproveEventResponse = zod.object({
   imageUrl: zod.string().optional(),
   price: zod.number(),
   currency: zod.string().optional(),
-  isSponsored: zod.boolean().optional(),
   status: zod.enum(["pending", "approved", "rejected"]),
   ticketTypes: zod
     .array(
@@ -459,7 +453,6 @@ export const RejectEventResponse = zod.object({
   imageUrl: zod.string().optional(),
   price: zod.number(),
   currency: zod.string().optional(),
-  isSponsored: zod.boolean().optional(),
   status: zod.enum(["pending", "approved", "rejected"]),
   ticketTypes: zod
     .array(

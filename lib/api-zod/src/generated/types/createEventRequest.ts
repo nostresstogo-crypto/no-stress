@@ -21,7 +21,6 @@ export interface CreateEventRequest {
   imageUrl?: string;
   price: number;
   currency?: string;
-  isSponsored?: boolean;
   ticketTypes?: TicketType[];
   latitude?: number;
   longitude?: number;
