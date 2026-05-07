@@ -262,20 +262,27 @@ export default function DashboardScreen() {
       }
       const isEdit = !!editingVenueId;
       const url = isEdit ? `${API_BASE}/partners/me/venues/${editingVenueId}` : `${API_BASE}/partners/me/venues`;
+      const payload: any = {
+        name: venueName.trim(),
+        type: venueType || (lang === "fr" ? "Autre" : "Other"),
+        city: venueCity.trim(),
+        address: venueAddress.trim(),
+        description: venueDesc.trim(),
+        openingTime: venueOpening.trim() || null,
+        closingTime: venueClosing.trim() || null,
+      };
+      // Only send images when the partner actually picked some — otherwise an
+      // edit on a legacy venue without photos would fail the "≥1 photo" check.
+      if (uploaded.length > 0) {
+        payload.images = uploaded;
+        payload.imageUrl = uploaded[0];
+      } else if (!isEdit) {
+        payload.images = [];
+      }
       const r = await authFetch(url, {
         method: isEdit ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: venueName.trim(),
-          type: venueType || (lang === "fr" ? "Autre" : "Other"),
-          city: venueCity.trim(),
-          address: venueAddress.trim(),
-          description: venueDesc.trim(),
-          images: uploaded,
-          imageUrl: uploaded[0] || null,
-          openingTime: venueOpening.trim() || null,
-          closingTime: venueClosing.trim() || null,
-        }),
+        body: JSON.stringify(payload),
       });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
