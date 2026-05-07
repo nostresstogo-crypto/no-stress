@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  FlatList,
   Modal,
   Platform,
   Pressable,
@@ -109,84 +108,89 @@ const MONTHS_EN = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-// ---- wheel ------------------------------------------------------------------
+// ---- stepper column ---------------------------------------------------------
 
-const ITEM_HEIGHT = 40;
-const VISIBLE = 5; // odd number, selected row in center
-
-type WheelProps = {
+type StepperProps = {
   items: string[];
   selectedIndex: number;
   onChange: (idx: number) => void;
+  label?: string;
   width?: number;
+  wrap?: boolean;
 };
 
-function Wheel({ items, selectedIndex, onChange, width = 80 }: WheelProps) {
-  const ref = useRef<FlatList<string>>(null);
-  const lastReportedRef = useRef(selectedIndex);
+function Stepper({ items, selectedIndex, onChange, label, width = 100, wrap = true }: StepperProps) {
+  const len = items.length;
+  const safeIdx = Math.max(0, Math.min(selectedIndex, len - 1));
 
-  useEffect(() => {
-    // Programmatically scroll when externally controlled value changes.
-    if (selectedIndex !== lastReportedRef.current) {
-      lastReportedRef.current = selectedIndex;
-      try {
-        ref.current?.scrollToOffset({ offset: selectedIndex * ITEM_HEIGHT, animated: false });
-      } catch {}
-    }
-  }, [selectedIndex]);
+  const goPrev = () => {
+    if (len === 0) return;
+    const next = safeIdx - 1;
+    if (next < 0) onChange(wrap ? len - 1 : 0);
+    else onChange(next);
+  };
+  const goNext = () => {
+    if (len === 0) return;
+    const next = safeIdx + 1;
+    if (next >= len) onChange(wrap ? 0 : len - 1);
+    else onChange(next);
+  };
+
+  const prev = items[(safeIdx - 1 + len) % len];
+  const next = items[(safeIdx + 1) % len];
 
   return (
-    <View style={[wheelStyles.container, { width, height: ITEM_HEIGHT * VISIBLE }]}>
-      <View pointerEvents="none" style={[wheelStyles.highlight, { top: ITEM_HEIGHT * Math.floor(VISIBLE / 2) }]} />
-      <FlatList
-        ref={ref}
-        data={items}
-        keyExtractor={(_, i) => String(i)}
-        showsVerticalScrollIndicator={false}
-        snapToInterval={ITEM_HEIGHT}
-        decelerationRate="fast"
-        getItemLayout={(_, i) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * i, index: i })}
-        initialScrollIndex={Math.max(0, Math.min(selectedIndex, items.length - 1))}
-        contentContainerStyle={{ paddingVertical: ITEM_HEIGHT * Math.floor(VISIBLE / 2) }}
-        onMomentumScrollEnd={(e) => {
-          const offset = e.nativeEvent.contentOffset.y;
-          const idx = Math.round(offset / ITEM_HEIGHT);
-          const clamped = Math.max(0, Math.min(idx, items.length - 1));
-          if (clamped !== lastReportedRef.current) {
-            lastReportedRef.current = clamped;
-            onChange(clamped);
-          }
-        }}
-        renderItem={({ item, index }) => {
-          const isSelected = index === selectedIndex;
-          return (
-            <View style={{ height: ITEM_HEIGHT, justifyContent: "center", alignItems: "center" }}>
-              <Text style={{
-                fontSize: isSelected ? 18 : 15,
-                fontWeight: isSelected ? "700" : "400",
-                color: isSelected ? C.text : C.textMuted,
-              }}>
-                {item}
-              </Text>
-            </View>
-          );
-        }}
-      />
+    <View style={[stepperStyles.col, { width }]}>
+      {label ? <Text style={stepperStyles.label}>{label}</Text> : null}
+      <TouchableOpacity
+        onPress={goPrev}
+        accessibilityRole="button"
+        accessibilityLabel="−"
+        style={stepperStyles.btn}
+      >
+        <Text style={stepperStyles.btnText}>▲</Text>
+      </TouchableOpacity>
+      {len > 2 ? <Text style={stepperStyles.neighbor} numberOfLines={1}>{prev}</Text> : null}
+      <View style={stepperStyles.valueBox}>
+        <Text style={stepperStyles.value} numberOfLines={1}>{items[safeIdx] ?? ""}</Text>
+      </View>
+      {len > 2 ? <Text style={stepperStyles.neighbor} numberOfLines={1}>{next}</Text> : null}
+      <TouchableOpacity
+        onPress={goNext}
+        accessibilityRole="button"
+        accessibilityLabel="+"
+        style={stepperStyles.btn}
+      >
+        <Text style={stepperStyles.btnText}>▼</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
-const wheelStyles = StyleSheet.create({
-  container: { overflow: "hidden", position: "relative" },
-  highlight: {
-    position: "absolute",
-    left: 0, right: 0,
-    height: ITEM_HEIGHT,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: C.border,
-    backgroundColor: "rgba(124,106,247,0.08)",
+const stepperStyles = StyleSheet.create({
+  col: { alignItems: "center", justifyContent: "center" },
+  label: { fontSize: 11, color: C.textMuted, marginBottom: 4, textTransform: "uppercase", letterSpacing: 0.5 },
+  btn: {
+    width: 44, height: 36,
+    alignItems: "center", justifyContent: "center",
+    borderRadius: 10,
+    backgroundColor: "rgba(124,106,247,0.12)",
+    marginVertical: 2,
   },
+  btnText: { fontSize: 16, color: "#7c6af7", fontWeight: "700" },
+  neighbor: { fontSize: 13, color: C.textMuted, marginVertical: 1 },
+  valueBox: {
+    minWidth: 80,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "#7c6af7",
+    backgroundColor: "rgba(124,106,247,0.08)",
+    alignItems: "center",
+    marginVertical: 2,
+  },
+  value: { fontSize: 20, fontWeight: "800", color: C.text },
 });
 
 // ---- DateField --------------------------------------------------------------
@@ -314,24 +318,28 @@ export function DateField(props: CommonProps) {
         onCancel={() => setOpen(false)}
         onConfirm={confirm}
       >
-        <View style={{ flexDirection: "row", justifyContent: "center", gap: 8 }}>
-          <Wheel
+        <View style={{ flexDirection: "row", justifyContent: "center", gap: 12 }}>
+          <Stepper
             items={days.map((d) => pad2(d))}
             selectedIndex={Math.max(0, Math.min(pickD - 1, days.length - 1))}
             onChange={(i) => setPickD(days[i])}
-            width={70}
+            label={lang === "fr" ? "Jour" : "Day"}
+            width={90}
           />
-          <Wheel
+          <Stepper
             items={months}
             selectedIndex={Math.max(0, Math.min(pickM - 1, months.length - 1))}
             onChange={(i) => setPickM(i + 1)}
+            label={lang === "fr" ? "Mois" : "Month"}
             width={130}
           />
-          <Wheel
+          <Stepper
             items={years.map(String)}
             selectedIndex={Math.max(0, years.indexOf(pickY))}
             onChange={(i) => setPickY(years[i])}
-            width={90}
+            label={lang === "fr" ? "Année" : "Year"}
+            width={100}
+            wrap={false}
           />
         </View>
       </PickerModal>
@@ -443,19 +451,21 @@ export function TimeField(props: Omit<CommonProps, "min" | "max">) {
         onCancel={() => setOpen(false)}
         onConfirm={confirm}
       >
-        <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8 }}>
-          <Wheel
+        <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 12 }}>
+          <Stepper
             items={hours}
             selectedIndex={pickH}
             onChange={setPickH}
-            width={80}
+            label={lang === "fr" ? "Heures" : "Hours"}
+            width={100}
           />
-          <Text style={{ fontSize: 22, color: C.text, fontWeight: "700" }}>:</Text>
-          <Wheel
+          <Text style={{ fontSize: 28, color: C.text, fontWeight: "800", marginTop: 18 }}>:</Text>
+          <Stepper
             items={minutes}
             selectedIndex={pickM}
             onChange={setPickM}
-            width={80}
+            label={lang === "fr" ? "Minutes" : "Minutes"}
+            width={100}
           />
         </View>
       </PickerModal>
