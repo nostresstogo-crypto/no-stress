@@ -140,9 +140,6 @@ router.post("/partners/me/venues", requireAuth, async (req: any, res) => {
     return res.status(400).json({ error: "Le nom et la ville sont obligatoires." });
   }
   const imgs = normalizeImages(images || (imageUrl ? [imageUrl] : []));
-  if (imgs.length === 0) {
-    return res.status(400).json({ error: "Au moins une photo du lieu est obligatoire (jusqu'à 3 photos)." });
-  }
   const [v] = await db
     .insert(venuesTable)
     .values({
@@ -152,8 +149,8 @@ router.post("/partners/me/venues", requireAuth, async (req: any, res) => {
       country: country || null,
       address: address || null,
       description: description || null,
-      imageUrl: imgs[0],
-      images: imgs,
+      imageUrl: imgs[0] ?? null,
+      images: imgs.length > 0 ? imgs : null,
       latitude: latitude != null ? Number(latitude) : null,
       longitude: longitude != null ? Number(longitude) : null,
       openingTime: normalizeTime(openingTime),
@@ -189,11 +186,8 @@ router.patch("/partners/me/venues/:id", requireAuth, async (req: any, res) => {
   }
   if ("images" in req.body || "imageUrl" in req.body) {
     const imgs = normalizeImages(req.body.images || (req.body.imageUrl ? [req.body.imageUrl] : []));
-    if (imgs.length === 0) {
-      return res.status(400).json({ error: "Au moins une photo du lieu est obligatoire." });
-    }
-    allowed.images = imgs;
-    allowed.imageUrl = imgs[0];
+    allowed.images = imgs.length > 0 ? imgs : null;
+    allowed.imageUrl = imgs[0] ?? null;
   }
   // Editing core info resets status to pending so admin re-validates.
   if (Object.keys(allowed).length > 0 && existing.status === "approved") {
