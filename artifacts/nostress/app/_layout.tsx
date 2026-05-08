@@ -274,7 +274,7 @@ function CustomSplash() {
       {/* Tagline */}
       <Animated.View style={[splash.taglineRow, { opacity: taglineOpacity, transform: [{ translateY: taglineY }] }]}>
         <View style={splash.accentLine} />
-        <Text style={splash.tagline}>L'AGENDA DE VOS LIEUX ET ÉVÉNEMENTS</Text>
+        <Text style={[splash.tagline, { textAlign: "center" }]}>L'AGENDA DE VOS LIEUX{"\n"}ET ÉVÉNEMENTS</Text>
         <View style={splash.accentLine} />
       </Animated.View>
 
