@@ -20,7 +20,7 @@ import { safePush } from "@/lib/navigation";
 
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { ColorPalette } from "@/constants/colors";
-import { CATEGORIES } from "@/constants/data";
+import { EVENT_CATEGORIES } from "@/constants/data";
 import { CategoryPill } from "@/components/CategoryPill";
 import { CitySelector } from "@/components/CitySelector";
 import { EventCard } from "@/components/EventCard";
@@ -352,7 +352,7 @@ export default function HomeScreen() {
             selected={selectedCategory === ""}
             onPress={() => setSelectedCategory("")}
           />
-          {CATEGORIES.map((cat) => (
+          {EVENT_CATEGORIES.map((cat) => (
             <CategoryPill
               key={cat.key}
               categoryKey={cat.key}

@@ -3,7 +3,7 @@ import { StyleSheet, Text, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { ColorPalette } from "@/constants/colors";
 import { useT, useColors } from "@/context/AppContext";
-import { CategoryKey, CATEGORIES } from "@/constants/data";
+import { CategoryKey, CATEGORIES, EVENT_CATEGORIES } from "@/constants/data";
 
 interface CategoryPillProps {
   categoryKey: CategoryKey | "";
@@ -16,7 +16,9 @@ export function CategoryPill({ categoryKey, selected, onPress, label }: Category
   const t = useT();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
-  const cat = CATEGORIES.find((c) => c.key === categoryKey);
+  const cat =
+    EVENT_CATEGORIES.find((c) => c.key === categoryKey) ??
+    CATEGORIES.find((c) => c.key === categoryKey);
   const color = cat?.color || C.lavender;
   const icon = cat?.icon || "apps";
   const text = label ?? (categoryKey ? t(categoryKey as CategoryKey) : t("allEvents"));
