@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   Image,
@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { safePush } from "@/lib/navigation";
 
 import { useT, useApp, useColors } from "@/context/AppContext";
@@ -200,11 +200,19 @@ function makeStyles(C: ColorPalette) {
 export default function AccountScreen() {
   const t = useT();
   const C = useColors();
-  const { user, lang, setLang, logout, favorites, favoriteVenues, notifications, markAllRead, removeNotification, unreadCount, isDark, themeMode, setThemeMode, locationNotificationsEnabled, setLocationNotificationsEnabled, selectedCity, nearbyEventsCount, apiEvents } = useApp();
+  const { user, lang, setLang, logout, favorites, favoriteVenues, notifications, markAllRead, removeNotification, unreadCount, isDark, themeMode, setThemeMode, locationNotificationsEnabled, setLocationNotificationsEnabled, selectedCity, nearbyEventsCount, apiEvents, refreshApiEvents, syncMyEventsFromBackend } = useApp();
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>("favorites");
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const styles = useMemo(() => makeStyles(C), [C]);
+
+  // Recharge favoris/notifications quand l'écran reprend le focus
+  // (notifs marquées lues sur l'autre appareil, nouvel event favori
+  // synchronisé en arrière-plan, statut d'event mis à jour, etc.)
+  useFocusEffect(useCallback(() => {
+    refreshApiEvents();
+    if (user) syncMyEventsFromBackend();
+  }, [user]));
 
   const handleOpenDeletionPage = () => {
     const accountType = user?.role === "structure" ? "partner" : "user";

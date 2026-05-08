@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import * as Location from "expo-location";
 import { safePush } from "@/lib/navigation";
 import { useApp, useColors, useT } from "@/context/AppContext";
@@ -81,6 +81,10 @@ export default function AllEventsScreen() {
   }, [city, country, category, radiusKm, coords]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Recharge la liste à chaque retour sur l'écran (depuis détail event,
+  // changement d'onglet, etc.)
+  useFocusEffect(useCallback(() => { load(); }, []));
 
   const requestLocation = async () => {
     setLocating(true);

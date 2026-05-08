@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "expo-router";
 import * as Location from "expo-location";
 import { safePush } from "@/lib/navigation";
 
@@ -88,6 +89,10 @@ export default function VenuesScreen() {
     setRefreshing(true);
     try { await load(); } finally { setRefreshing(false); }
   }, [load]);
+
+  // Recharge les lieux à chaque fois que l'écran reprend le focus
+  // (changement d'onglet, retour depuis une page détail, etc.)
+  useFocusEffect(useCallback(() => { onRefresh(); }, []));
 
   const requestLocation = async () => {
     setLocating(true);
