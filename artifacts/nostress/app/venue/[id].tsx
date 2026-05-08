@@ -1,9 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Dimensions,
   Image,
   Linking,
+  Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -59,6 +62,8 @@ export default function VenueDetailScreen() {
   const [apiVenue, setApiVenue] = useState<Venue | null>(null);
   const [apiEvents, setApiEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  // URI de l'image plein écran à afficher dans le viewer modal (null = fermé).
+  const [zoomImage, setZoomImage] = useState<{ uri: string; name?: string } | null>(null);
 
   const isApi = typeof id === "string" && id.startsWith("api_");
   const apiNumId = isApi ? id.slice(4) : null;
@@ -332,7 +337,17 @@ export default function VenueDetailScreen() {
               </Text>
               {venue.specialties.map((sp) => (
                 <View key={sp.id} style={styles.specialtyRow}>
-                  <Image source={{ uri: sp.imageUrl }} style={styles.specialtyImage} resizeMode="cover" />
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    onPress={() => sp.imageUrl && setZoomImage({ uri: sp.imageUrl, name: sp.name })}
+                    accessibilityRole="imagebutton"
+                    accessibilityLabel={lang === "fr" ? `Agrandir ${sp.name}` : `Zoom on ${sp.name}`}
+                  >
+                    <Image source={{ uri: sp.imageUrl }} style={styles.specialtyImage} resizeMode="cover" />
+                    <View style={styles.specialtyZoomBadge}>
+                      <Ionicons name="expand" size={12} color="#fff" />
+                    </View>
+                  </TouchableOpacity>
                   <View style={styles.specialtyInfo}>
                     <Text style={styles.specialtyName} numberOfLines={1}>{sp.name}</Text>
                     {sp.description ? (
@@ -459,6 +474,40 @@ export default function VenueDetailScreen() {
           ) : null}
         </View>
       </ScrollView>
+
+      {/* Modal de zoom plein écran sur les images de spécialités. */}
+      <Modal
+        visible={!!zoomImage}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setZoomImage(null)}
+        statusBarTranslucent
+      >
+        <Pressable style={styles.zoomBackdrop} onPress={() => setZoomImage(null)}>
+          {zoomImage ? (
+            <Image
+              source={{ uri: zoomImage.uri }}
+              style={styles.zoomImage}
+              resizeMode="contain"
+            />
+          ) : null}
+          {zoomImage?.name ? (
+            <View style={[styles.zoomCaption, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+              <Text style={styles.zoomCaptionText} numberOfLines={2}>
+                {zoomImage.name}
+              </Text>
+            </View>
+          ) : null}
+          <TouchableOpacity
+            style={[styles.zoomCloseBtn, { top: Math.max(insets.top, 16) }]}
+            onPress={() => setZoomImage(null)}
+            accessibilityRole="button"
+            accessibilityLabel={lang === "fr" ? "Fermer" : "Close"}
+          >
+            <Ionicons name="close" size={24} color="#fff" />
+          </TouchableOpacity>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -733,6 +782,52 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
     height: 72,
     borderRadius: 10,
     backgroundColor: C.bg,
+  },
+  specialtyZoomBadge: {
+    position: "absolute",
+    bottom: 4,
+    right: 4,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  zoomBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.95)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  zoomImage: {
+    width: Dimensions.get("window").width,
+    height: Dimensions.get("window").height * 0.85,
+  },
+  zoomCloseBtn: {
+    position: "absolute",
+    right: 16,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  zoomCaption: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  zoomCaptionText: {
+    color: "#fff",
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+    textAlign: "center",
   },
   specialtyInfo: {
     flex: 1,
