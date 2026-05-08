@@ -26,6 +26,7 @@ import { StatusBar } from "expo-status-bar";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider, useApp, useColors } from "@/context/AppContext";
 import { initSentry, captureException } from "@/lib/sentry";
+import { setupNotificationResponseHandling } from "@/lib/pushNotifications";
 
 initSentry();
 SplashScreen.preventAutoHideAsync();
@@ -302,6 +303,12 @@ function RootLayoutNav() {
   const { appReady, hasOnboarded, isDark, colors: C } = useApp();
   const [showSplash, setShowSplash] = useState(true);
   const splashOpacity = useRef(new Animated.Value(1)).current;
+
+  // Tap sur une notification push/locale → ouvre l'event ou le lieu concerné
+  useEffect(() => {
+    const cleanup = setupNotificationResponseHandling();
+    return cleanup;
+  }, []);
 
   useEffect(() => {
     if (!appReady) return;

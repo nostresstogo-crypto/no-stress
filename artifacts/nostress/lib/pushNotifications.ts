@@ -2,6 +2,7 @@ import { Platform } from "react-native";
 import Constants from "expo-constants";
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
+import { router } from "expo-router";
 
 import { API_BASE } from "@/lib/apiBase";
 
@@ -129,6 +130,83 @@ export async function registerPushPreferences(prefs: {
   } catch (err) {
     console.warn("[push] registerPushPreferences failed", err);
   }
+}
+
+/* ─── Deep-link sur tap d'une notification ───────────────────────────── */
+
+function routeFromNotificationData(data: any): string | null {
+  if (!data || typeof data !== "object") return null;
+  const type = typeof data.type === "string" ? data.type : "";
+  const eventId = data.eventId != null ? String(data.eventId) : null;
+  const venueId = data.venueId != null ? String(data.venueId) : null;
+
+  // Évent (géofencing, approbation, modification, nouvel event sur lieu favori,
+  // validation/rejet partenaire d'un évent)
+  if (
+    eventId &&
+    (type === "nearby_event" ||
+      type === "event_approved" ||
+      type === "event_updated" ||
+      type === "event_rejected" ||
+      type === "venue_new_event")
+  ) {
+    return `/event/${eventId}`;
+  }
+
+  // Lieu (modification, validation/rejet partenaire d'un lieu)
+  if (
+    venueId &&
+    (type === "venue_updated" ||
+      type === "venue_approved" ||
+      type === "venue_rejected")
+  ) {
+    return `/venue/${venueId}`;
+  }
+
+  // Fallback : on a un eventId/venueId sans type connu
+  if (eventId) return `/event/${eventId}`;
+  if (venueId) return `/venue/${venueId}`;
+  return null;
+}
+
+function navigateFromNotification(response: Notifications.NotificationResponse | null) {
+  if (!response) return;
+  const data = response.notification.request.content.data;
+  const path = routeFromNotificationData(data);
+  if (!path) return;
+  try {
+    // push : conserve l'historique, l'utilisateur peut revenir
+    router.push(path as any);
+  } catch (err) {
+    console.warn("[push] navigation failed", err);
+  }
+}
+
+/**
+ * Branche les listeners de tap sur notifications.
+ * - foreground/background tap → response listener
+ * - cold start (app fermée puis ouverte via la notif) → getLastNotificationResponseAsync
+ *
+ * Retourne une fonction de cleanup.
+ */
+export function setupNotificationResponseHandling(): () => void {
+  const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+    navigateFromNotification(response);
+  });
+
+  // Cold start : si l'app a été ouverte par un tap sur notif, on récupère la réponse.
+  Notifications.getLastNotificationResponseAsync()
+    .then((last) => {
+      if (last) {
+        // Léger délai pour laisser le router se monter
+        setTimeout(() => navigateFromNotification(last), 400);
+      }
+    })
+    .catch(() => {});
+
+  return () => {
+    sub.remove();
+  };
 }
 
 export async function unregisterPushToken(): Promise<void> {
