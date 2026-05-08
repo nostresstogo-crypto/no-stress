@@ -34,10 +34,24 @@ export async function getActivePartnerIds(): Promise<number[]> {
 }
 
 // Convenience helper for routes — fetches partner, returns 403 JSON if subscription inactive.
+// Distinguishes the two reasons (pending admin approval vs. expired subscription) to give
+// the client a clear error message.
 export async function ensurePartnerSubscriptionActive(partnerId: number, res: any): Promise<boolean> {
   const [p] = await db.select().from(partnersTable).where(eq(partnersTable.id, partnerId));
   if (!p) {
     res.status(404).json({ error: "Partenaire introuvable." });
+    return false;
+  }
+  if (p.status !== "approved") {
+    res.status(403).json({
+      error:
+        p.status === "rejected"
+          ? "Votre compte a été refusé par l'administrateur. Contactez le support si vous pensez qu'il s'agit d'une erreur."
+          : "Votre compte est en attente de validation par l'administrateur. Vous pourrez créer vos lieux et événements une fois approuvé.",
+      pendingApproval: p.status === "pending",
+      rejected: p.status === "rejected",
+      partnerStatus: p.status,
+    });
     return false;
   }
   if (!isSubscriptionActive(p)) {
