@@ -2,7 +2,7 @@
   "expo": {
     "name": "NoStress",
     "slug": "nostress",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "nostress",
@@ -14,38 +14,33 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#070617"
+      "backgroundColor": "#0E1120"
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.nostress.app",
-      "buildNumber": "1",
+      "bundleIdentifier": "com.nostresstg.app",
       "config": {
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "NoStress utilise votre localisation pour vous proposer les événements près de chez vous au Togo et au Bénin.",
-        "NSCameraUsageDescription": "NoStress a besoin d'accéder à votre appareil photo pour ajouter des images à vos événements.",
-        "NSPhotoLibraryUsageDescription": "NoStress a besoin d'accéder à vos photos pour ajouter des images de profil ou d'événements.",
-        "NSPhotoLibraryAddUsageDescription": "NoStress a besoin d'enregistrer vos billets dans votre bibliothèque photo.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Turning on your location will allow $(PRODUCT_NAME) to show you nearby places and events.",
+        "NSLocationAlwaysUsageDescription": "Turning on your location will allow $(PRODUCT_NAME) to show you nearby places and events.",
+        "NSLocationWhenInUseUsageDescription": "Turning on your location will allow $(PRODUCT_NAME) to show you nearby places and events.",
+        "NSCameraUsageDescription": "$(PRODUCT_NAME) needs access to your camera so you can take photos to add to your events or profile.",
+        "NSPhotoLibraryUsageDescription": "$(PRODUCT_NAME) needs access to your photos so you can choose your partner's logo or your profile photo.",
+        "NSPhotoLibraryAddUsageDescription": "$(PRODUCT_NAME) needs to save your tickets to your photo library."
       }
     },
     "android": {
-      "package": "com.nostress.app",
-      "versionCode": 1,
-      "backgroundColor": "#070617",
+      "package": "com.nostresstg.app",
+      "backgroundColor": "#0E1120",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#070617"
+        "backgroundColor": "#0E1120"
       },
       "permissions": [
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION",
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "VIBRATE"
+        "android.permission.RECORD_AUDIO"
       ],
       "blockedPermissions": [
         "android.permission.SYSTEM_ALERT_WINDOW",
@@ -73,18 +68,29 @@
       ],
       "expo-web-browser",
       [
-        "expo-location",
+        "expo-image-picker",
         {
-          "locationAlwaysAndWhenInUsePermission": "NoStress utilise votre localisation pour vous proposer les événements près de chez vous."
+          "photosPermission": "Please this app need your permission to access your photos so that you can choose your partner's logo or your profile user photo",
+          "cameraPermission": "$(PRODUCT_NAME) needs access to your camera so you can take photos to add to your events or profile.",
+          "colors": {
+            "cropToolbarColor": "#000000"
+          },
+          "dark": {
+            "colors": {
+              "cropToolbarColor": "#000000"
+            }
+          }
         }
       ],
       [
-        "expo-image-picker",
+        "expo-location",
         {
-          "photosPermission": "NoStress a besoin d'accéder à vos photos pour ajouter des images à vos événements.",
-          "cameraPermission": "NoStress a besoin d'accéder à votre appareil photo pour prendre des photos d'événements."
+          "locationAlwaysAndWhenInUsePermission": "Turning on your location will allow $(PRODUCT_NAME) to show you nearby places and events.",
+          "locationAlwaysPermission": "Turning on your location will allow $(PRODUCT_NAME) to show you nearby places and events.",
+          "locationWhenInUsePermission": "Turning on your location will allow $(PRODUCT_NAME) to show you nearby places and events."
         }
       ],
+      "@react-native-community/datetimepicker",
       [
         "expo-build-properties",
         {
@@ -106,6 +112,9 @@
     "extra": {
       "router": {
         "origin": "https://replit.com/"
+      },
+      "eas": {
+        "projectId": "b372c0cb-009a-40b0-bd7c-720947a2a462"
       },
       "apiBase": "https://api.no-stress.net/api"
     }

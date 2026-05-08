@@ -1,0 +1,82 @@
+{
+  "expo": {
+    "name": "NoStress",
+    "slug": "nostress",
+    "version": "1.0.1",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "nostress",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0E1120"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.nostresstg.app",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Turning on your location will allow $(PRODUCT_NAME) to show you nearby places and events.",
+        "NSLocationAlwaysUsageDescription": "Turning on your location will allow $(PRODUCT_NAME) to show you nearby places and events.",
+        "NSLocationWhenInUseUsageDescription": "Turning on your location will allow $(PRODUCT_NAME) to show you nearby places and events."
+      }
+    },
+    "android": {
+      "backgroundColor": "#0E1120",
+      "package": "com.nostresstg.app",
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/images/icon.png"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://replit.com/"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Please this app need your permission to access your photos so that you can choose your partner's logo or your profile user photo",
+          "colors": {
+            "cropToolbarColor": "#000000"
+          },
+          "dark": {
+            "colors": {
+              "cropToolbarColor": "#000000"
+            }
+          }
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Turning on your location will allow $(PRODUCT_NAME) to show you nearby places and events.",
+          "locationAlwaysPermission": "Turning on your location will allow $(PRODUCT_NAME) to show you nearby places and events.",
+          "locationWhenInUsePermission": "Turning on your location will allow $(PRODUCT_NAME) to show you nearby places and events."
+        }
+      ],
+      "@react-native-community/datetimepicker"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {
+        "origin": "https://replit.com/"
+      },
+      "eas": {
+        "projectId": "b372c0cb-009a-40b0-bd7c-720947a2a462"
+      }
+    }
+  }
+}
