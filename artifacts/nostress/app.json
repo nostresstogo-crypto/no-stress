@@ -19,18 +19,17 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.nostresstg.app",
+      "privacyPolicyUrl": "https://no-stress.net/confidentialite",
       "config": {
         "usesNonExemptEncryption": false
       },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Turning on your location will allow $(PRODUCT_NAME) to show you nearby places and events.",
-        "NSLocationAlwaysUsageDescription": "Turning on your location will allow $(PRODUCT_NAME) to show you nearby places and events.",
-        "NSLocationWhenInUseUsageDescription": "Turning on your location will allow $(PRODUCT_NAME) to show you nearby places and events.",
-        "NSCameraUsageDescription": "$(PRODUCT_NAME) needs access to your camera so you can take photos to add to your events or profile.",
-        "NSPhotoLibraryUsageDescription": "$(PRODUCT_NAME) needs access to your photos so you can choose your partner's logo or your profile photo.",
-        "NSPhotoLibraryAddUsageDescription": "$(PRODUCT_NAME) needs to save your tickets to your photo library.",
-        "NSUserNotificationUsageDescription": "$(PRODUCT_NAME) sends you notifications about new events near you, your favorite categories, and updates on your bookings and tickets."
+        "NSLocationWhenInUseUsageDescription": "$(PRODUCT_NAME) uses your location to show you nearby events and venues.",
+        "NSCameraUsageDescription": "$(PRODUCT_NAME) needs camera access to take photos for your events or profile.",
+        "NSPhotoLibraryUsageDescription": "$(PRODUCT_NAME) needs photo library access to choose a logo or profile picture.",
+        "NSPhotoLibraryAddUsageDescription": "$(PRODUCT_NAME) needs permission to save your tickets to your photo library.",
+        "NSUserNotificationUsageDescription": "$(PRODUCT_NAME) sends notifications about new nearby events, your favorites, and booking updates."
       }
     },
     "android": {
@@ -41,12 +40,12 @@
         "backgroundColor": "#0E1120"
       },
       "permissions": [
-        "android.permission.RECORD_AUDIO",
         "android.permission.POST_NOTIFICATIONS"
       ],
       "blockedPermissions": [
         "android.permission.SYSTEM_ALERT_WINDOW",
-        "android.permission.READ_PHONE_STATE"
+        "android.permission.READ_PHONE_STATE",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -72,8 +71,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Please this app need your permission to access your photos so that you can choose your partner's logo or your profile user photo",
-          "cameraPermission": "$(PRODUCT_NAME) needs access to your camera so you can take photos to add to your events or profile.",
+          "photosPermission": "$(PRODUCT_NAME) needs access to your photo library to choose a profile picture or partner logo.",
+          "cameraPermission": "$(PRODUCT_NAME) needs camera access to take photos for your events or profile.",
           "colors": {
             "cropToolbarColor": "#000000"
           },
@@ -87,9 +86,7 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Turning on your location will allow $(PRODUCT_NAME) to show you nearby places and events.",
-          "locationAlwaysPermission": "Turning on your location will allow $(PRODUCT_NAME) to show you nearby places and events.",
-          "locationWhenInUsePermission": "Turning on your location will allow $(PRODUCT_NAME) to show you nearby places and events."
+          "locationWhenInUsePermission": "$(PRODUCT_NAME) uses your location to show you nearby events and venues."
         }
       ],
       "@react-native-community/datetimepicker",

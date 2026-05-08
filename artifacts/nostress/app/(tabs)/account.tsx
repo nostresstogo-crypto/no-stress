@@ -21,7 +21,7 @@ import { EventCard } from "@/components/EventCard";
 import { ColorPalette } from "@/constants/colors";
 import { LANG_LABELS, type Lang } from "@/constants/i18n";
 import { formatDateTimeLocalized } from "@/lib/formatDate";
-import { API_BASE, WEB_BASE } from "@/lib/apiBase";
+import { API_BASE } from "@/lib/apiBase";
 
 const SUPPORT_WHATSAPP = "+22891003501";
 const SUPPORT_WHATSAPP_URL = `https://wa.me/${SUPPORT_WHATSAPP.replace(/[^0-9]/g, "")}?text=${encodeURIComponent("Bonjour NoStress, j'ai besoin d'aide.")}`;
@@ -212,41 +212,64 @@ export default function AccountScreen() {
     if (user) syncMyEventsFromBackend();
   }, [user]));
 
-  const handleOpenDeletionPage = () => {
-    const accountType = user?.role === "structure" ? "partner" : "user";
-    const params = new URLSearchParams({
-      email: user?.email || "",
-      name: user?.name || "",
-      type: accountType,
-    });
-    const url = `${WEB_BASE}/suppression-compte?${params.toString()}`;
-    const title = lang === "fr" ? "Suppression de compte" : "Account deletion";
-    const message = lang === "fr"
-      ? "Vous allez être redirigé vers notre site web pour soumettre votre demande de suppression. Elle sera traitée sous 30 jours et toutes vos données seront définitivement effacées.\n\nContinuer ?"
-      : "You will be redirected to our website to submit your deletion request. It will be processed within 30 days and all your data will be permanently erased.\n\nContinue?";
+  const [deletionLoading, setDeletionLoading] = useState(false);
 
-    const open = () => {
-      if (Platform.OS === "web") {
-        try { window.open(url, "_blank", "noopener,noreferrer"); return; } catch {}
+  const handleDeleteAccount = () => {
+    if (!user) return;
+    const isFr = lang === "fr";
+    const title = isFr ? "Supprimer mon compte" : "Delete my account";
+    const message = isFr
+      ? "Votre demande sera traitée sous 30 jours. Toutes vos données, billets et favoris seront définitivement effacés.\n\nCette action est irréversible. Confirmer ?"
+      : "Your request will be processed within 30 days. All your data, tickets and favorites will be permanently erased.\n\nThis action cannot be undone. Confirm?";
+
+    const submit = async () => {
+      setDeletionLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/account/deletion-request`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: user.email,
+            name: user.name,
+            accountType: user.role === "structure" ? "partner" : "user",
+            reason: "in_app_request",
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          Alert.alert(
+            isFr ? "Demande envoyée" : "Request submitted",
+            isFr
+              ? "Votre demande de suppression a bien été reçue. Elle sera traitée sous 30 jours."
+              : "Your deletion request has been received. It will be processed within 30 days.",
+            [{ text: "OK", onPress: logout }],
+          );
+        } else if (res.status === 409) {
+          Alert.alert(
+            isFr ? "Demande déjà en cours" : "Request already pending",
+            isFr
+              ? "Une demande de suppression est déjà en cours pour ce compte."
+              : "A deletion request is already pending for this account.",
+          );
+        } else {
+          Alert.alert(t("error"), data?.error ?? (isFr ? "Une erreur est survenue." : "An error occurred."));
+        }
+      } catch {
+        Alert.alert(t("error"), isFr ? "Impossible de joindre le serveur." : "Could not reach the server.");
+      } finally {
+        setDeletionLoading(false);
       }
-      Linking.openURL(url).catch(() =>
-        Alert.alert(
-          t("error"),
-          lang === "fr" ? "Impossible d'ouvrir le navigateur." : "Could not open browser.",
-        ),
-      );
     };
 
     if (Platform.OS === "web") {
-      // Alert.alert on react-native-web ignores the buttons array, so use window.confirm.
       const ok = typeof window !== "undefined" && window.confirm(`${title}\n\n${message}`);
-      if (ok) open();
+      if (ok) submit();
       return;
     }
 
     Alert.alert(title, message, [
-      { text: lang === "fr" ? "Annuler" : "Cancel", style: "cancel" },
-      { text: lang === "fr" ? "Continuer" : "Continue", style: "destructive", onPress: open },
+      { text: isFr ? "Annuler" : "Cancel", style: "cancel" },
+      { text: isFr ? "Supprimer" : "Delete", style: "destructive", onPress: submit },
     ]);
   };
 
@@ -593,14 +616,14 @@ export default function AccountScreen() {
         <Text style={styles.logoutText}>{t("logout")}</Text>
       </TouchableOpacity>
 
-      {/* Delete Account — redirige vers la page web /suppression-compte */}
+      {/* Delete Account — traitement in-app, pas de redirection externe */}
       <TouchableOpacity
-        style={[styles.logoutBtn, { borderColor: C.error, backgroundColor: C.error + "10", marginTop: 0 }]}
-        onPress={handleOpenDeletionPage}
+        style={[styles.logoutBtn, { borderColor: C.error, backgroundColor: C.error + "10", marginTop: 0, opacity: deletionLoading ? 0.6 : 1 }]}
+        onPress={handleDeleteAccount}
+        disabled={deletionLoading}
       >
         <Ionicons name="trash-outline" size={20} color={C.error} />
-        <Text style={styles.logoutText}>{t("deleteAccount")}</Text>
-        <Ionicons name="open-outline" size={16} color={C.error} style={{ marginLeft: 6 }} />
+        <Text style={styles.logoutText}>{deletionLoading ? (lang === "fr" ? "Envoi…" : "Sending…") : t("deleteAccount")}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
