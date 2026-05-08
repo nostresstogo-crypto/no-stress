@@ -657,14 +657,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
     if (sig === lastPushRegRef.current) return;
     lastPushRegRef.current = sig;
-    const t = setTimeout(() => {
-      registerPushPreferences({
-        city: selectedCity || null,
-        favoriteCategories,
-        language: lang === "fr" ? "fr" : "en",
-      });
-    }, 1500);
-    return () => clearTimeout(t);
+    void registerPushPreferences;
+    return;
   }, [appReady, selectedCity, favoriteCategories, lang]);
 
   const value = useMemo<AppContextValue>(
