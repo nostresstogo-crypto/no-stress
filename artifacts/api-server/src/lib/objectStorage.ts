@@ -411,7 +411,7 @@ export class ObjectStorageService {
             "(e.g. https://api.no-stress.net).",
         );
       }
-      return `${base}/storage/uploads/local/${objectId}?exp=${exp}&token=${token}`;
+      return `${base}/api/storage/uploads/local/${objectId}?exp=${exp}&token=${token}`;
     }
 
     const privateDir = this.getPrivateObjectDir();
@@ -454,10 +454,12 @@ export class ObjectStorageService {
   normalizeObjectEntityPath(rawPath: string): string {
     if (this.driver === "local") {
       // Local upload URLs look like:
-      //   https://api.no-stress.net/storage/uploads/local/<id>?exp=…&token=…
+      //   https://api.no-stress.net/api/storage/uploads/local/<id>?exp=…&token=…
+      // (Le préfixe /api est obligatoire car nginx ne proxy que /api/*.
+      // L'ancien format sans /api est aussi accepté pour compat ascendante.)
       try {
         const u = new URL(rawPath);
-        const m = u.pathname.match(/^\/storage\/uploads\/local\/([A-Za-z0-9_-]+)/);
+        const m = u.pathname.match(/^(?:\/api)?\/storage\/uploads\/local\/([A-Za-z0-9_-]+)/);
         if (m) return `/objects/uploads/${m[1]}`;
       } catch {
         /* not a URL */
