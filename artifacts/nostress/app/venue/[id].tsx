@@ -419,19 +419,30 @@ export default function VenueDetailScreen() {
                     onPress={() => safePush(`/event/${event.id}`)}
                     activeOpacity={0.8}
                   >
-                    <View style={styles.eventDateBox}>
-                      <Text style={styles.eventDay}>
-                        {(event.date || "").split("-")[2] || "—"}
-                      </Text>
-                      <Text style={styles.eventMonth}>
-                        {getMonthShort(event.date || "", lang)}
-                      </Text>
-                    </View>
+                    {event.imageUrl ? (
+                      <Image
+                        source={{ uri: event.imageUrl }}
+                        style={styles.eventThumb}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={styles.eventDateBox}>
+                        <Text style={styles.eventDay}>
+                          {(event.date || "").split("-")[2] || "—"}
+                        </Text>
+                        <Text style={styles.eventMonth}>
+                          {getMonthShort(event.date || "", lang)}
+                        </Text>
+                      </View>
+                    )}
                     <View style={styles.eventInfo}>
                       <Text style={styles.eventTitle} numberOfLines={1}>
                         {title}
                       </Text>
-                      <Text style={styles.eventTime}>{event.time}</Text>
+                      <Text style={styles.eventDate}>
+                        {formatEventDate(event.date || "", lang)}
+                      </Text>
+                      {event.time ? <Text style={styles.eventTime}>{event.time}</Text> : null}
                     </View>
                     <View style={styles.eventPriceWrap}>
                       <Ionicons name="chevron-forward" size={14} color={C.textMuted} />
@@ -459,19 +470,30 @@ export default function VenueDetailScreen() {
                     onPress={() => safePush(`/event/${event.id}`)}
                     activeOpacity={0.8}
                   >
-                    <View style={[styles.eventDateBox, { backgroundColor: C.border + "22" }]}>
-                      <Text style={[styles.eventDay, { color: C.textMuted }]}>
-                        {(event.date || "").split("-")[2] || "—"}
-                      </Text>
-                      <Text style={[styles.eventMonth, { color: C.textMuted }]}>
-                        {getMonthShort(event.date || "", lang)}
-                      </Text>
-                    </View>
+                    {event.imageUrl ? (
+                      <Image
+                        source={{ uri: event.imageUrl }}
+                        style={styles.eventThumb}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={[styles.eventDateBox, { backgroundColor: C.border + "22" }]}>
+                        <Text style={[styles.eventDay, { color: C.textMuted }]}>
+                          {(event.date || "").split("-")[2] || "—"}
+                        </Text>
+                        <Text style={[styles.eventMonth, { color: C.textMuted }]}>
+                          {getMonthShort(event.date || "", lang)}
+                        </Text>
+                      </View>
+                    )}
                     <View style={styles.eventInfo}>
                       <Text style={styles.eventTitle} numberOfLines={1}>
                         {title}
                       </Text>
-                      <Text style={styles.eventTime}>{event.time}</Text>
+                      <Text style={styles.eventDate}>
+                        {formatEventDate(event.date || "", lang)}
+                      </Text>
+                      {event.time ? <Text style={styles.eventTime}>{event.time}</Text> : null}
                     </View>
                     <View style={styles.eventPriceWrap}>
                       <Ionicons name="chevron-forward" size={14} color={C.textMuted} />
@@ -535,6 +557,23 @@ function getTypeIcon(type: string): string {
     case "Comedy Club": return "happy";
     default: return "business";
   }
+}
+
+// Format "12 Mai 2026" / "May 12, 2026" — date affichée au-dessus de l'heure
+// dans la liste des events d'un lieu (la vignette image remplace désormais
+// la pastille jour+mois quand l'event a une photo).
+function formatEventDate(dateStr: string, lang: string): string {
+  if (!dateStr) return "—";
+  const parts = dateStr.split("-");
+  if (parts.length < 3) return dateStr;
+  const day = parseInt(parts[2], 10);
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const year = parts[0];
+  const monthsFr = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+  const monthsEn = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+  const months = lang === "fr" ? monthsFr : monthsEn;
+  const month = months[monthIdx] ?? "";
+  return lang === "fr" ? `${day} ${month} ${year}` : `${month} ${day}, ${year}`;
 }
 
 function getMonthShort(dateStr: string, lang: string): string {
@@ -726,8 +765,8 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
     gap: 12,
   },
   eventDateBox: {
-    width: 44,
-    height: 44,
+    width: 56,
+    height: 56,
     borderRadius: 10,
     backgroundColor: C.lavender + "18",
     borderWidth: 1,
@@ -735,6 +774,18 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
+  },
+  eventThumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+    backgroundColor: C.bg,
+    flexShrink: 0,
+  },
+  eventDate: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: C.text,
   },
   eventDay: {
     fontSize: 16,
