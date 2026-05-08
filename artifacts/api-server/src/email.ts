@@ -248,6 +248,70 @@ export async function sendNewVenueAdminNotification(
   });
 }
 
+export async function sendVenueUpdatedAdminNotification(
+  venue: { id: number; name: string; type?: string | null; city?: string | null; country?: string | null; address?: string | null },
+  partner: { id: number; businessName: string; contactName: string; email: string },
+  changedFields: string[],
+) {
+  const adminLink = `${ADMIN_BASE_URL}/lieux?id=${venue.id}`;
+  const fieldLabels: Record<string, string> = {
+    name: "Nom",
+    type: "Type",
+    city: "Ville",
+    country: "Pays",
+    address: "Adresse",
+    description: "Description",
+    openingTime: "Heure d'ouverture",
+    closingTime: "Heure de fermeture",
+    images: "Photos",
+    imageUrl: "Photos",
+  };
+  const changesList = changedFields
+    .map((f) => fieldLabels[f] || f)
+    // Dédupe (images/imageUrl partagent le même libellé "Photos").
+    .filter((label, i, arr) => arr.indexOf(label) === i)
+    .map((label) => `<li style="margin: 4px 0;">${escapeHtml(label)}</li>`)
+    .join("");
+  await sendMail({
+    to: ADMIN_EMAIL,
+    subject: `✏️ Lieu modifié à re-valider : ${venue.name}`,
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml("Lieu modifié à re-valider")}
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 0 0 16px;">
+          Un partenaire vient de modifier les informations d'un lieu. Le lieu a été remis en attente de validation et n'apparaît plus dans l'application tant qu'il n'a pas été ré-approuvé.
+        </p>
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px; width: 40%;">Lieu</td><td style="padding: 6px 0; color: #e8e8f0; font-weight: 600;">${escapeHtml(venue.name)}</td></tr>
+            ${venue.type ? `<tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Type</td><td style="padding: 6px 0; color: #e8e8f0;">${escapeHtml(venue.type)}</td></tr>` : ""}
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Ville</td><td style="padding: 6px 0; color: #e8e8f0;">${escapeHtml(venue.city || "—")}${venue.country ? `, ${escapeHtml(venue.country)}` : ""}</td></tr>
+            ${venue.address ? `<tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Adresse</td><td style="padding: 6px 0; color: #e8e8f0;">${escapeHtml(venue.address)}</td></tr>` : ""}
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Partenaire</td><td style="padding: 6px 0; color: #e8e8f0;">${escapeHtml(partner.businessName)}</td></tr>
+            <tr><td style="padding: 6px 0; color: #6b6d8a; font-size: 13px;">Contact</td><td style="padding: 6px 0;"><a href="mailto:${escapeHtml(partner.email)}" style="color: #7c6af7;">${escapeHtml(partner.contactName)} (${escapeHtml(partner.email)})</a></td></tr>
+          </table>
+        </div>
+        ${changesList ? `
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #f0c040;">
+          <p style="margin: 0 0 8px; font-size: 13px; color: #6b6d8a; text-transform: uppercase; letter-spacing: 0.5px;">Champs modifiés</p>
+          <ul style="margin: 0; padding-left: 20px; color: #e8e8f0; font-size: 14px; line-height: 1.6;">
+            ${changesList}
+          </ul>
+        </div>` : ""}
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${adminLink}" style="display: inline-block; background: #7c6af7; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 600; font-size: 14px;">
+            Examiner et re-valider
+          </a>
+        </div>
+        <p style="color: #6b6d8a; line-height: 1.5; margin: 16px 0 0; font-size: 12px; text-align: center;">
+          Lien direct : <a href="${adminLink}" style="color: #7c6af7; word-break: break-all;">${adminLink}</a>
+        </p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}
+
 export async function sendNewEventAdminNotification(
   event: { id: number; title: string; date: string | Date; time?: string | null; city?: string | null; category?: string | null; description?: string | null },
   venue: { id: number; name: string; city?: string | null; country?: string | null },

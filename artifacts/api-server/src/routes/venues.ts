@@ -6,6 +6,7 @@ import { requireAdmin } from "./admin.js";
 import { ensurePartnerSubscriptionActive, getActivePartnerIds } from "../lib/subscriptions.js";
 import {
   sendNewVenueAdminNotification,
+  sendVenueUpdatedAdminNotification,
   sendVenueApprovedEmail,
   sendVenueRejectedEmail,
 } from "../email.js";
@@ -190,12 +191,25 @@ router.patch("/partners/me/venues/:id", requireAuth, async (req: any, res) => {
     allowed.imageUrl = imgs[0] ?? null;
   }
   // Editing core info resets status to pending so admin re-validates.
-  if (Object.keys(allowed).length > 0 && existing.status === "approved") {
+  const triggersRevalidation =
+    Object.keys(allowed).length > 0 && existing.status === "approved";
+  if (triggersRevalidation) {
     allowed.status = "pending";
     allowed.rejectionReason = null;
   }
   const [v] = await db.update(venuesTable).set(allowed).where(eq(venuesTable.id, id)).returning();
   res.json(serialize(v));
+
+  // Notify admin (best-effort, hors réponse) uniquement quand un lieu déjà approuvé
+  // bascule à pending : c'est ce cas qui demande une nouvelle action de modération.
+  if (triggersRevalidation) {
+    const changedFields = Object.keys(allowed).filter(
+      (k) => k !== "status" && k !== "rejectionReason",
+    );
+    db.select().from(partnersTable).where(eq(partnersTable.id, partnerId)).then(([p]) => {
+      if (p) sendVenueUpdatedAdminNotification(v, p, changedFields).catch(() => {});
+    }).catch(() => {});
+  }
 });
 
 router.patch("/partners/me/venues/:id/location", requireAuth, async (req: any, res) => {
