@@ -7,7 +7,9 @@ import { Button } from "components/ui/button";
 import { Label } from "components/ui/label";
 import { CheckCircle2, Mail, MapPin, Send, AlertCircle } from "lucide-react";
 
-const API_BASE = `${(process.env.PUBLIC_URL || "").replace(/\/$/, "").replace("/nostress-web", "")}/api`;
+const API_BASE = process.env.NODE_ENV === "production"
+  ? "https://api.no-stress.net/api"
+  : `${(process.env.PUBLIC_URL || "").replace(/\/$/, "").replace("/nostress-web", "")}/api`;
 
 const ContactSchema = Yup.object().shape({
   name: Yup.string()

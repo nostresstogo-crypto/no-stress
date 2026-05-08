@@ -14,9 +14,11 @@ import {
 } from "components/ui/select";
 import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 
-const API_BASE = `${(process.env.PUBLIC_URL || "")
-  .replace(/\/$/, "")
-  .replace("/nostress-web", "")}/api`;
+const API_BASE = process.env.NODE_ENV === "production"
+  ? "https://api.no-stress.net/api"
+  : `${(process.env.PUBLIC_URL || "")
+      .replace(/\/$/, "")
+      .replace("/nostress-web", "")}/api`;
 
 const REASON_LABELS: Record<string, string> = {
   not_useful: "L'application ne m'est pas utile",

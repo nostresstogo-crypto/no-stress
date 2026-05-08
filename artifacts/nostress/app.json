@@ -106,7 +106,8 @@
     "extra": {
       "router": {
         "origin": "https://replit.com/"
-      }
+      },
+      "apiBase": "https://api.no-stress.net/api"
     }
   }
 }
