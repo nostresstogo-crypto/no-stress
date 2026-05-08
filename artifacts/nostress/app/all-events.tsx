@@ -127,6 +127,9 @@ export default function AllEventsScreen() {
           hitSlop={6}
         >
           <Ionicons name="options-outline" size={16} color={filtersOpen ? C.bg : C.text} />
+          <Text style={[styles.filterToggleText, filtersOpen && { color: C.bg }]}>
+            {filtersOpen ? (isFr ? "Masquer" : "Hide") : (isFr ? "Filtres" : "Filters")}
+          </Text>
           {activeFilterCount > 0 && (
             <View style={styles.filterCountBadge}>
               <Text style={styles.filterCountBadgeText}>{activeFilterCount}</Text>
@@ -291,6 +294,7 @@ const makeStyles = (C: any) => StyleSheet.create({
     borderWidth: 1, borderColor: C.border, backgroundColor: C.card,
   },
   filterToggleActive: { backgroundColor: C.lavender, borderColor: C.lavender },
+  filterToggleText: { fontSize: 12, color: C.text, fontFamily: "Inter_600SemiBold" },
   filterCountBadge: {
     minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 4,
     backgroundColor: C.gold, alignItems: "center", justifyContent: "center",
