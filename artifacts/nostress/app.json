@@ -91,6 +91,7 @@
         }
       ],
       "@react-native-community/datetimepicker",
+      "@sentry/react-native/expo",
       [
         "expo-build-properties",
         {
