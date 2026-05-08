@@ -3,18 +3,18 @@ export const TOGO_GREEN  = "#006A4E";
 export const TOGO_YELLOW = "#FFCD00";
 export const TOGO_RED    = "#D21034";
 
-/* ── Dark theme (default) — obsidian + champagne luxe ────── */
+/* ── Dark theme (default) — midnight lavender, luxe & chaleureux ── */
 const DARK = {
-  bg:          "#07091A",
-  card:        "#11142A",
-  card2:       "#191D38",
-  border:      "#262B4A",
+  bg:          "#161A33",  // bleu nuit avec teinte lavande, moins corbeau
+  card:        "#1F2447",  // surface élevée, contraste doux
+  card2:       "#2A2F58",  // surface imbriquée, bien différenciée
+  border:      "#3A3F6B",  // liseré plus visible sur fond plus clair
   lavender:    "#B5A8F0",
   lavenderDim: "#8C7FD8",
   gold:        "#E5C46B",
   goldDim:     "#B89A4D",
   text:        "#F2EFFA",
-  textMuted:   "#8B89A8",
+  textMuted:   "#A6A3C4",  // contraste rééquilibré pour le nouveau bg
   success:     "#3FBE7A",
   error:       "#E26B6B",
   white:       "#FFFFFF",
