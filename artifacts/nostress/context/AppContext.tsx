@@ -14,6 +14,11 @@ import { Lang } from "@/constants/i18n";
 import { getThemeColors, ColorPalette } from "@/constants/colors";
 import { MOCK_CITIES, MOCK_EVENTS } from "@/constants/data";
 import { registerPushPreferences } from "@/lib/pushNotifications";
+import {
+  startNearbyAlerts,
+  stopNearbyAlerts,
+  updateNearbyAlertsContext,
+} from "@/lib/nearbyAlerts";
 import { API_BASE } from "@/lib/apiBase";
 
 export interface ApiEvent {
@@ -654,6 +659,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       city: selectedCity || "",
       cats: [...favoriteCategories].sort(),
       lang,
+      // Inclure le token + role/id pour forcer un upsert à chaque changement d'identité
+      auth: token || "",
+      uid: user?.id || "",
+      role: user?.role || "",
     });
     if (sig === lastPushRegRef.current) return;
     lastPushRegRef.current = sig;
@@ -661,8 +670,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
       city: selectedCity || null,
       favoriteCategories,
       language: lang,
+      authToken: token || null,
     });
-  }, [appReady, selectedCity, favoriteCategories, lang]);
+  }, [appReady, selectedCity, favoriteCategories, lang, token, user?.id, user?.role]);
+
+  // Géofencing 1km : démarre/arrête selon réglage utilisateur
+  useEffect(() => {
+    const enabled = locationNotificationsEnabled && !!user && user.role === "user";
+    if (!enabled) {
+      stopNearbyAlerts();
+      return;
+    }
+    void startNearbyAlerts(apiEvents, lang);
+    return () => {
+      // Pas de stop ici : on garde le watcher actif tant que l'user veut.
+    };
+  }, [locationNotificationsEnabled, user, lang]);
+
+  // Met à jour la liste d'évents surveillés sans relancer le watcher
+  useEffect(() => {
+    updateNearbyAlertsContext(apiEvents, lang);
+  }, [apiEvents, lang]);
 
   const value = useMemo<AppContextValue>(
     () => ({

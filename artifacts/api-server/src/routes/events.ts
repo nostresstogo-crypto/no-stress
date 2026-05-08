@@ -4,7 +4,12 @@ import { db, eventsTable, venuesTable, partnersTable } from "@workspace/db";
 import { sendNewEventAdminNotification } from "../email.js";
 import { requireAuth } from "../lib/auth-utils.js";
 import { requireAdmin } from "./admin.js";
-import { notifyEventApproved } from "../lib/pushNotifications.js";
+import {
+  notifyEventApproved,
+  notifyEventUpdated,
+  notifyVenueNewEvent,
+  notifyPartnerStatus,
+} from "../lib/pushNotifications.js";
 import { ensurePartnerSubscriptionActive, getActivePartnerIds } from "../lib/subscriptions.js";
 
 const router: IRouter = Router();
@@ -216,6 +221,9 @@ router.post("/partners/me/events", requireAuth, async (req: any, res) => {
   db.select().from(partnersTable).where(eq(partnersTable.id, partnerId)).then(([p]) => {
     if (p) sendNewEventAdminNotification(event, venue, p).catch(() => {});
   }).catch(() => {});
+
+  // Push : nouvel évènement → users qui ont mis ce lieu en favori
+  notifyVenueNewEvent(event.id).catch(() => {});
 });
 
 router.patch("/partners/me/events/:id", requireAuth, async (req: any, res) => {
@@ -270,6 +278,12 @@ router.patch("/partners/me/events/:id", requireAuth, async (req: any, res) => {
   allowed.status = "approved";
   const [event] = await db.update(eventsTable).set(allowed).where(eq(eventsTable.id, id)).returning();
   res.json(serialize(event));
+
+  // Push : modification → users qui ont mis cet event en favori
+  const changedFields = Object.keys(allowed).filter((k) => k !== "status");
+  if (changedFields.length > 0) {
+    notifyEventUpdated(event.id, changedFields).catch(() => {});
+  }
 });
 
 router.delete("/partners/me/events/:id", requireAuth, async (req: any, res) => {
@@ -296,14 +310,34 @@ router.post("/admin/events/:id/approve", requireAdmin, async (req: any, res) => 
   if (!event) return res.status(404).json({ error: "Événement introuvable." });
   // Fire-and-forget : ne bloque pas la réponse
   notifyEventApproved(event.id).catch(() => {});
+  if (event.partnerId != null) {
+    notifyPartnerStatus({
+      partnerId: event.partnerId,
+      itemType: "event",
+      itemId: event.id,
+      itemName: event.titleFr || event.title,
+      status: "approved",
+    }).catch(() => {});
+  }
   res.json(serialize(event));
 });
 
 router.post("/admin/events/:id/reject", requireAdmin, async (req: any, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Événement introuvable." });
+  const reason = String(req.body?.reason || "").trim() || null;
   const [event] = await db.update(eventsTable).set({ status: "rejected" }).where(eq(eventsTable.id, id)).returning();
   if (!event) return res.status(404).json({ error: "Événement introuvable." });
+  if (event.partnerId != null) {
+    notifyPartnerStatus({
+      partnerId: event.partnerId,
+      itemType: "event",
+      itemId: event.id,
+      itemName: event.titleFr || event.title,
+      status: "rejected",
+      reason,
+    }).catch(() => {});
+  }
   res.json(serialize(event));
 });
 

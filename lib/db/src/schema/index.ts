@@ -201,6 +201,8 @@ export const pushTokensTable = pgTable("push_tokens", {
   city: text("city"),
   favoriteCategories: jsonb("favorite_categories"),
   language: text("language").default("fr"),
+  userId: integer("user_id").references(() => usersTable.id, { onDelete: "cascade" }),
+  partnerId: integer("partner_id").references(() => partnersTable.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

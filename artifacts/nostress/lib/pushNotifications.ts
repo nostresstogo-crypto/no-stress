@@ -94,6 +94,7 @@ export async function registerPushPreferences(prefs: {
   city?: string | null;
   favoriteCategories?: string[];
   language?: "fr" | "en";
+  authToken?: string | null;
 }): Promise<void> {
   try {
     const token = await getExpoPushToken();
@@ -107,13 +108,18 @@ export async function registerPushPreferences(prefs: {
       language: prefs.language || "fr",
     };
 
-    const sig = JSON.stringify(payload);
+    // La signature inclut authToken complet pour ré-enregistrer à chaque
+    // changement d'identité (login/logout/switch d'un compte à l'autre).
+    const sig = JSON.stringify({ ...payload, auth: prefs.authToken || "" });
     if (sig === lastSig) return;
     lastSig = sig;
 
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (prefs.authToken) headers["Authorization"] = `Bearer ${prefs.authToken}`;
+
     const res = await fetch(`${API_BASE}/push/register`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(payload),
     });
     if (!res.ok) {

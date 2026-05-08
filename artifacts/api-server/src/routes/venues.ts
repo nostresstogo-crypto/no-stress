@@ -10,6 +10,10 @@ import {
   sendVenueApprovedEmail,
   sendVenueRejectedEmail,
 } from "../email.js";
+import {
+  notifyVenueUpdated,
+  notifyPartnerStatus,
+} from "../lib/pushNotifications.js";
 
 const MAX_GALLERY = 3;
 const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
@@ -200,15 +204,21 @@ router.patch("/partners/me/venues/:id", requireAuth, async (req: any, res) => {
   const [v] = await db.update(venuesTable).set(allowed).where(eq(venuesTable.id, id)).returning();
   res.json(serialize(v));
 
+  const changedFields = Object.keys(allowed).filter(
+    (k) => k !== "status" && k !== "rejectionReason",
+  );
+
   // Notify admin (best-effort, hors réponse) uniquement quand un lieu déjà approuvé
   // bascule à pending : c'est ce cas qui demande une nouvelle action de modération.
   if (triggersRevalidation) {
-    const changedFields = Object.keys(allowed).filter(
-      (k) => k !== "status" && k !== "rejectionReason",
-    );
     db.select().from(partnersTable).where(eq(partnersTable.id, partnerId)).then(([p]) => {
       if (p) sendVenueUpdatedAdminNotification(v, p, changedFields).catch(() => {});
     }).catch(() => {});
+  }
+
+  // Push : modification → users qui ont mis ce lieu en favori
+  if (changedFields.length > 0) {
+    notifyVenueUpdated(v.id, changedFields).catch(() => {});
   }
 });
 
@@ -304,6 +314,13 @@ router.post("/admin/venues/:id/approve", requireAdmin, async (req: any, res) => 
         }
       })
       .catch((err) => console.error("[admin][venue-approve] notify failed:", err));
+    notifyPartnerStatus({
+      partnerId: v.partnerId,
+      itemType: "venue",
+      itemId: v.id,
+      itemName: v.name,
+      status: "approved",
+    }).catch(() => {});
   }
   res.json(serialize(v));
 });
@@ -331,6 +348,14 @@ router.post("/admin/venues/:id/reject", requireAdmin, async (req: any, res) => {
         }
       })
       .catch((err) => console.error("[admin][venue-reject] notify failed:", err));
+    notifyPartnerStatus({
+      partnerId: v.partnerId,
+      itemType: "venue",
+      itemId: v.id,
+      itemName: v.name,
+      status: "rejected",
+      reason,
+    }).catch(() => {});
   }
   res.json(serialize(v));
 });
