@@ -294,7 +294,8 @@ router.post("/admin/events/:id/approve", requireAdmin, async (req: any, res) => 
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Événement introuvable." });
   const [event] = await db.update(eventsTable).set({ status: "approved" }).where(eq(eventsTable.id, id)).returning();
   if (!event) return res.status(404).json({ error: "Événement introuvable." });
-  void notifyEventApproved;
+  // Fire-and-forget : ne bloque pas la réponse
+  notifyEventApproved(event.id).catch(() => {});
   res.json(serialize(event));
 });
 
