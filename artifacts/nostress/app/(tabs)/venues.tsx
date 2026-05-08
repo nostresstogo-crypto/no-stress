@@ -40,6 +40,24 @@ export default function VenuesScreen() {
   const [radiusKm, setRadiusKm] = useState<number | null>(5);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const activeFilterCount = useMemo(() => {
+    let n = 0;
+    if (country) n++;
+    if (city) n++;
+    if (selectedType) n++;
+    if (coords && radiusKm) n++;
+    return n;
+  }, [country, city, selectedType, coords, radiusKm]);
+
+  const resetFilters = useCallback(() => {
+    setCountry("");
+    setCity("");
+    setSelectedType("");
+    setRadiusKm(5);
+    setCoords(null);
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -98,8 +116,44 @@ export default function VenuesScreen() {
   return (
     <View style={styles.root}>
       <View style={[styles.header, { paddingTop: topInset + 12 }]}>
-        <Text style={styles.headerTitle}>{t("venues")}</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.headerTitle}>{t("venues")}</Text>
+          <TouchableOpacity
+            onPress={() => setFiltersOpen((v) => !v)}
+            style={[styles.filterToggle, filtersOpen && styles.filterToggleActive]}
+            accessibilityLabel={t("language") === "Langue" ? "Filtres" : "Filters"}
+          >
+            <Ionicons name="options-outline" size={18} color={filtersOpen ? C.bg : C.text} />
+            <Text style={[styles.filterToggleText, filtersOpen && { color: C.bg }]}>
+              {filtersOpen ? "Masquer" : "Filtres"}
+            </Text>
+            {activeFilterCount > 0 && (
+              <View style={styles.filterCountBadge}>
+                <Text style={styles.filterCountBadgeText}>{activeFilterCount}</Text>
+              </View>
+            )}
+            <Ionicons
+              name={filtersOpen ? "chevron-up" : "chevron-down"}
+              size={16}
+              color={filtersOpen ? C.bg : C.textMuted}
+            />
+          </TouchableOpacity>
+        </View>
 
+        {!filtersOpen && activeFilterCount > 0 && (
+          <View style={styles.activeSummary}>
+            {country ? <Text style={styles.activeSummaryText}>{country}</Text> : null}
+            {city ? <Text style={styles.activeSummaryText}>{city}</Text> : null}
+            {selectedType ? <Text style={styles.activeSummaryText}>{selectedType}</Text> : null}
+            {coords && radiusKm ? <Text style={styles.activeSummaryText}>{radiusKm} km</Text> : null}
+            <TouchableOpacity onPress={resetFilters} hitSlop={6}>
+              <Text style={[styles.activeSummaryText, { color: C.lavender }]}>Effacer ✕</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {filtersOpen ? (
+          <>
         <Text style={styles.filterLabel}>Pays</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 4 }}>
           <TouchableOpacity
@@ -190,6 +244,8 @@ export default function VenuesScreen() {
             ))}
           </ScrollView>
         </View>
+          </>
+        ) : null}
       </View>
 
       {loading ? (
@@ -228,7 +284,22 @@ const makeStyles = (C: any) => StyleSheet.create({
     borderBottomColor: C.border,
     gap: 10,
   },
-  headerTitle: { fontSize: 28, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 4 },
+  headerTitle: { fontSize: 28, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 4, flex: 1 },
+  titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  filterToggle: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20,
+    borderWidth: 1, borderColor: C.border, backgroundColor: C.card,
+  },
+  filterToggleActive: { backgroundColor: C.lavender, borderColor: C.lavender },
+  filterToggleText: { fontSize: 13, color: C.text, fontFamily: "Inter_600SemiBold" },
+  filterCountBadge: {
+    minWidth: 18, height: 18, borderRadius: 9, paddingHorizontal: 5,
+    backgroundColor: C.gold, alignItems: "center", justifyContent: "center",
+  },
+  filterCountBadgeText: { color: C.bg, fontSize: 10, fontFamily: "Inter_700Bold" },
+  activeSummary: { flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center", paddingTop: 4 },
+  activeSummaryText: { fontSize: 12, color: C.textMuted, fontFamily: "Inter_500Medium" },
   filterLabel: { fontSize: 11, color: C.textMuted, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5, marginTop: 6 },
   row: { flexDirection: "row", gap: 8 },
   inputWrap: {

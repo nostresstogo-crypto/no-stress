@@ -39,6 +39,24 @@ export default function AllEventsScreen() {
   const [radiusKm, setRadiusKm] = useState<number | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [locating, setLocating] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const activeFilterCount = useMemo(() => {
+    let n = 0;
+    if (country) n++;
+    if (city) n++;
+    if (category) n++;
+    if (coords && radiusKm) n++;
+    return n;
+  }, [country, city, category, coords, radiusKm]);
+
+  const resetFilters = useCallback(() => {
+    setCountry("");
+    setCity("");
+    setCategory("");
+    setRadiusKm(null);
+    setCoords(null);
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -103,9 +121,34 @@ export default function AllEventsScreen() {
         <Text style={styles.headerTitle}>
           {isFr ? "Tous les événements" : "All events"}
         </Text>
-        <View style={{ width: 32 }} />
+        <TouchableOpacity
+          onPress={() => setFiltersOpen((v) => !v)}
+          style={[styles.filterToggle, filtersOpen && styles.filterToggleActive]}
+          hitSlop={6}
+        >
+          <Ionicons name="options-outline" size={16} color={filtersOpen ? C.bg : C.text} />
+          {activeFilterCount > 0 && (
+            <View style={styles.filterCountBadge}>
+              <Text style={styles.filterCountBadgeText}>{activeFilterCount}</Text>
+            </View>
+          )}
+          <Ionicons name={filtersOpen ? "chevron-up" : "chevron-down"} size={14} color={filtersOpen ? C.bg : C.textMuted} />
+        </TouchableOpacity>
       </View>
 
+      {!filtersOpen && activeFilterCount > 0 ? (
+        <View style={styles.activeSummary}>
+          {country ? <Text style={styles.activeSummaryText}>{country}</Text> : null}
+          {city ? <Text style={styles.activeSummaryText}>{city}</Text> : null}
+          {category ? <Text style={styles.activeSummaryText}>{t(category as any)}</Text> : null}
+          {coords && radiusKm ? <Text style={styles.activeSummaryText}>{radiusKm} km</Text> : null}
+          <TouchableOpacity onPress={resetFilters} hitSlop={6}>
+            <Text style={[styles.activeSummaryText, { color: C.lavender }]}>{isFr ? "Effacer ✕" : "Clear ✕"}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
+      {filtersOpen ? (
       <View style={styles.filterCard}>
         <Text style={styles.filterLabel}>{isFr ? "Pays" : "Country"}</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 6 }}>
@@ -207,6 +250,7 @@ export default function AllEventsScreen() {
           )}
         </View>
       </View>
+      ) : null}
 
       {loading ? (
         <View style={styles.center}>
@@ -241,6 +285,23 @@ const makeStyles = (C: any) => StyleSheet.create({
   },
   iconBtn: { width: 32, height: 32, borderRadius: 16, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 16, fontFamily: "Inter_700Bold", color: C.text, flex: 1, textAlign: "center" },
+  filterToggle: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16,
+    borderWidth: 1, borderColor: C.border, backgroundColor: C.card,
+  },
+  filterToggleActive: { backgroundColor: C.lavender, borderColor: C.lavender },
+  filterCountBadge: {
+    minWidth: 16, height: 16, borderRadius: 8, paddingHorizontal: 4,
+    backgroundColor: C.gold, alignItems: "center", justifyContent: "center",
+  },
+  filterCountBadgeText: { color: C.bg, fontSize: 9, fontFamily: "Inter_700Bold" },
+  activeSummary: {
+    flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center",
+    paddingHorizontal: 16, paddingVertical: 8,
+    borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.card,
+  },
+  activeSummaryText: { fontSize: 12, color: C.textMuted, fontFamily: "Inter_500Medium" },
   filterCard: { padding: 12, gap: 6, borderBottomWidth: 1, borderBottomColor: C.border, backgroundColor: C.card },
   filterLabel: { fontSize: 11, color: C.textMuted, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5, marginTop: 4 },
   row: { flexDirection: "row", gap: 8 },
