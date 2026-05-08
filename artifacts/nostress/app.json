@@ -2,7 +2,7 @@
   "expo": {
     "name": "NoStress",
     "slug": "nostress",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "nostress",
@@ -29,7 +29,8 @@
         "NSLocationWhenInUseUsageDescription": "Turning on your location will allow $(PRODUCT_NAME) to show you nearby places and events.",
         "NSCameraUsageDescription": "$(PRODUCT_NAME) needs access to your camera so you can take photos to add to your events or profile.",
         "NSPhotoLibraryUsageDescription": "$(PRODUCT_NAME) needs access to your photos so you can choose your partner's logo or your profile photo.",
-        "NSPhotoLibraryAddUsageDescription": "$(PRODUCT_NAME) needs to save your tickets to your photo library."
+        "NSPhotoLibraryAddUsageDescription": "$(PRODUCT_NAME) needs to save your tickets to your photo library.",
+        "NSUserNotificationUsageDescription": "$(PRODUCT_NAME) sends you notifications about new events near you, your favorite categories, and updates on your bookings and tickets."
       }
     },
     "android": {
@@ -40,7 +41,8 @@
         "backgroundColor": "#0E1120"
       },
       "permissions": [
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS"
       ],
       "blockedPermissions": [
         "android.permission.SYSTEM_ALERT_WINDOW",
@@ -91,6 +93,15 @@
         }
       ],
       "@react-native-community/datetimepicker",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#B5A8F0",
+          "defaultChannel": "default",
+          "enableBackgroundRemoteNotifications": false
+        }
+      ],
       [
         "expo-build-properties",
         {
