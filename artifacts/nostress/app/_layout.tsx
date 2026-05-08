@@ -25,7 +25,7 @@ import { StatusBar } from "expo-status-bar";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider, useApp, useColors } from "@/context/AppContext";
-import { initSentry, Sentry } from "@/lib/sentry";
+import { initSentry, captureException } from "@/lib/sentry";
 
 initSentry();
 SplashScreen.preventAutoHideAsync();
@@ -575,7 +575,7 @@ function RootLayout() {
     if (fontError) {
       console.warn("[fonts] erreur de chargement", fontError);
       try {
-        Sentry?.captureException?.(fontError);
+        captureException(fontError);
       } catch {}
     }
     if (fontsLoaded || fontError) {
@@ -602,6 +602,4 @@ function RootLayout() {
   );
 }
 
-export default process.env.EXPO_PUBLIC_SENTRY_DSN
-  ? Sentry.wrap(RootLayout)
-  : RootLayout;
+export default RootLayout;

@@ -1,30 +1,12 @@
-import * as Sentry from "@sentry/react-native";
-
-const dsn = process.env.EXPO_PUBLIC_SENTRY_DSN;
-
-let initialized = false;
+// Sentry retiré du build mobile — stub no-op pour conserver l'API publique
+// utilisée par les autres modules (initSentry, captureException). Tout
+// est désactivé jusqu'à ce qu'on remette en place une solution de monitoring
+// (Sentry avec credentials propres, Bugsnag, etc.).
 
 export function initSentry(): void {
-  if (initialized || !dsn) return;
-  try {
-    Sentry.init({
-      dsn,
-      environment: __DEV__ ? "development" : "production",
-      enabled: !__DEV__,
-      tracesSampleRate: 0.1,
-      sendDefaultPii: false,
-    });
-    initialized = true;
-  } catch (e) {
-    console.error("[Sentry] init failed:", e);
-  }
+  // no-op
 }
 
-export function captureException(error: unknown, context?: Record<string, unknown>): void {
-  if (!initialized) return;
-  try {
-    Sentry.captureException(error, context ? { extra: context } : undefined);
-  } catch {}
+export function captureException(_error: unknown, _context?: Record<string, unknown>): void {
+  // no-op
 }
-
-export { Sentry };

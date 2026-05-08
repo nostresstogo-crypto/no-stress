@@ -58,7 +58,6 @@
   },
   "dependencies": {
     "@react-native-community/datetimepicker": "^8.4.4",
-    "@sentry/react-native": "^7.2.0",
     "expo-build-properties": "~1.0.10",
     "expo-device": "~8.0.10",
     "expo-notifications": "~0.32.17",
