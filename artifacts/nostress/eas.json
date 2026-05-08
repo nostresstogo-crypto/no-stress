@@ -19,7 +19,8 @@
         "simulator": false
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE": "https://api.no-stress.net/api"
+        "EXPO_PUBLIC_API_BASE": "https://api.no-stress.net/api",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },
     "production": {
@@ -29,7 +30,8 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE": "https://api.no-stress.net/api"
+        "EXPO_PUBLIC_API_BASE": "https://api.no-stress.net/api",
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     }
   },
