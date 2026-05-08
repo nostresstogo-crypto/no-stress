@@ -63,13 +63,17 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 }
 
 router.get("/events", async (req, res) => {
-  const { city, country, category, partnerId, includeArchived, archivedOnly, page = 1, limit = 20, lat, lng, radiusKm } = req.query;
+  const { city, country, category, partnerId, venueId, includeArchived, archivedOnly, page = 1, limit = 20, lat, lng, radiusKm } = req.query;
   const activeIds = await getActivePartnerIds();
   if (activeIds.length === 0) return res.json({ events: [], total: 0, page: Number(page), limit: Number(limit) });
   const conds: any[] = [eq(eventsTable.status, "approved"), inArray(eventsTable.partnerId, activeIds)];
   if (partnerId) {
     const pid = parseInt(String(partnerId), 10);
     if (Number.isFinite(pid)) conds.push(eq(eventsTable.partnerId, pid));
+  }
+  if (venueId) {
+    const vid = parseInt(String(venueId), 10);
+    if (Number.isFinite(vid)) conds.push(eq(eventsTable.venueId, vid));
   }
   if (city) conds.push(ilike(eventsTable.city, `%${String(city)}%`));
   if (category) conds.push(eq(eventsTable.category, String(category)));

@@ -57,6 +57,7 @@ export default function VenueDetailScreen() {
   const insets = useSafeAreaInsets();
 
   const [apiVenue, setApiVenue] = useState<Venue | null>(null);
+  const [apiEvents, setApiEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const isApi = typeof id === "string" && id.startsWith("api_");
@@ -70,9 +71,12 @@ export default function VenueDetailScreen() {
         return;
       }
       try {
-        const r = await fetch(`${API_BASE}/venues/${apiNumId}`);
-        if (!cancelled && r.ok) {
-          const data = await r.json();
+        const [rv, re] = await Promise.all([
+          fetch(`${API_BASE}/venues/${apiNumId}`),
+          fetch(`${API_BASE}/events?venueId=${apiNumId}&includeArchived=1&limit=200`),
+        ]);
+        if (!cancelled && rv.ok) {
+          const data = await rv.json();
           setApiVenue({
             id: `api_${data.id}`,
             name: data.name || "",
@@ -90,6 +94,10 @@ export default function VenueDetailScreen() {
             specialties: Array.isArray(data.specialties) ? data.specialties : [],
           });
         }
+        if (!cancelled && re.ok) {
+          const data = await re.json();
+          setApiEvents(Array.isArray(data?.events) ? data.events : []);
+        }
       } catch {}
       if (!cancelled) setLoading(false);
     })();
@@ -101,15 +109,35 @@ export default function VenueDetailScreen() {
     return MOCK_VENUES.find((v) => v.id === id) as Venue | undefined;
   }, [isApi, apiVenue, id]);
 
-  const venueEvents = useMemo(() => {
-    if (!venue) return [];
-    return MOCK_EVENTS.filter(
-      (e) =>
-        e.venueId === venue.id ||
-        (e.venueName && venue.name &&
-          e.venueName.toLowerCase() === venue.name.toLowerCase()),
-    );
-  }, [venue]);
+  // Sépare les événements à venir (date >= aujourd'hui) et passés.
+  // - Côté API : on a fetché avec includeArchived=1 pour récupérer tout l'historique du lieu.
+  // - Côté mock (MOCK_EVENTS) : on fait le même filtre par date.
+  const { upcomingEvents, pastEvents } = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    let all: any[] = [];
+    if (isApi) {
+      all = apiEvents.map((e) => ({
+        ...e,
+        id: `api_${e.id}`,
+        title: e.title || "",
+        titleFr: e.titleFr || null,
+      }));
+    } else if (venue) {
+      all = MOCK_EVENTS.filter(
+        (e) =>
+          e.venueId === venue.id ||
+          (e.venueName && venue.name &&
+            e.venueName.toLowerCase() === venue.name.toLowerCase()),
+      );
+    }
+    const upcoming = all
+      .filter((e) => (e.date || "") >= today)
+      .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+    const past = all
+      .filter((e) => (e.date || "") < today)
+      .sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+    return { upcomingEvents: upcoming, pastEvents: past };
+  }, [isApi, apiEvents, venue]);
 
   if (loading) {
     return (
@@ -344,10 +372,10 @@ export default function VenueDetailScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
               {lang === "fr"
-                ? `Événements ici (${venueEvents.length})`
-                : `Events here (${venueEvents.length})`}
+                ? `Événements à venir (${upcomingEvents.length})`
+                : `Upcoming events (${upcomingEvents.length})`}
             </Text>
-            {venueEvents.length === 0 ? (
+            {upcomingEvents.length === 0 ? (
               <View style={styles.emptyEvents}>
                 <Ionicons name="calendar-outline" size={32} color={C.border} />
                 <Text style={styles.emptyEventsText}>
@@ -357,10 +385,9 @@ export default function VenueDetailScreen() {
                 </Text>
               </View>
             ) : (
-              venueEvents.map((event) => {
+              upcomingEvents.map((event) => {
                 const title =
                   lang === "fr" && event.titleFr ? event.titleFr : event.title;
-                const isFree = event.price === 0;
                 return (
                   <TouchableOpacity
                     key={event.id}
@@ -380,23 +407,56 @@ export default function VenueDetailScreen() {
                       <Text style={styles.eventTitle} numberOfLines={1}>
                         {title}
                       </Text>
-                      <Text style={styles.eventTime}>
-                        {event.time}
-                      </Text>
+                      <Text style={styles.eventTime}>{event.time}</Text>
                     </View>
                     <View style={styles.eventPriceWrap}>
-                      {/* Event price hidden by product decision. */}
-                      <Ionicons
-                        name="chevron-forward"
-                        size={14}
-                        color={C.textMuted}
-                      />
+                      <Ionicons name="chevron-forward" size={14} color={C.textMuted} />
                     </View>
                   </TouchableOpacity>
                 );
               })
             )}
           </View>
+
+          {pastEvents.length > 0 ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>
+                {lang === "fr"
+                  ? `Événements passés (${pastEvents.length})`
+                  : `Past events (${pastEvents.length})`}
+              </Text>
+              {pastEvents.map((event) => {
+                const title =
+                  lang === "fr" && event.titleFr ? event.titleFr : event.title;
+                return (
+                  <TouchableOpacity
+                    key={event.id}
+                    style={[styles.eventRow, { opacity: 0.6 }]}
+                    onPress={() => safePush(`/event/${event.id}`)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.eventDateBox, { backgroundColor: C.border + "22" }]}>
+                      <Text style={[styles.eventDay, { color: C.textMuted }]}>
+                        {(event.date || "").split("-")[2] || "—"}
+                      </Text>
+                      <Text style={[styles.eventMonth, { color: C.textMuted }]}>
+                        {getMonthShort(event.date || "", lang)}
+                      </Text>
+                    </View>
+                    <View style={styles.eventInfo}>
+                      <Text style={styles.eventTitle} numberOfLines={1}>
+                        {title}
+                      </Text>
+                      <Text style={styles.eventTime}>{event.time}</Text>
+                    </View>
+                    <View style={styles.eventPriceWrap}>
+                      <Ionicons name="chevron-forward" size={14} color={C.textMuted} />
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          ) : null}
         </View>
       </ScrollView>
     </View>
