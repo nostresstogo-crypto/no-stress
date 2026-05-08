@@ -40,7 +40,8 @@ function makeStyles(C: ColorPalette) {
     compact: { flexDirection: "row", alignItems: "center", borderRadius: 12 },
     image: { width: "100%", height: 140 },
     compactImage: { width: 72, height: 72 },
-    placeholder: { backgroundColor: C.card2, alignItems: "center", justifyContent: "center" },
+    placeholder: { backgroundColor: C.card2, alignItems: "center", justifyContent: "center", gap: 6 },
+    placeholderLabel: { fontSize: 11, fontFamily: "Inter_500Medium", color: C.textMuted, letterSpacing: 0.3 },
     info: { padding: 12, gap: 4 },
     compactInfo: { flex: 1, padding: 10 },
     nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
@@ -72,7 +73,10 @@ export function VenueCard({ venue, onPress, compact = false }: VenueCardProps) {
         />
       ) : (
         <View style={[compact ? styles.compactImage : styles.image, styles.placeholder]}>
-          <Ionicons name="business" size={compact ? 24 : 32} color={C.lavender} />
+          <Ionicons name="business" size={compact ? 28 : 44} color={C.lavender} />
+          {!compact && (
+            <Text style={styles.placeholderLabel}>Aucune photo</Text>
+          )}
         </View>
       )}
       <View style={[styles.info, compact && styles.compactInfo]}>

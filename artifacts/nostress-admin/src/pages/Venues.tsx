@@ -219,8 +219,12 @@ export default function Venues() {
                               }}
                             />
                           ) : (
-                            <div className="w-14 h-14 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                            <div
+                              className="w-14 h-14 rounded-md bg-muted flex flex-col items-center justify-center flex-shrink-0"
+                              title="Aucune photo"
+                            >
                               <MapPin className="w-5 h-5 text-muted-foreground" />
+                              <span className="text-[8px] text-muted-foreground/80 mt-0.5">Aucune photo</span>
                             </div>
                           )}
                           <div className="min-w-0">

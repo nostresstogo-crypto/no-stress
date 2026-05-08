@@ -186,7 +186,8 @@ export default function VenueDetailScreen() {
             />
           ) : (
             <View style={[styles.heroImage, styles.heroPlaceholder]}>
-              <Ionicons name="business" size={64} color={C.lavender} />
+              <Ionicons name="business" size={72} color={C.lavender} />
+              <Text style={styles.heroPlaceholderLabel}>Aucune photo</Text>
             </View>
           )}
 
@@ -437,6 +438,13 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
     backgroundColor: C.card,
     alignItems: "center",
     justifyContent: "center",
+    gap: 10,
+  },
+  heroPlaceholderLabel: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: C.textMuted,
+    letterSpacing: 0.4,
   },
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
