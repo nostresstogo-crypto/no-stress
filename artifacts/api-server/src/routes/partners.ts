@@ -148,68 +148,146 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
   const tempPassword = generateRandomPassword();
   // Note: a same email may coexist as a "user" and as a "partner" account.
   // Only duplicate-within-the-same-role is forbidden (checked just below).
-  // If a partner with same email exists → friendly 409 telling user to log in (no data leaked).
+  // If a partner with same email exists AND email already verified → 409 (use login).
+  // If exists but NOT yet verified → allow re-submit: update fields, regenerate OTP, resend email.
   const [existingByEmail] = await db
-    .select({ id: partnersTable.id })
+    .select()
     .from(partnersTable)
     .where(eq(partnersTable.email, email));
-  if (existingByEmail) {
+  if (existingByEmail && existingByEmail.emailVerified) {
     return res.status(409).json({
       error: "Une demande avec cet email existe déjà. Connectez-vous pour reprendre votre dossier.",
       alreadyRegistered: true,
     });
   }
-  // Phone collision under a different email → reject to prevent duplicate businesses
+  // Phone collision under a different email → reject to prevent duplicate businesses.
+  // Allow same-email pending re-registration to keep / change its phone.
   if (phone) {
     const [existingByPhone] = await db
       .select()
       .from(partnersTable)
       .where(eq(partnersTable.phone, phone));
-    if (existingByPhone) {
+    if (existingByPhone && existingByPhone.email !== email) {
       return res.status(409).json({ error: "Ce numéro de téléphone est déjà utilisé par un autre partenaire." });
     }
   }
-  const passwordHash = await hashPassword(tempPassword);
   const code = generateVerificationCode();
+  const cityWithCountry = country ? `${city}, ${country}` : city;
   let partner;
-  try {
-    [partner] = await db
-      .insert(partnersTable)
-      .values({
-        email,
+  let isNewRegistration = false;
+  const passwordHash = await hashPassword(tempPassword);
+  if (existingByEmail) {
+    // Re-submission for an unverified partner: refresh data + regenerate OTP.
+    // Atomic update guarded by `email_verified IS NULL` to prevent a TOCTOU race
+    // where the partner verifies their email between our SELECT above and this UPDATE.
+    const updated = await db
+      .update(partnersTable)
+      .set({
         passwordHash,
         contactName,
         businessName,
         businessType,
         phone,
-        city: country ? `${city}, ${country}` : city,
-        latitude: null,
-        longitude: null,
+        city: cityWithCountry,
         description: description || null,
         websiteUrl: websiteUrl || null,
         verificationCode: code,
         verificationCodeExpires: verificationCodeExpiry(),
+        updatedAt: new Date(),
       })
+      .where(and(eq(partnersTable.id, existingByEmail.id), isNull(partnersTable.emailVerified)))
       .returning();
-  } catch (err: any) {
-    // Handle race-condition unique violation on partners.email
-    if (err?.code === "23505") {
+    if (updated.length === 0) {
+      // Lost the race — the account became verified between our SELECT and UPDATE.
       return res.status(409).json({
         error: "Une demande avec cet email existe déjà. Connectez-vous pour reprendre votre dossier.",
         alreadyRegistered: true,
       });
     }
-    throw err;
+    partner = updated[0];
+    res.status(200).json({
+      message: "Nouveau code de vérification envoyé par email.",
+      pendingVerification: true,
+      email,
+    });
+  } else {
+    try {
+      [partner] = await db
+        .insert(partnersTable)
+        .values({
+          email,
+          passwordHash,
+          contactName,
+          businessName,
+          businessType,
+          phone,
+          city: cityWithCountry,
+          latitude: null,
+          longitude: null,
+          description: description || null,
+          websiteUrl: websiteUrl || null,
+          verificationCode: code,
+          verificationCodeExpires: verificationCodeExpiry(),
+        })
+        .returning();
+      isNewRegistration = true;
+    } catch (err: any) {
+      // Race on initial creation: another request inserted the partner between our SELECT and INSERT.
+      // Re-fetch and route to the re-submission path if the existing row is still unverified.
+      if (err?.code === "23505") {
+        const [racing] = await db
+          .select()
+          .from(partnersTable)
+          .where(eq(partnersTable.email, email));
+        if (racing && !racing.emailVerified) {
+          const updated = await db
+            .update(partnersTable)
+            .set({
+              passwordHash,
+              contactName,
+              businessName,
+              businessType,
+              phone,
+              city: cityWithCountry,
+              description: description || null,
+              websiteUrl: websiteUrl || null,
+              verificationCode: code,
+              verificationCodeExpires: verificationCodeExpiry(),
+              updatedAt: new Date(),
+            })
+            .where(and(eq(partnersTable.id, racing.id), isNull(partnersTable.emailVerified)))
+            .returning();
+          if (updated.length > 0) {
+            partner = updated[0];
+            res.status(200).json({
+              message: "Nouveau code de vérification envoyé par email.",
+              pendingVerification: true,
+              email,
+            });
+            sendVerificationCodeEmail(email, contactName, code).catch(() => {});
+            return;
+          }
+        }
+        return res.status(409).json({
+          error: "Une demande avec cet email existe déjà. Connectez-vous pour reprendre votre dossier.",
+          alreadyRegistered: true,
+        });
+      }
+      throw err;
+    }
+    await db.insert(registrationLogTable).values({ type: "partner" });
+    // No token issued — partner must (1) verify email by OTP, (2) wait for admin approval, then login.
+    res.status(201).json({
+      message: "Code de vérification envoyé par email. Vérifiez votre email pour finaliser l'inscription.",
+      pendingVerification: true,
+      email,
+    });
   }
-  await db.insert(registrationLogTable).values({ type: "partner" });
-  // No token issued — partner must (1) verify email by OTP, (2) wait for admin approval, then login.
-  res.status(201).json({
-    message: "Code de vérification envoyé par email. Vérifiez votre email pour finaliser l'inscription.",
-    pendingVerification: true,
-    email,
-  });
   sendVerificationCodeEmail(email, contactName, code).catch(() => {});
-  sendPartnerRegistrationEmailToAdmin(partner.id, email, contactName, businessName, businessType, city, phone).catch(() => {});
+  // Notify admin only on initial registration (not on re-submissions) to avoid spam.
+  if (isNewRegistration) {
+    sendPartnerRegistrationEmailToAdmin(partner.id, email, contactName, businessName, businessType, city, phone).catch(() => {});
+  }
 });
 
 const partnerVerifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: "partner-verify" });
