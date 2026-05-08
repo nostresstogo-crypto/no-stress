@@ -27,3 +27,7 @@ function resolveBase(
 
 export const API_BASE = resolveBase("EXPO_PUBLIC_API_BASE", "apiBase", "/api");
 export const WEB_BASE = resolveBase("EXPO_PUBLIC_WEB_BASE", "webBase", "/nostress-web");
+
+if (typeof console !== "undefined") {
+  console.log("[apiBase] API_BASE =", API_BASE);
+}
