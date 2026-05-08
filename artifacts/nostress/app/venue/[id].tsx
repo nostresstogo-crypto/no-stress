@@ -121,9 +121,11 @@ export default function VenueDetailScreen() {
     const today = new Date().toISOString().slice(0, 10);
     let all: any[] = [];
     if (isApi) {
+      // L'écran event/[id].tsx attend l'id numérique brut (il fait `fetch /events/${id}`),
+      // surtout pas `api_${id}` — sinon le fetch retourne 404 et la page affiche "noData".
       all = apiEvents.map((e) => ({
         ...e,
-        id: `api_${e.id}`,
+        id: String(e.id),
         title: e.title || "",
         titleFr: e.titleFr || null,
       }));
@@ -212,11 +214,18 @@ export default function VenueDetailScreen() {
         {/* Hero image */}
         <View style={styles.hero}>
           {venue.imageUrl ? (
-            <Image
-              source={{ uri: venue.imageUrl }}
-              style={styles.heroImage}
-              resizeMode="cover"
-            />
+            <TouchableOpacity
+              activeOpacity={0.95}
+              onPress={() => setZoomImage({ uri: venue.imageUrl as string, name: venue.name })}
+              accessibilityRole="imagebutton"
+              accessibilityLabel={lang === "fr" ? `Agrandir la photo de ${venue.name}` : `Zoom on ${venue.name}`}
+            >
+              <Image
+                source={{ uri: venue.imageUrl }}
+                style={styles.heroImage}
+                resizeMode="cover"
+              />
+            </TouchableOpacity>
           ) : (
             <View style={[styles.heroImage, styles.heroPlaceholder]}>
               <Ionicons name="business" size={72} color={C.lavender} />
