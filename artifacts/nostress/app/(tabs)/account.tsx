@@ -25,8 +25,6 @@ import { API_BASE, WEB_BASE } from "@/lib/apiBase";
 
 const SUPPORT_WHATSAPP = "+13197774884";
 const SUPPORT_WHATSAPP_URL = `https://wa.me/${SUPPORT_WHATSAPP.replace(/[^0-9]/g, "")}?text=${encodeURIComponent("Bonjour NoStress, j'ai besoin d'aide.")}`;
-const PRIVACY_URL = `${WEB_BASE}/politique-confidentialite`;
-const TERMS_URL = `${WEB_BASE}/conditions-utilisation`;
 
 type Tab = "favorites" | "notifications";
 
@@ -389,13 +387,13 @@ export default function AccountScreen() {
         {/* Privacy policy */}
         <TouchableOpacity
           style={styles.settingRow}
-          onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})}
+          onPress={() => router.push("/legal/privacy")}
         >
           <Ionicons name="shield-checkmark-outline" size={20} color={C.lavender} />
           <Text style={styles.settingLabel}>
             {lang === "fr" ? "Politique de confidentialité" : "Privacy policy"}
           </Text>
-          <Ionicons name="open-outline" size={18} color={C.textMuted} />
+          <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
         </TouchableOpacity>
 
         <View style={styles.settingDivider} />
@@ -403,13 +401,13 @@ export default function AccountScreen() {
         {/* Terms of use */}
         <TouchableOpacity
           style={styles.settingRow}
-          onPress={() => Linking.openURL(TERMS_URL).catch(() => {})}
+          onPress={() => router.push("/legal/terms")}
         >
           <Ionicons name="document-text-outline" size={20} color={C.lavender} />
           <Text style={styles.settingLabel}>
             {lang === "fr" ? "Conditions d'utilisation" : "Terms of use"}
           </Text>
-          <Ionicons name="open-outline" size={18} color={C.textMuted} />
+          <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
         </TouchableOpacity>
 
         <View style={styles.settingDivider} />
