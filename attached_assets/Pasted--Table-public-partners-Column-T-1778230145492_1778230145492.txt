@@ -1,0 +1,27 @@
+                                           Table "public.partners"
+      Column      |            Type             | Collation | Nullable |               Default
+------------------+-----------------------------+-----------+----------+--------------------------------------
+ id               | integer                     |           | not null | nextval('partners_id_seq'::regclass)
+ user_id          | integer                     |           |          |
+ email            | text                        |           | not null |
+ password_hash    | text                        |           |          |
+ contact_name     | text                        |           | not null |
+ business_name    | text                        |           | not null |
+ business_type    | text                        |           | not null |
+ phone            | text                        |           | not null |
+ city             | text                        |           | not null |
+ description      | text                        |           |          |
+ website_url      | text                        |           |          |
+ latitude         | double precision            |           |          |
+ longitude        | double precision            |           |          |
+ status           | text                        |           | not null | 'pending'::text
+ rejection_reason | text                        |           |          |
+ created_at       | timestamp without time zone |           | not null | now()
+ updated_at       | timestamp without time zone |           | not null | now()
+Indexes:
+    "partners_pkey" PRIMARY KEY, btree (id)
+Foreign-key constraints:
+    "partners_user_id_users_id_fk" FOREIGN KEY (user_id) REFERENCES users(id)
+Referenced by:
+    TABLE "events" CONSTRAINT "events_partner_id_partners_id_fk" FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE CASCADE
+    TABLE "venues" CONSTRAINT "venues_partner_id_partners_id_fk" FOREIGN KEY (partner_id) REFERENCES partners(id) ON DELETE CASCADE
