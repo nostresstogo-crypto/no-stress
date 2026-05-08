@@ -27,6 +27,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider, useApp, useColors } from "@/context/AppContext";
 import { initSentry, captureException } from "@/lib/sentry";
 import { setupNotificationResponseHandling } from "@/lib/pushNotifications";
+import AnimatedSplash from "@/components/AnimatedSplash";
 
 initSentry();
 SplashScreen.preventAutoHideAsync();
@@ -351,7 +352,7 @@ function RootLayoutNav() {
         <Animated.View
           style={[StyleSheet.absoluteFill, { opacity: splashOpacity, zIndex: 999, pointerEvents: "none" as any }]}
         >
-          <CustomSplash />
+          <AnimatedSplash />
         </Animated.View>
       )}
     </>

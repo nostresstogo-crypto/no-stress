@@ -4,7 +4,6 @@ import {
   Dimensions,
   FlatList,
   Image,
-  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -12,56 +11,58 @@ import {
   ViewToken,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import { safeReplace } from "@/lib/navigation";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { safeReplace } from "@/lib/navigation";
 import { useApp } from "@/context/AppContext";
 import { translations, Lang } from "@/constants/i18n";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 
-const LAVENDER = "#9B8FE8";
-const GOLD = "#D4AF37";
-const CORAL = "#FF6B8A";
-const CYAN = "#00D4FF";
-const BG = "#0E1120";
+const LAVENDER = "#B5A8F0";
+const LAVENDER_DEEP = "#7A6BD8";
+const GOLD = "#E5C46B";
+const CORAL = "#F47A95";
+const CYAN = "#5FD4F5";
+const BG = "#0A0820";
+const BG_TOP = "#15102E";
 
 type Slide = {
   key: string;
-  icon: string;
-  iconColor: string;
-  glowColor: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  accent: string;
+  accentDeep: string;
+  gradient: [string, string, string];
   titleKey: keyof typeof translations.fr;
   subKey: keyof typeof translations.fr;
-  accentColor: string;
 };
 
 const SLIDES: Slide[] = [
   {
     key: "welcome",
     icon: "sparkles",
-    iconColor: LAVENDER,
-    glowColor: LAVENDER,
-    accentColor: LAVENDER,
+    accent: LAVENDER,
+    accentDeep: LAVENDER_DEEP,
+    gradient: ["#1A0F3D", "#0E0826", "#06030F"],
     titleKey: "onboarding1Title",
     subKey: "onboarding1Sub",
   },
   {
     key: "concert",
-    icon: "people",
-    iconColor: CORAL,
-    glowColor: CORAL,
-    accentColor: CORAL,
+    icon: "musical-notes",
+    accent: CORAL,
+    accentDeep: "#C4476A",
+    gradient: ["#3D0F26", "#260815", "#0F030A"],
     titleKey: "onboarding2Title",
     subKey: "onboarding2Sub",
   },
   {
     key: "tickets",
-    icon: "ticket-outline",
-    iconColor: CYAN,
-    glowColor: CYAN,
-    accentColor: CYAN,
+    icon: "ticket",
+    accent: CYAN,
+    accentDeep: "#3BA6C2",
+    gradient: ["#0F2D3D", "#082026", "#03101A"],
     titleKey: "onboarding3Title",
     subKey: "onboarding3Sub",
   },
@@ -83,14 +84,14 @@ export default function OnboardingScreen() {
         const idx = viewableItems[0].index ?? 0;
         setActiveIdx(idx);
       }
-    }
+    },
   ).current;
 
   function goNext() {
     if (activeIdx < SLIDES.length - 1) {
       const next = activeIdx + 1;
-      setActiveIdx(next);
       flatRef.current?.scrollToIndex({ index: next, animated: true });
+      setActiveIdx(next);
     } else {
       finish();
     }
@@ -101,26 +102,55 @@ export default function OnboardingScreen() {
     safeReplace("/(tabs)");
   }
 
-  async function skip() {
-    await finish();
-  }
-
   const isLast = activeIdx === SLIDES.length - 1;
   const activeSlide = SLIDES[activeIdx];
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top }]}>
-      <View style={styles.accentStripe}>
-        <View style={[styles.accentSeg, { backgroundColor: LAVENDER }]} />
-        <View style={[styles.accentSeg, { backgroundColor: CORAL }]} />
-        <View style={[styles.accentSeg, { backgroundColor: CYAN }]} />
-      </View>
+    <View style={[styles.root, { backgroundColor: BG }]}>
+      {/* Animated per-slide gradient backdrop */}
+      <SlideBackdrop slides={SLIDES} scrollX={scrollX} />
 
-      {!isLast && (
-        <TouchableOpacity style={styles.skipBtn} onPress={skip}>
-          <Text style={styles.skipText}>{t("onboardingSkip")}</Text>
-        </TouchableOpacity>
-      )}
+      {/* Top header — progress segments + Skip, on the same row.
+          Plus aucun chevauchement possible. */}
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        <View style={styles.progressRow}>
+          {SLIDES.map((s, i) => {
+            const inputRange = [
+              (i - 1) * SCREEN_W,
+              i * SCREEN_W,
+              (i + 1) * SCREEN_W,
+            ];
+            const fillW = scrollX.interpolate({
+              inputRange,
+              outputRange: ["0%", "100%", "100%"],
+              extrapolate: "clamp",
+            });
+            return (
+              <View key={s.key} style={styles.progressSeg}>
+                <Animated.View
+                  style={[
+                    styles.progressFill,
+                    { width: fillW, backgroundColor: s.accent },
+                  ]}
+                />
+              </View>
+            );
+          })}
+        </View>
+
+        {!isLast ? (
+          <TouchableOpacity
+            style={styles.skipBtn}
+            onPress={finish}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Text style={styles.skipText}>{t("onboardingSkip")}</Text>
+          </TouchableOpacity>
+        ) : (
+          // placeholder pour garder l'alignement quand le bouton disparaît
+          <View style={styles.skipPlaceholder} />
+        )}
+      </View>
 
       <Animated.FlatList
         ref={flatRef as any}
@@ -132,7 +162,7 @@ export default function OnboardingScreen() {
         scrollEventThrottle={16}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: false }
+          { useNativeDriver: false },
         )}
         onViewableItemsChanged={onViewChange}
         viewabilityConfig={{ itemVisiblePercentThreshold: 50 }}
@@ -148,6 +178,7 @@ export default function OnboardingScreen() {
         )}
       />
 
+      {/* Bottom CTA */}
       <View style={[styles.bottom, { paddingBottom: insets.bottom + 24 }]}>
         <View style={styles.dots}>
           {SLIDES.map((s, i) => {
@@ -158,7 +189,7 @@ export default function OnboardingScreen() {
             ];
             const dotWidth = scrollX.interpolate({
               inputRange,
-              outputRange: [8, 24, 8],
+              outputRange: [8, 28, 8],
               extrapolate: "clamp",
             });
             const opacity = scrollX.interpolate({
@@ -168,35 +199,88 @@ export default function OnboardingScreen() {
             });
             return (
               <Animated.View
-                key={i}
-                style={[styles.dot, { width: dotWidth, opacity, backgroundColor: s.accentColor }]}
+                key={s.key}
+                style={[
+                  styles.dot,
+                  { width: dotWidth, opacity, backgroundColor: s.accent },
+                ]}
               />
             );
           })}
         </View>
 
-        <TouchableOpacity
-          style={[styles.ctaBtn, { backgroundColor: activeSlide.accentColor }]}
-          onPress={goNext}
-          activeOpacity={0.85}
-        >
-          {isLast ? (
-            <>
-              <Text style={styles.ctaText}>{t("onboardingStart")}</Text>
-              <Ionicons name="arrow-forward" size={20} color={BG} />
-            </>
-          ) : (
-            <>
-              <Text style={styles.ctaText}>{t("onboardingNext")}</Text>
-              <Ionicons name="chevron-forward" size={20} color={BG} />
-            </>
-          )}
+        <TouchableOpacity onPress={goNext} activeOpacity={0.85}>
+          <LinearGradient
+            colors={[activeSlide.accent, activeSlide.accentDeep]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.ctaBtn}
+          >
+            <Text style={styles.ctaText}>
+              {isLast ? t("onboardingStart") : t("onboardingNext")}
+            </Text>
+            <Ionicons name="arrow-forward" size={20} color="#0A0820" />
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
+/* ─── Per-slide animated gradient backdrop ───────────────────────────── */
+function SlideBackdrop({
+  slides,
+  scrollX,
+}: {
+  slides: Slide[];
+  scrollX: Animated.Value;
+}) {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {slides.map((s, i) => {
+        const inputRange = [
+          (i - 1) * SCREEN_W,
+          i * SCREEN_W,
+          (i + 1) * SCREEN_W,
+        ];
+        const opacity = scrollX.interpolate({
+          inputRange,
+          outputRange: [0, 1, 0],
+          extrapolate: "clamp",
+        });
+        return (
+          <Animated.View
+            key={s.key}
+            style={[StyleSheet.absoluteFill, { opacity }]}
+          >
+            <LinearGradient
+              colors={s.gradient}
+              locations={[0, 0.55, 1]}
+              style={StyleSheet.absoluteFill}
+            />
+            {/* Glow accent */}
+            <View
+              style={[
+                styles.bgGlow,
+                styles.bgGlowTop,
+                { backgroundColor: s.accent + "26" },
+              ]}
+            />
+            <View
+              style={[
+                styles.bgGlow,
+                styles.bgGlowBot,
+                { backgroundColor: s.accentDeep + "1F" },
+              ]}
+            />
+          </Animated.View>
+        );
+      })}
+    </View>
+  );
+}
+
+/* ─── Single slide ───────────────────────────────────────────────────── */
 function SlideView({
   slide,
   index,
@@ -218,47 +302,85 @@ function SlideView({
     (index + 1) * SCREEN_W,
   ];
 
-  const scale = scrollX.interpolate({
+  const heroScale = scrollX.interpolate({
     inputRange,
-    outputRange: [0.88, 1, 0.88],
+    outputRange: [0.7, 1, 0.7],
     extrapolate: "clamp",
   });
-  const opacity = scrollX.interpolate({
+  const heroOpacity = scrollX.interpolate({
     inputRange,
-    outputRange: [0.5, 1, 0.5],
+    outputRange: [0.3, 1, 0.3],
+    extrapolate: "clamp",
+  });
+  const textTranslate = scrollX.interpolate({
+    inputRange,
+    outputRange: [60, 0, -60],
     extrapolate: "clamp",
   });
 
   return (
     <View style={styles.slide}>
-      <Animated.View style={[styles.slideInner, { transform: [{ scale }], opacity }]}>
-        <View style={[styles.glow, { backgroundColor: slide.glowColor + "18" }]} />
-
+      {/* Hero visual */}
+      <Animated.View
+        style={[
+          styles.heroWrap,
+          { opacity: heroOpacity, transform: [{ scale: heroScale }] },
+        ]}
+      >
         {index === 1 ? (
-          <View style={styles.concertImageWrap}>
+          <View style={styles.concertHero}>
             <Image
               source={require("@/assets/images/concert-crowd.png")}
-              style={styles.concertImage}
+              style={styles.concertImg}
               resizeMode="cover"
             />
-            <View style={styles.concertOverlay} />
-            <Ionicons name="musical-notes" size={48} color="#fff" style={styles.concertIcon} />
+            <LinearGradient
+              colors={[
+                "rgba(10, 8, 32, 0)",
+                "rgba(10, 8, 32, 0.45)",
+                "rgba(10, 8, 32, 0.9)",
+              ]}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={[styles.heroIconBubble, { backgroundColor: slide.accent + "DD" }]}>
+              <Ionicons name={slide.icon} size={36} color="#FFFFFF" />
+            </View>
           </View>
         ) : (
-          <View
-            style={[
-              styles.iconCircle,
-              { backgroundColor: slide.iconColor + "18", borderColor: slide.iconColor + "40" },
-            ]}
-          >
-            <Ionicons name={slide.icon as any} size={72} color={slide.iconColor} />
+          <View style={styles.iconHero}>
+            <View
+              style={[
+                styles.iconHeroOuterRing,
+                { borderColor: slide.accent + "33" },
+              ]}
+            />
+            <View
+              style={[
+                styles.iconHeroMidRing,
+                { borderColor: slide.accent + "55" },
+              ]}
+            />
+            <LinearGradient
+              colors={[slide.accent, slide.accentDeep]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.iconHeroCore}
+            >
+              <Ionicons name={slide.icon} size={64} color="#FFFFFF" />
+            </LinearGradient>
           </View>
         )}
+      </Animated.View>
 
+      {/* Brand mark on slide 0 */}
+      <Animated.View
+        style={[styles.body, { transform: [{ translateX: textTranslate }] }]}
+      >
         {index === 0 && (
           <View style={styles.brandMark}>
             <Text style={styles.brandNo}>No</Text>
-            <Text style={[styles.brandStress, { color: LAVENDER }]}>Stress</Text>
+            <Text style={[styles.brandStress, { color: slide.accent }]}>Stress</Text>
+            <View style={[styles.brandDot, { backgroundColor: GOLD }]} />
           </View>
         )}
 
@@ -269,38 +391,41 @@ function SlideView({
           <View style={styles.langRow}>
             <Text style={styles.langLabel}>{t("onboardingChooseLang")}</Text>
             <View style={styles.langBtns}>
-              <TouchableOpacity
-                style={[styles.langBtn, lang === "fr" && styles.langBtnActiveFR]}
+              <LangChip
+                flag="🇫🇷"
+                label="Français"
+                active={lang === "fr"}
+                color={LAVENDER}
                 onPress={() => setLang("fr")}
-              >
-                <Text style={styles.langFlag}>🇫🇷</Text>
-                <Text style={[styles.langText, lang === "fr" && styles.langTextActive]}>
-                  Français
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.langBtn, lang === "en" && styles.langBtnActiveEN]}
+              />
+              <LangChip
+                flag="🇬🇧"
+                label="English"
+                active={lang === "en"}
+                color={CYAN}
                 onPress={() => setLang("en")}
-              >
-                <Text style={styles.langFlag}>🇬🇧</Text>
-                <Text style={[styles.langText, lang === "en" && styles.langTextActive]}>
-                  English
-                </Text>
-              </TouchableOpacity>
+              />
             </View>
           </View>
         )}
 
         {index === 1 && (
-          <View style={styles.vibeRow}>
+          <View style={styles.pillRow}>
             {[
               { label: "Concerts", icon: "mic" as const, color: CORAL },
               { label: "Festivals", icon: "bonfire" as const, color: GOLD },
-              { label: lang === "fr" ? "Soirées" : "Parties", icon: "moon" as const, color: CYAN },
+              {
+                label: lang === "fr" ? "Soirées" : "Parties",
+                icon: "moon" as const,
+                color: CYAN,
+              },
             ].map((v) => (
-              <View key={v.label} style={[styles.vibePill, { borderColor: v.color + "55" }]}>
+              <View
+                key={v.label}
+                style={[styles.pill, { borderColor: v.color + "55" }]}
+              >
                 <Ionicons name={v.icon} size={14} color={v.color} />
-                <Text style={[styles.vibePillText, { color: v.color }]}>{v.label}</Text>
+                <Text style={[styles.pillText, { color: v.color }]}>{v.label}</Text>
               </View>
             ))}
           </View>
@@ -309,12 +434,24 @@ function SlideView({
         {index === 2 && (
           <View style={styles.featureList}>
             {[
-              { icon: "flash" as const, label: lang === "fr" ? "Réservation instantanée" : "Instant booking", color: CYAN },
-              { icon: "qr-code" as const, label: lang === "fr" ? "QR code sécurisé" : "Secure QR code", color: LAVENDER },
-              { icon: "shield-checkmark" as const, label: lang === "fr" ? "Paiement sécurisé" : "Secure payment", color: CORAL },
+              {
+                icon: "flash" as const,
+                label: lang === "fr" ? "Réservation instantanée" : "Instant booking",
+                color: CYAN,
+              },
+              {
+                icon: "qr-code" as const,
+                label: lang === "fr" ? "QR code sécurisé" : "Secure QR code",
+                color: LAVENDER,
+              },
+              {
+                icon: "shield-checkmark" as const,
+                label: lang === "fr" ? "Paiement sécurisé" : "Secure payment",
+                color: GOLD,
+              },
             ].map((f) => (
               <View key={f.label} style={styles.featureItem}>
-                <View style={[styles.featureIcon, { backgroundColor: f.color + "18" }]}>
+                <View style={[styles.featureIcon, { backgroundColor: f.color + "20" }]}>
                   <Ionicons name={f.icon} size={18} color={f.color} />
                 </View>
                 <Text style={styles.featureText}>{f.label}</Text>
@@ -327,117 +464,228 @@ function SlideView({
   );
 }
 
+function LangChip({
+  flag,
+  label,
+  active,
+  color,
+  onPress,
+}: {
+  flag: string;
+  label: string;
+  active: boolean;
+  color: string;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.85}
+      style={[
+        styles.langBtn,
+        active && { borderColor: color, backgroundColor: color + "22" },
+      ]}
+    >
+      <Text style={styles.langFlag}>{flag}</Text>
+      <Text style={[styles.langText, active && { color: "#F0EDF8", fontFamily: "Inter_600SemiBold" }]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: BG,
-  },
-  accentStripe: {
+  root: { flex: 1 },
+
+  /* Header (progress + skip) */
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
     flexDirection: "row",
-    height: 3,
+    alignItems: "center",
+    gap: 16,
+    zIndex: 5,
   },
-  accentSeg: {
+  progressRow: {
     flex: 1,
+    flexDirection: "row",
+    gap: 6,
+    alignItems: "center",
+  },
+  progressSeg: {
+    flex: 1,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 2,
   },
   skipBtn: {
-    position: "absolute",
-    top: Platform.OS === "ios" ? 56 : 36,
-    right: 24,
-    zIndex: 10,
-    padding: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 14,
+    backgroundColor: "rgba(255,255,255,0.08)",
   },
+  skipPlaceholder: { width: 56 },
   skipText: {
-    fontSize: 14,
-    fontFamily: "Inter_500Medium",
-    color: "#8B89A6",
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: "#D7D3EC",
+    letterSpacing: 0.4,
   },
+
+  /* Backdrop glows */
+  bgGlow: {
+    position: "absolute",
+    borderRadius: 9999,
+  },
+  bgGlowTop: {
+    width: 360,
+    height: 360,
+    top: -120,
+    right: -120,
+  },
+  bgGlowBot: {
+    width: 320,
+    height: 320,
+    bottom: -100,
+    left: -100,
+  },
+
+  /* Slide */
   slide: {
     width: SCREEN_W,
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 32,
+    paddingHorizontal: 28,
+    gap: 28,
   },
-  slideInner: {
-    width: "100%",
+
+  /* Hero */
+  heroWrap: {
     alignItems: "center",
-    gap: 16,
+    justifyContent: "center",
+    height: 240,
   },
-  glow: {
+  iconHero: {
+    width: 220,
+    height: 220,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconHeroOuterRing: {
     position: "absolute",
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    borderWidth: 1.5,
+  },
+  iconHeroMidRing: {
+    position: "absolute",
+    width: 170,
+    height: 170,
+    borderRadius: 85,
+    borderWidth: 1.5,
+  },
+  iconHeroCore: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.4,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 10,
+  },
+  concertHero: {
     width: 280,
-    height: 280,
-    borderRadius: 140,
-  },
-  iconCircle: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    borderWidth: 2,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  concertImageWrap: {
-    width: 260,
-    height: 180,
-    borderRadius: 24,
+    height: 220,
+    borderRadius: 28,
     overflow: "hidden",
-    marginBottom: 8,
-    position: "relative",
     alignItems: "center",
     justifyContent: "center",
   },
-  concertImage: {
+  concertImg: {
+    ...StyleSheet.absoluteFillObject,
     width: "100%",
     height: "100%",
   },
-  concertOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(14, 17, 32, 0.35)",
+  heroIconBubble: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
   },
-  concertIcon: {
-    position: "absolute",
-    opacity: 0.9,
+
+  /* Body */
+  body: {
+    width: "100%",
+    alignItems: "center",
+    gap: 14,
   },
   brandMark: {
     flexDirection: "row",
     alignItems: "baseline",
-    marginBottom: -8,
+    gap: 2,
   },
   brandNo: {
-    fontSize: 32,
+    fontSize: 30,
     fontFamily: "Inter_700Bold",
-    color: "#F0EDF8",
+    color: "#F4F1FA",
+    letterSpacing: -0.8,
   },
   brandStress: {
-    fontSize: 32,
+    fontSize: 30,
     fontFamily: "Inter_700Bold",
+    letterSpacing: -0.8,
+  },
+  brandDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginLeft: 4,
+    marginBottom: 4,
   },
   slideTitle: {
-    fontSize: 26,
+    fontSize: 28,
     fontFamily: "Inter_700Bold",
-    color: "#F0EDF8",
+    color: "#F4F1FA",
     textAlign: "center",
+    letterSpacing: -0.5,
   },
   slideSub: {
     fontSize: 15,
     fontFamily: "Inter_400Regular",
-    color: "#8B89A6",
+    color: "#A6A2C4",
     textAlign: "center",
     lineHeight: 22,
     paddingHorizontal: 8,
   },
+
+  /* Lang chips */
   langRow: {
     width: "100%",
-    marginTop: 8,
-    gap: 12,
+    marginTop: 6,
+    gap: 10,
     alignItems: "center",
   },
   langLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: "Inter_500Medium",
-    color: "#8B89A6",
+    color: "#7E7AA0",
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
   },
   langBtns: {
     flexDirection: "row",
@@ -449,67 +697,57 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: "#2A2D45",
-    backgroundColor: "#161829",
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.04)",
   },
-  langBtnActiveFR: {
-    borderColor: LAVENDER,
-    backgroundColor: LAVENDER + "18",
-  },
-  langBtnActiveEN: {
-    borderColor: CYAN,
-    backgroundColor: CYAN + "18",
-  },
-  langFlag: {
-    fontSize: 18,
-  },
+  langFlag: { fontSize: 18 },
   langText: {
     fontSize: 14,
     fontFamily: "Inter_500Medium",
-    color: "#8B89A6",
+    color: "#A6A2C4",
   },
-  langTextActive: {
-    color: "#F0EDF8",
-    fontFamily: "Inter_600SemiBold",
-  },
-  vibeRow: {
+
+  /* Pills */
+  pillRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "center",
     gap: 8,
     marginTop: 4,
   },
-  vibePill: {
+  pill: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "#161829",
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.05)",
     borderWidth: 1,
   },
-  vibePillText: {
+  pillText: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
   },
+
+  /* Feature list */
   featureList: {
     width: "100%",
-    gap: 12,
-    marginTop: 8,
+    gap: 10,
+    marginTop: 6,
   },
   featureItem: {
     flexDirection: "row",
     alignItems: "center",
     gap: 14,
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 14,
-    backgroundColor: "#161829",
+    paddingVertical: 12,
+    borderRadius: 16,
+    backgroundColor: "rgba(255,255,255,0.05)",
     borderWidth: 1,
-    borderColor: "#2A2D45",
+    borderColor: "rgba(255,255,255,0.08)",
   },
   featureIcon: {
     width: 36,
@@ -523,15 +761,17 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     color: "#F0EDF8",
   },
+
+  /* Bottom */
   bottom: {
     paddingHorizontal: 24,
-    gap: 20,
+    gap: 22,
   },
   dots: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    gap: 6,
+    gap: 7,
   },
   dot: {
     height: 8,
@@ -541,13 +781,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    paddingVertical: 16,
-    borderRadius: 16,
+    gap: 10,
+    paddingVertical: 17,
+    borderRadius: 18,
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
   },
   ctaText: {
     fontSize: 17,
     fontFamily: "Inter_700Bold",
-    color: BG,
+    color: "#0A0820",
+    letterSpacing: 0.3,
   },
 });
