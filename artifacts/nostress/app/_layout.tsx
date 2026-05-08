@@ -558,16 +558,26 @@ const splash = StyleSheet.create({
 });
 
 function RootLayout() {
+  // Mapping explicite des polices vectorielles : plus fiable en Expo Go + pnpm
+  // que `...Ionicons.font` (qui peut ne pas résoudre les chemins .ttf à travers
+  // les liens symboliques de pnpm). Les noms de famille DOIVENT correspondre à
+  // ceux que @expo/vector-icons utilise en interne ("Ionicons", "Feather").
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
-    ...Ionicons.font,
-    ...Feather.font,
+    Ionicons: require("@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf"),
+    Feather: require("@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Feather.ttf"),
   });
 
   useEffect(() => {
+    if (fontError) {
+      console.warn("[fonts] erreur de chargement", fontError);
+      try {
+        Sentry?.captureException?.(fontError);
+      } catch {}
+    }
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
     }
