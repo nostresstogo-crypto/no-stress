@@ -73,11 +73,17 @@ router.get("/events", async (req, res) => {
   }
   if (city) conds.push(ilike(eventsTable.city, `%${String(city)}%`));
   if (category) conds.push(eq(eventsTable.category, String(category)));
+  // Visibilité publique :
+  // - par défaut, on ne montre QUE les événements à venir (date >= aujourd'hui),
+  //   les events passés ne doivent plus apparaître dans les listes ni l'accueil ;
+  // - `archivedOnly=1`        → uniquement les events archivés (date < J-30) ;
+  // - `includeArchived=1`     → tout, sans filtre de date (rétro-compat).
   const cutoff = archiveCutoffDate();
+  const today = todayISO();
   if (String(archivedOnly) === "1" || String(archivedOnly) === "true") {
     conds.push(lt(eventsTable.date, cutoff));
   } else if (String(includeArchived) !== "1" && String(includeArchived) !== "true") {
-    conds.push(gte(eventsTable.date, cutoff));
+    conds.push(gte(eventsTable.date, today));
   }
   let rows = conds.length
     ? await db.select().from(eventsTable).where(and(...conds)).orderBy(desc(eventsTable.createdAt))

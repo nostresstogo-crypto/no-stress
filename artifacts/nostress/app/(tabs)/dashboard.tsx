@@ -931,8 +931,9 @@ export default function DashboardScreen() {
                 const isOpen = openEventActionsId === event.id;
                 const toggleActions = () =>
                   setOpenEventActionsId(isOpen ? null : event.id);
-                const canEdit = (event.status === "pending" || event.status === "rejected") && !isPast;
-                const canCancel = !isCancelled && !isPast && event.status === "approved";
+                // Auto-approbation : on peut éditer/annuler tant que l'event est dans le futur et pas déjà annulé.
+                const canEdit = !isPast && !isCancelled && event.status !== "archived";
+                const canCancel = !isPast && !isCancelled && event.status === "approved";
                 return (
                   <View key={event.id} style={[styles.eventRow, { flexDirection: "column", alignItems: "stretch", gap: 0 }]}>
                     <View style={styles.eventInfo}>
