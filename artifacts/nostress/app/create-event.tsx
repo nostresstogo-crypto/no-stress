@@ -20,7 +20,7 @@ import * as ImagePicker from "expo-image-picker";
 
 import type { ColorPalette } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
-import { CATEGORIES, MOCK_CITIES, CategoryKey } from "@/constants/data";
+import { EVENT_CATEGORIES, MOCK_CITIES, CategoryKey } from "@/constants/data";
 import type { MyEvent } from "@/context/AppContext";
 import { API_BASE } from "@/lib/apiBase";
 import { DateField, TimeField, todayISO } from "@/components/DateTimeField";
@@ -395,8 +395,8 @@ export default function CreateEventScreen() {
         {/* Category selector */}
         <Field label={t("category")} required error={errors.category} fieldStyles={fieldStyles}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
-            {CATEGORIES.map((cat) => {
-              const label = lang === "fr" ? (cat.key === "liveMusic" ? "Musique live" : cat.key === "nightclubs" ? "Boîtes de nuit" : cat.key.charAt(0).toUpperCase() + cat.key.slice(1)) : cat.key.charAt(0).toUpperCase() + cat.key.slice(1);
+            {EVENT_CATEGORIES.map((cat) => {
+              const label = t(cat.key as any);
               const active = form.category === cat.key;
               return (
                 <TouchableOpacity

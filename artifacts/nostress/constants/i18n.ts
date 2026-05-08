@@ -33,6 +33,12 @@ const baseTranslations = {
     culture: "Culture",
     comedy: "Comédie",
     liveMusic: "Musique live",
+    soiree: "Soirée",
+    spectacle: "Spectacle",
+    theatre: "Théâtre",
+    conference: "Conférence",
+    gastronomie: "Gastronomie",
+    atelier: "Atelier",
 
     // Event detail
     description: "Description",
@@ -248,6 +254,12 @@ const baseTranslations = {
     culture: "Culture",
     comedy: "Comedy",
     liveMusic: "Live Music",
+    soiree: "Party",
+    spectacle: "Show",
+    theatre: "Theatre",
+    conference: "Conference",
+    gastronomie: "Food & Drink",
+    atelier: "Workshop",
 
     // Event detail
     description: "Description",

@@ -10,7 +10,14 @@ export type CategoryKey =
   | "sport"
   | "culture"
   | "comedy"
-  | "liveMusic";
+  | "liveMusic"
+  // Catégories spécifiques aux événements
+  | "soiree"
+  | "spectacle"
+  | "theatre"
+  | "conference"
+  | "gastronomie"
+  | "atelier";
 
 export const CATEGORIES: { key: CategoryKey; icon: string; color: string }[] = [
   { key: "concerts", icon: "musical-notes", color: "#E8735A" },
@@ -25,6 +32,28 @@ export const CATEGORIES: { key: CategoryKey; icon: string; color: string }[] = [
   { key: "culture", icon: "library", color: "#B85AE8" },
   { key: "comedy", icon: "happy", color: "#E8985A" },
   { key: "liveMusic", icon: "mic", color: "#5A9BE8" },
+];
+
+// Catégories proposées dans le formulaire de création/édition d'événement.
+// Volontairement ciblées sur des TYPES d'événements (pas des types de lieux).
+// Les clés "venue-y" (bars, restaurants, hotels, nightclubs) restent dans
+// CategoryKey pour compat avec d'anciens événements en BDD mais ne sont plus
+// proposées à la création.
+export const EVENT_CATEGORIES: { key: CategoryKey; icon: string; color: string }[] = [
+  { key: "concerts",    icon: "musical-notes", color: "#E8735A" },
+  { key: "soiree",      icon: "wine",          color: "#9B8FE8" },
+  { key: "festivals",   icon: "sparkles",      color: "#E8C85A" },
+  { key: "spectacle",   icon: "ticket",        color: "#E85A9B" },
+  { key: "theatre",     icon: "rose",          color: "#B85AE8" },
+  { key: "comedy",      icon: "happy",         color: "#E8985A" },
+  { key: "cinema",      icon: "film",          color: "#5A9BE8" },
+  { key: "sport",       icon: "football",      color: "#5AE875" },
+  { key: "culture",     icon: "library",       color: "#A38FE8" },
+  { key: "conference",  icon: "people",        color: "#5AB4E8" },
+  { key: "gastronomie", icon: "restaurant",    color: "#4CAF82" },
+  { key: "atelier",     icon: "construct",     color: "#D4AF37" },
+  { key: "beach",       icon: "sunny",         color: "#5AB4E8" },
+  { key: "liveMusic",   icon: "mic",           color: "#E8735A" },
 ];
 
 export const VENUE_TYPES = [
