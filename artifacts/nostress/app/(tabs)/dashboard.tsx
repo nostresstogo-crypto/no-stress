@@ -50,19 +50,39 @@ const MAX_VENUE_IMAGES = 3;
 async function uploadVenueImage(uri: string, apiBase: string): Promise<string> {
   const lowerUri = uri.toLowerCase();
   const contentType = lowerUri.endsWith(".png") ? "image/png" : lowerUri.endsWith(".webp") ? "image/webp" : "image/jpeg";
-  const name = uri.split("/").pop() || "upload.jpg";
-  const fileResp = await fetch(uri);
-  const blob = await fileResp.blob();
+  // Normaliser le nom : pour blob:/data: URIs, le pop() donne soit un UUID
+  // illisible soit un payload base64 énorme. On génère un nom propre.
+  const isOpaqueUri = uri.startsWith("blob:") || uri.startsWith("data:");
+  const ext = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
+  const name = isOpaqueUri
+    ? `upload-${Date.now()}.${ext}`
+    : (uri.split("/").pop() || `upload-${Date.now()}.${ext}`);
+  let blob: Blob;
+  try {
+    const fileResp = await fetch(uri);
+    if (!fileResp.ok) throw new Error(`fetch local ${fileResp.status}`);
+    blob = await fileResp.blob();
+  } catch (e: any) {
+    throw new Error(`Lecture du fichier impossible: ${e?.message || e}`);
+  }
   const size = (blob as any).size || 0;
+  if (size === 0) throw new Error("Fichier vide ou illisible");
+  if (size > 10 * 1024 * 1024) throw new Error("Le fichier dépasse 10 Mo");
   const presignResp = await fetch(`${apiBase}/storage/uploads/request-url`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, size, contentType }),
   });
-  if (!presignResp.ok) throw new Error("upload prep failed");
+  if (!presignResp.ok) {
+    const txt = await presignResp.text().catch(() => "");
+    throw new Error(`Préparation upload échouée (${presignResp.status}): ${txt.slice(0, 120)}`);
+  }
   const { uploadURL, objectPath } = await presignResp.json();
   const putResp = await fetch(uploadURL, { method: "PUT", headers: { "Content-Type": contentType }, body: blob });
-  if (!putResp.ok) throw new Error("upload failed");
+  if (!putResp.ok) {
+    const txt = await putResp.text().catch(() => "");
+    throw new Error(`Envoi photo échoué (${putResp.status}): ${txt.slice(0, 120)}`);
+  }
   return `${apiBase}/storage${objectPath}`;
 }
 
@@ -191,20 +211,34 @@ export default function DashboardScreen() {
     setVenueSpecialties((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const syncSpecialties = async (venueId: string) => {
+  const syncSpecialties = async (venueId: string): Promise<{ failures: string[] }> => {
     const existingRes = await authFetch(`${API_BASE}/partners/me/venues/${venueId}/specialties`);
     const existing = existingRes.ok ? ((await existingRes.json())?.specialties || []) : [];
     const keptIds = new Set(venueSpecialties.filter((s) => s.id).map((s) => s.id));
+    const specialtyFailures: string[] = [];
     for (const old of existing) {
       if (!keptIds.has(String(old.id))) {
-        await authFetch(`${API_BASE}/partners/me/venues/${venueId}/specialties/${old.id}`, { method: "DELETE" });
+        const delRes = await authFetch(`${API_BASE}/partners/me/venues/${venueId}/specialties/${old.id}`, { method: "DELETE" });
+        if (!delRes.ok) {
+          specialtyFailures.push(`Suppression "${old.name || old.id}" échouée (${delRes.status})`);
+        }
       }
     }
     for (const s of venueSpecialties) {
       if (!s.name.trim() || !s.imageUrl) continue;
       let imageUrl = s.imageUrl;
-      if (imageUrl.startsWith("file:") || imageUrl.startsWith("content:") || imageUrl.startsWith("ph:") || imageUrl.startsWith("/")) {
-        try { imageUrl = await uploadVenueImage(imageUrl, API_BASE); } catch { continue; }
+      // Même logique que pour les photos de lieu : tout ce qui n'est pas un
+      // https:// persisté (donc file:/content:/ph:/blob:/data:/chemin local)
+      // doit être uploadé. Sinon, sur le web, blob:/data: URIs étaient envoyées
+      // telles quelles à l'API → liens morts.
+      const isPersisted = /^https?:\/\//i.test(imageUrl) && !imageUrl.startsWith("blob:");
+      if (!isPersisted) {
+        try { imageUrl = await uploadVenueImage(imageUrl, API_BASE); }
+        catch (e: any) {
+          console.warn("specialty upload failed", e?.message);
+          specialtyFailures.push(`${s.name}: ${e?.message || "upload échoué"}`);
+          continue;
+        }
       }
       const priceNum = s.price && s.price.trim() ? Number(s.price.replace(/[^0-9]/g, "")) : null;
       const body = JSON.stringify({
@@ -213,12 +247,15 @@ export default function DashboardScreen() {
         description: s.description?.trim() || null,
         price: priceNum,
       });
-      if (s.id) {
-        await authFetch(`${API_BASE}/partners/me/venues/${venueId}/specialties/${s.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body });
-      } else {
-        await authFetch(`${API_BASE}/partners/me/venues/${venueId}/specialties`, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+      const res = s.id
+        ? await authFetch(`${API_BASE}/partners/me/venues/${venueId}/specialties/${s.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body })
+        : await authFetch(`${API_BASE}/partners/me/venues/${venueId}/specialties`, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+      if (!res.ok) {
+        const errTxt = await res.text().catch(() => "");
+        specialtyFailures.push(`${s.name}: enregistrement échoué (${res.status}) ${errTxt.slice(0, 80)}`);
       }
     }
+    return { failures: specialtyFailures };
   };
 
   const saveVenue = async () => {
@@ -248,6 +285,7 @@ export default function DashboardScreen() {
     setSavingVenue(true);
     try {
       const uploaded: string[] = [];
+      const uploadFailures: string[] = [];
       for (const uri of venueImages.slice(0, MAX_VENUE_IMAGES)) {
         if (!uri) continue;
         // Detect already-uploaded URLs vs local picker results that need upload.
@@ -260,8 +298,34 @@ export default function DashboardScreen() {
           uploaded.push(uri);
         } else {
           try { uploaded.push(await uploadVenueImage(uri, API_BASE)); }
-          catch (e: any) { console.warn("venue upload failed", e?.message); }
+          catch (e: any) {
+            console.warn("venue upload failed", e?.message);
+            uploadFailures.push(e?.message || "unknown");
+          }
         }
+      }
+      // Si l'utilisateur a sélectionné des photos mais qu'AUCUNE n'a pu être
+      // uploadée, on stoppe tout : sinon le lieu serait créé sans photo et
+      // l'utilisateur ne s'en rendrait pas compte.
+      if (venueImages.length > 0 && uploaded.length === 0) {
+        setSavingVenue(false);
+        Alert.alert(
+          lang === "fr" ? "Échec de l'upload" : "Upload failed",
+          lang === "fr"
+            ? `La photo n'a pas pu être envoyée. Vérifiez votre connexion et réessayez.\n\n(${uploadFailures[0] || "erreur inconnue"})`
+            : `The photo could not be uploaded. Check your connection and try again.\n\n(${uploadFailures[0] || "unknown error"})`,
+        );
+        return;
+      }
+      // Au moins une photo uploadée mais d'autres ont échoué : on prévient
+      // sans bloquer.
+      if (uploadFailures.length > 0 && uploaded.length > 0) {
+        Alert.alert(
+          lang === "fr" ? "Photos partiellement envoyées" : "Photos partially uploaded",
+          lang === "fr"
+            ? `${uploadFailures.length} photo(s) n'ont pas pu être envoyée(s). Le lieu sera enregistré avec ${uploaded.length} photo(s).`
+            : `${uploadFailures.length} photo(s) failed to upload. The venue will be saved with ${uploaded.length} photo(s).`,
+        );
       }
       const isEdit = !!editingVenueId;
       const url = isEdit ? `${API_BASE}/partners/me/venues/${editingVenueId}` : `${API_BASE}/partners/me/venues`;
@@ -314,7 +378,19 @@ export default function DashboardScreen() {
         AsyncStorage.setItem(NS_MY_VENUES_KEY, JSON.stringify(next));
         return next;
       });
-      try { await syncSpecialties(savedVenue.id); } catch (e: any) { console.warn("specialties sync failed", e?.message); }
+      let specFailures: string[] = [];
+      try {
+        const r = await syncSpecialties(savedVenue.id);
+        specFailures = r.failures;
+      } catch (e: any) { console.warn("specialties sync failed", e?.message); }
+      if (specFailures.length > 0) {
+        Alert.alert(
+          lang === "fr" ? "Spécialités partiellement enregistrées" : "Specialties partially saved",
+          (lang === "fr"
+            ? "Certaines photos de spécialités n'ont pas pu être envoyées :\n\n"
+            : "Some specialty photos could not be uploaded:\n\n") + specFailures.join("\n"),
+        );
+      }
       setShowVenueModal(false);
       setEditingVenueId(null);
       addNotification({
