@@ -28,6 +28,7 @@ import { AppProvider, useApp, useColors } from "@/context/AppContext";
 import { initSentry, captureException } from "@/lib/sentry";
 import { setupNotificationResponseHandling } from "@/lib/pushNotifications";
 import AnimatedSplash from "@/components/AnimatedSplash";
+import { OfflineBanner } from "@/components/OfflineBanner";
 
 initSentry();
 SplashScreen.preventAutoHideAsync();
@@ -355,6 +356,8 @@ function RootLayoutNav() {
           <AnimatedSplash />
         </Animated.View>
       )}
+
+      <OfflineBanner />
     </>
   );
 }
