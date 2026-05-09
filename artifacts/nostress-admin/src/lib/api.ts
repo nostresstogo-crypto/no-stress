@@ -21,6 +21,11 @@ export function getAdminRefreshToken(): string | null {
 }
 
 let refreshInflight: Promise<string | null> | null = null;
+let _logoutCallback: (() => void) | null = null;
+
+export function setLogoutCallback(fn: (() => void) | null): void {
+  _logoutCallback = fn;
+}
 
 async function refreshAccessToken(): Promise<string | null> {
   if (refreshInflight) return refreshInflight;
@@ -58,10 +63,18 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   let res = await fetch(`${API_BASE}${path}`, { ...options, headers: buildHeaders(getAdminToken()) });
 
-  if (res.status === 401 && getAdminRefreshToken()) {
+  if (res.status === 401) {
+    if (!getAdminRefreshToken()) {
+      _logoutCallback?.();
+      const error = await res.json().catch(() => ({ error: "Erreur réseau" }));
+      throw new Error(error.error || `HTTP ${res.status}`);
+    }
     const newToken = await refreshAccessToken();
     if (newToken) {
       res = await fetch(`${API_BASE}${path}`, { ...options, headers: buildHeaders(newToken) });
+      if (res.status === 401) {
+        _logoutCallback?.();
+      }
     }
   }
 

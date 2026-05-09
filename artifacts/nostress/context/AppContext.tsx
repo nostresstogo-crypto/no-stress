@@ -157,6 +157,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const tokenRef = useRef<string | null>(null);
   const refreshRef = useRef<string | null>(null);
   const refreshInflight = useRef<Promise<string | null> | null>(null);
+  const logoutRef = useRef<(() => Promise<void>) | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [favoriteVenues, setFavoriteVenues] = useState<string[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -322,10 +323,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return h;
     };
     let res = await fetch(url, { ...init, headers: buildHeaders(tokenRef.current) });
-    if (res.status !== 401 || !refreshRef.current) return res;
+    if (res.status !== 401) return res;
+    if (!refreshRef.current) {
+      await logoutRef.current?.();
+      return res;
+    }
     const newToken = await refreshAccessToken();
     if (!newToken) return res;
     res = await fetch(url, { ...init, headers: buildHeaders(newToken) });
+    if (res.status === 401) {
+      await logoutRef.current?.();
+    }
     return res;
   }, [refreshAccessToken]);
 
@@ -466,6 +474,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setFavoriteVenues([]);
     await AsyncStorage.multiRemove([KEYS.user, KEYS.token, KEYS.refreshToken, KEYS.favorites, KEYS.favoriteVenues]);
   }, []);
+
+  logoutRef.current = logout;
 
   const setHasOnboarded = useCallback(async () => {
     setHasOnboardedState(true);

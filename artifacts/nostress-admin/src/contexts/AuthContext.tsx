@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { api, getAdminToken, setAdminSession } from "@/lib/api";
+import { api, getAdminToken, setAdminSession, setLogoutCallback } from "@/lib/api";
 
 interface Admin {
   id: string;
@@ -51,6 +51,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAdminSession(null, null);
     setAdmin(null);
   };
+
+  useEffect(() => {
+    const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+    setLogoutCallback(() => {
+      setAdminSession(null, null);
+      setAdmin(null);
+      window.location.replace(base + "/login");
+    });
+    return () => setLogoutCallback(null);
+  }, []);
 
   return (
     <AuthContext.Provider value={{ admin, isLoading, login, logout }}>
