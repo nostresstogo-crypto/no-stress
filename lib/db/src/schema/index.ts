@@ -47,6 +47,7 @@ export const partnersTable = pgTable("partners", {
   verificationCode: text("verification_code"),
   verificationCodeExpires: timestamp("verification_code_expires"),
   subscriptionUntil: timestamp("subscription_until"),
+  subscriptionStart: timestamp("subscription_start"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

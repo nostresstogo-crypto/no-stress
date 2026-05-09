@@ -106,7 +106,7 @@ export default function DashboardScreen() {
   const [eventStatusFilter, setEventStatusFilter] = useState<EventStatusFilter>("all");
   const [openEventActionsId, setOpenEventActionsId] = useState<string | null>(null);
   const [partnerCheck, setPartnerCheck] = useState<PartnerCheckStatus>(null);
-  const [subscription, setSubscription] = useState<{ active: boolean; subscriptionUntil: string | null; daysRemaining: number } | null>(null);
+  const [subscription, setSubscription] = useState<{ active: boolean; subscriptionUntil: string | null; subscriptionStart: string | null; daysRemaining: number } | null>(null);
   const [partnerRejectReason, setPartnerRejectReason] = useState<string | null>(null);
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
@@ -1159,6 +1159,31 @@ export default function DashboardScreen() {
         {/* ── Plan tab ── */}
         {tab === "plan" && (
           <>
+            {subscription && (
+              <View style={{ marginBottom: 16, backgroundColor: subscription.active ? C.success + "18" : C.error + "18", borderRadius: 12, borderWidth: 1, borderColor: subscription.active ? C.success + "44" : C.error + "44", padding: 14 }}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <Ionicons name={subscription.active ? "checkmark-circle" : "close-circle"} size={16} color={subscription.active ? C.success : C.error} />
+                  <Text style={{ color: subscription.active ? C.success : C.error, fontWeight: "700", fontSize: 13 }}>
+                    {lang === "fr"
+                      ? (subscription.active ? "Abonnement actif" : "Abonnement expiré")
+                      : (subscription.active ? "Active subscription" : "Expired subscription")}
+                  </Text>
+                </View>
+                {subscription.subscriptionStart && subscription.subscriptionUntil ? (
+                  <Text style={{ color: C.textMuted, fontSize: 12 }}>
+                    {lang === "fr" ? "Du " : "From "}
+                    {new Date(subscription.subscriptionStart).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                    {lang === "fr" ? " au " : " to "}
+                    {new Date(subscription.subscriptionUntil).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                  </Text>
+                ) : subscription.subscriptionUntil ? (
+                  <Text style={{ color: C.textMuted, fontSize: 12 }}>
+                    {lang === "fr" ? "Expire le " : "Expires on "}
+                    {new Date(subscription.subscriptionUntil).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                  </Text>
+                ) : null}
+              </View>
+            )}
             <Text style={styles.planTitle}>{t("choosePlan")}</Text>
             {MOCK_SUBSCRIPTION_PLANS.map((plan) => {
               const isCurrent = plan.id === activePlan.id;

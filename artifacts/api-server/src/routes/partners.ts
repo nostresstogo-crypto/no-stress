@@ -428,6 +428,7 @@ router.post("/admin/partners/:id/approve", requireAdmin, async (req: any, res) =
       // Grant 3 months of free subscription starting at approval. Reset on each approve
       // so re-approving a previously-rejected partner restarts the trial cleanly.
       subscriptionUntil: computeNewSubscriptionUntil(),
+      subscriptionStart: new Date(),
       updatedAt: new Date(),
     })
     .where(eq(partnersTable.id, id))

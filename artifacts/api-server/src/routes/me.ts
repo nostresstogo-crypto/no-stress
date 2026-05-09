@@ -66,9 +66,10 @@ function publicPartner(p: typeof partnersTable.$inferSelect) {
     emailVerified: !!p.emailVerified,
     subscription: (() => {
       const until = p.subscriptionUntil ? new Date(p.subscriptionUntil) : null;
+      const start = p.subscriptionStart ? new Date(p.subscriptionStart) : null;
       const active = p.status === "approved" && !!until && until.getTime() > Date.now();
       const daysRemaining = until ? Math.max(0, Math.ceil((until.getTime() - Date.now()) / 86_400_000)) : 0;
-      return { active, subscriptionUntil: until ? until.toISOString() : null, daysRemaining };
+      return { active, subscriptionUntil: until ? until.toISOString() : null, subscriptionStart: start ? start.toISOString() : null, daysRemaining };
     })(),
   };
 }

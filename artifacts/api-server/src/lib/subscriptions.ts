@@ -16,12 +16,13 @@ export function isSubscriptionActive(p: { status?: string | null; subscriptionUn
   return new Date(p.subscriptionUntil).getTime() > Date.now();
 }
 
-export function subscriptionInfo(p: { status?: string | null; subscriptionUntil?: Date | null } | null | undefined) {
-  if (!p) return { active: false, subscriptionUntil: null, daysRemaining: 0 };
+export function subscriptionInfo(p: { status?: string | null; subscriptionUntil?: Date | null; subscriptionStart?: Date | null } | null | undefined) {
+  if (!p) return { active: false, subscriptionUntil: null, subscriptionStart: null, daysRemaining: 0 };
   const until = p.subscriptionUntil ? new Date(p.subscriptionUntil) : null;
+  const start = p.subscriptionStart ? new Date(p.subscriptionStart) : null;
   const active = isSubscriptionActive(p);
   const daysRemaining = until ? Math.max(0, Math.ceil((until.getTime() - Date.now()) / 86_400_000)) : 0;
-  return { active, subscriptionUntil: until ? until.toISOString() : null, daysRemaining };
+  return { active, subscriptionUntil: until ? until.toISOString() : null, subscriptionStart: start ? start.toISOString() : null, daysRemaining };
 }
 
 // Returns ids of partners with active subscription. Used to filter public visibility.
