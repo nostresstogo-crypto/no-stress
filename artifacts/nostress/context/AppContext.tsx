@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useColorScheme } from "react-native";
+import NetInfo from "@react-native-community/netinfo";
 import { Lang } from "@/constants/i18n";
 import { getThemeColors, ColorPalette } from "@/constants/colors";
 import { MOCK_CITIES, MOCK_EVENTS } from "@/constants/data";
@@ -408,6 +409,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
       syncFavoritesFromBackend();
     }
   }, [appReady, user?.id, user?.role, syncFavoritesFromBackend]);
+
+  const wasOfflineRef = useRef(false);
+  useEffect(() => {
+    if (!appReady) return;
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      const online = state.isConnected === true && state.isInternetReachable !== false;
+      if (wasOfflineRef.current && online) {
+        refreshApiEvents();
+        if (user?.role === "user" && tokenRef.current) {
+          syncFavoritesFromBackend();
+        }
+      }
+      wasOfflineRef.current = !online;
+    });
+    return () => unsubscribe();
+  }, [appReady, refreshApiEvents, syncFavoritesFromBackend, user?.role]);
 
   const addNotification = useCallback(
     (n: Omit<Notification, "id" | "read" | "createdAt">) => {
