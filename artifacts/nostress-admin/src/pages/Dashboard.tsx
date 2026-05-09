@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { api } from "@/lib/api";
 import { Link } from "wouter";
@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   Activity,
   Bell,
+  RefreshCw,
 } from "lucide-react";
 
 interface Stats {
@@ -40,13 +41,16 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const today = new Date();
 
-  useEffect(() => {
+  const loadStats = useCallback(() => {
+    setLoading(true);
     api.admin
       .stats()
       .then(setStats)
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => { loadStats(); }, [loadStats]);
 
   const totalPartners = stats
     ? stats.pendingPartners + stats.approvedPartners + stats.rejectedPartners
@@ -194,7 +198,15 @@ export default function Dashboard() {
                   {formatDate(today)}
                 </p>
               </div>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-3 items-start">
+                <button
+                  onClick={loadStats}
+                  disabled={loading}
+                  className="flex items-center gap-2 rounded-xl border border-border/60 bg-background/40 backdrop-blur px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+                  Actualiser
+                </button>
                 <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-background/40 backdrop-blur px-4 py-3 min-w-[160px]">
                   <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
                     <Users className="w-5 h-5 text-primary" />

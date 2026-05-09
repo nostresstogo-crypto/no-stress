@@ -29,6 +29,7 @@ import {
   Trash2,
   KeyRound,
   CalendarClock,
+  RefreshCw,
 } from "lucide-react";
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
@@ -229,9 +230,15 @@ export default function Partners() {
           </div>
         )}
 
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Gestion des partenaires</h1>
-          <p className="text-muted-foreground mt-1">Valider et gérer les inscriptions des partenaires</p>
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Gestion des partenaires</h1>
+            <p className="text-muted-foreground mt-1">Valider et gérer les inscriptions des partenaires</p>
+          </div>
+          <Button variant="outline" size="sm" onClick={loadPartners} disabled={isLoading} className="flex-shrink-0 gap-2">
+            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+            Actualiser
+          </Button>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 mb-6">

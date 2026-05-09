@@ -23,6 +23,7 @@ import {
   Calendar,
   Link2,
   Unlink,
+  RefreshCw,
 } from "lucide-react";
 
 const REASON_LABELS: Record<string, string> = {
@@ -136,11 +137,17 @@ export default function DeletionRequests() {
           </div>
         )}
 
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Demandes de suppression</h1>
-          <p className="text-muted-foreground mt-1">
-            Gérer les demandes de suppression de compte (conformité RGPD / App Store)
-          </p>
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Demandes de suppression</h1>
+            <p className="text-muted-foreground mt-1">
+              Gérer les demandes de suppression de compte (conformité RGPD / App Store)
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={loadRequests} disabled={isLoading} className="flex-shrink-0 gap-2">
+            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+            Actualiser
+          </Button>
         </div>
 
         <div className="bg-muted/20 border border-yellow-500/20 rounded-lg px-4 py-3 flex items-start gap-3 mb-6">

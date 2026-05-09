@@ -22,6 +22,7 @@ import {
   ThumbsDown,
   Globe,
   Phone,
+  RefreshCw,
 } from "lucide-react";
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
@@ -142,11 +143,17 @@ export default function Venues() {
           </div>
         )}
 
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Validation des lieux</h1>
-          <p className="text-muted-foreground mt-1">
-            Approuver ou rejeter les lieux soumis par les partenaires (les événements ne peuvent être créés que sur des lieux approuvés).
-          </p>
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Validation des lieux</h1>
+            <p className="text-muted-foreground mt-1">
+              Approuver ou rejeter les lieux soumis par les partenaires (les événements ne peuvent être créés que sur des lieux approuvés).
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={load} disabled={isLoading} className="flex-shrink-0 gap-2">
+            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+            Actualiser
+          </Button>
         </div>
 
         <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
