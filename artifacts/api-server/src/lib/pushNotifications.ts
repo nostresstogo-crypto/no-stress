@@ -66,8 +66,9 @@ export async function deletePushToken(token: string): Promise<void> {
 
 /* ─── low-level send ──────────────────────────────────────────────────── */
 
-async function sendExpoPush(messages: ExpoPushMessage[]): Promise<void> {
-  if (messages.length === 0) return;
+// Returns true if at least one chunk was accepted by Expo (2xx), false if all failed.
+async function sendExpoPush(messages: ExpoPushMessage[]): Promise<boolean> {
+  if (messages.length === 0) return true;
 
   const chunks: ExpoPushMessage[][] = [];
   for (let i = 0; i < messages.length; i += 100) {
@@ -82,6 +83,7 @@ async function sendExpoPush(messages: ExpoPushMessage[]): Promise<void> {
   if (EXPO_ACCESS_TOKEN) headers["Authorization"] = `Bearer ${EXPO_ACCESS_TOKEN}`;
 
   const tokensToDelete = new Set<string>();
+  let anySuccess = false;
 
   for (const chunk of chunks) {
     try {
@@ -94,6 +96,7 @@ async function sendExpoPush(messages: ExpoPushMessage[]): Promise<void> {
         logger.warn({ status: res.status }, "[push] expo send non-2xx");
         continue;
       }
+      anySuccess = true;
       const json = (await res.json()) as {
         data?: Array<{ status: string; details?: { error?: string } }>;
       };
@@ -118,6 +121,8 @@ async function sendExpoPush(messages: ExpoPushMessage[]): Promise<void> {
       logger.warn({ err }, "[push] cleanup failed");
     }
   }
+
+  return anySuccess;
 }
 
 /* ─── helpers ────────────────────────────────────────────────────────── */
@@ -308,7 +313,34 @@ export async function notifyVenueNewEvent(eventId: number): Promise<void> {
   }
 }
 
-/* ─── 5. Validation/rejet pour un partenaire ─────────────────────────── */
+/* ─── 5. Alerte fin d'abonnement pour un partenaire ─────────────────── */
+
+export async function notifyPartnerSubscriptionExpiring(input: {
+  partnerId: number;
+  daysRemaining: number;
+  expiryDate: Date;
+}): Promise<void> {
+  // Errors propagate to caller — callers rely on rejection to detect delivery failures.
+  const recipients = await tokensForPartnerId(input.partnerId);
+  if (recipients.length === 0) return;
+
+  const expiryStr = input.expiryDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const { daysRemaining } = input;
+
+  const messages = buildMessages(recipients, () => ({
+    title: daysRemaining === 1 ? "Abonnement : dernier jour !" : `Abonnement : ${daysRemaining} jours restants`,
+    body: `Votre abonnement NoStress expire le ${expiryStr}. Renouvelez-le pour continuer à publier vos événements.`,
+    channelId: "default",
+    data: { type: "subscription_expiring", daysRemaining: String(daysRemaining) },
+  }));
+  const ok = await sendExpoPush(messages);
+  if (!ok) {
+    throw new Error(`[push] all Expo chunks rejected for partner ${input.partnerId}`);
+  }
+  logger.info({ partnerId: input.partnerId, daysRemaining }, "[push] subscription expiry warning sent");
+}
+
+/* ─── 6. Validation/rejet pour un partenaire ─────────────────────────── */
 
 export async function notifyPartnerStatus(input: {
   partnerId: number;

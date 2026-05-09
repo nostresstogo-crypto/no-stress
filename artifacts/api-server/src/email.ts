@@ -721,6 +721,51 @@ export async function sendDeletionConfirmedEmail(to: string, name: string) {
   });
 }
 
+export async function sendSubscriptionExpiryWarningEmail(
+  to: string,
+  contactName: string,
+  businessName: string,
+  daysRemaining: number,
+  expiryDate: Date,
+) {
+  const safeName = escapeHtml(contactName || "Partenaire");
+  const safeBusiness = escapeHtml(businessName);
+  const expiryStr = expiryDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const urgencyColor = daysRemaining <= 2 ? "#e05252" : "#f0c040";
+  const urgencyLabel = daysRemaining === 1 ? "⚠️ Dernier jour !" : `⚠️ Plus que ${daysRemaining} jour${daysRemaining > 1 ? "s" : ""}`;
+  // Use the throwing variant so callers can detect delivery failures.
+  await sendMailOrThrow({
+    to,
+    subject: `⚠️ Votre abonnement NoStress expire dans ${daysRemaining} jour${daysRemaining > 1 ? "s" : ""} – Renouvelez maintenant`,
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml(`Bonjour ${safeName},`)}
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 0 0 16px;">
+          L'abonnement de votre structure <strong style="color: #e8e8f0;">${safeBusiness}</strong> sur NoStress arrive bientôt à expiration.
+        </p>
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid ${urgencyColor};">
+          <p style="margin: 0 0 8px; font-size: 15px; font-weight: 700; color: ${urgencyColor};">${urgencyLabel}</p>
+          <p style="margin: 0; font-size: 14px; color: #b0b2cc; line-height: 1.6;">
+            Votre abonnement expire le <strong style="color: #e8e8f0;">${expiryStr}</strong>.<br>
+            Après cette date, vos lieux et événements ne seront plus visibles dans l'application.
+          </p>
+        </div>
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #7c6af7;">
+          <p style="margin: 0; font-size: 14px; color: #b0b2cc; line-height: 1.6;">
+            🔄 Pour renouveler votre abonnement et continuer à profiter de NoStress, contactez notre équipe :<br><br>
+            📧 <a href="mailto:nostresstogo@gmail.com" style="color: #7c6af7;">nostresstogo@gmail.com</a>
+          </p>
+        </div>
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 16px 0 0;">
+          Ne laissez pas votre visibilité s'interrompre !<br><br>
+          <strong style="color: #e8e8f0;">L'équipe NoStress</strong>
+        </p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}
+
 export async function sendReportToAdmin(opts: {
   reportId: number;
   itemType: "event" | "venue";
