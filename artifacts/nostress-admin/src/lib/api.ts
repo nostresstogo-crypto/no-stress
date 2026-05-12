@@ -116,6 +116,7 @@ export const api = {
         pendingPublications: number;
         totalPublications: number;
         totalUsers: number;
+        totalVenues: number;
       }>("/admin/stats"),
   },
   partners: {

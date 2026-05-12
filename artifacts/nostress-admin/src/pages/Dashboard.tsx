@@ -28,6 +28,7 @@ interface Stats {
   pendingPublications: number;
   totalPublications: number;
   totalUsers: number;
+  totalVenues: number;
 }
 
 const WEEKDAYS_FR = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
@@ -224,6 +225,15 @@ export default function Dashboard() {
                   <div>
                     <p className="text-xs text-muted-foreground">Partenaires</p>
                     <p className="text-xl font-bold text-foreground">{totalPartners}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-background/40 backdrop-blur px-4 py-3 min-w-[160px]">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center">
+                    <TrendingUp className="w-5 h-5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Lieux</p>
+                    <p className="text-xl font-bold text-foreground">{stats?.totalVenues ?? 0}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-background/40 backdrop-blur px-4 py-3 min-w-[160px]">
