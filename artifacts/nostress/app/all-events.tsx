@@ -60,6 +60,7 @@ export default function AllEventsScreen() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setEvents([]);
     const params = new URLSearchParams();
     if (city.trim()) params.set("city", city.trim());
     if (country.trim()) params.set("country", country.trim());

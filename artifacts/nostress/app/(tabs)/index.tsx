@@ -177,7 +177,11 @@ export default function HomeScreen() {
   }, []);
 
   useEffect(() => { loadEvents(); }, [loadEvents]);
-  useFocusEffect(useCallback(() => { loadEvents(); }, [loadEvents]));
+  useFocusEffect(useCallback(() => {
+    setApiEvents([]);
+    setApiVenues([]);
+    loadEvents();
+  }, [loadEvents]));
 
   const recentVenues = useMemo(() => {
     return [...apiVenues]

@@ -87,6 +87,16 @@ export default function EventDetailScreen() {
     return () => { cancelled = true; };
   }, [lookupVenueName, lookupVenueCity]);
 
+  const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
+
+  if (loading) {
+    return (
+      <View style={[s.notFound, { backgroundColor: C.bg }]}>
+        <Text style={[s.notFoundText, { color: C.textMuted }]}>...</Text>
+      </View>
+    );
+  }
+
   const mockEvent = MOCK_EVENTS.find((e) => e.id === id);
   const partnerEvent = myEvents.find((e) => e.id === id);
   const event: any = apiEvent
@@ -129,15 +139,6 @@ export default function EventDetailScreen() {
         status: partnerEvent.status,
       }
     : mockEvent;
-  const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
-
-  if (loading && !event) {
-    return (
-      <View style={[s.notFound, { backgroundColor: C.bg }]}>
-        <Text style={[s.notFoundText, { color: C.textMuted }]}>...</Text>
-      </View>
-    );
-  }
 
   if (!event) {
     return (
