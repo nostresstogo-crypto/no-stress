@@ -115,6 +115,7 @@ export const api = {
         pendingDeletionRequests: number;
         pendingPublications: number;
         totalPublications: number;
+        totalUsers: number;
       }>("/admin/stats"),
   },
   partners: {

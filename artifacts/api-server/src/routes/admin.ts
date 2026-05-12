@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, sql } from "drizzle-orm";
-import { db, adminsTable, partnersTable, eventsTable, deletionRequestsTable } from "@workspace/db";
+import { db, adminsTable, partnersTable, eventsTable, deletionRequestsTable, usersTable } from "@workspace/db";
 import {
   hashPassword,
   verifyPassword,
@@ -185,6 +185,9 @@ router.get("/admin/stats", requireAdmin, async (_req, res) => {
       total: sql<number>`count(*)::int`,
     })
     .from(deletionRequestsTable);
+  const [userStats] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(usersTable);
   res.json({
     pendingPartners: partnerStats?.pending ?? 0,
     approvedPartners: partnerStats?.approved ?? 0,
@@ -193,6 +196,7 @@ router.get("/admin/stats", requireAdmin, async (_req, res) => {
     pendingDeletionRequests: delStats?.pending ?? 0,
     pendingPublications: eventStats?.pending ?? 0,
     totalPublications: eventStats?.total ?? 0,
+    totalUsers: userStats?.total ?? 0,
   });
 });
 

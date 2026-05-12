@@ -27,6 +27,7 @@ interface Stats {
   pendingDeletionRequests: number;
   pendingPublications: number;
   totalPublications: number;
+  totalUsers: number;
 }
 
 const WEEKDAYS_FR = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
@@ -208,11 +209,20 @@ export default function Dashboard() {
                   Actualiser
                 </button>
                 <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-background/40 backdrop-blur px-4 py-3 min-w-[160px]">
+                  <div className="w-10 h-10 rounded-xl bg-violet-500/15 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-violet-400" />
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Utilisateurs</p>
+                    <p className="text-xl font-bold text-foreground">{stats?.totalUsers ?? 0}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-background/40 backdrop-blur px-4 py-3 min-w-[160px]">
                   <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center">
                     <Users className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Partenaires totaux</p>
+                    <p className="text-xs text-muted-foreground">Partenaires</p>
                     <p className="text-xl font-bold text-foreground">{totalPartners}</p>
                   </div>
                 </div>
