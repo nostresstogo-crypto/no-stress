@@ -561,7 +561,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!r.ok) return;
       const data = await r.json();
       const remote: any[] = Array.isArray(data?.events) ? data.events : [];
-      if (remote.length === 0) return;
       setMyEvents((prev) => {
         const knownApiIds = new Set(prev.filter((e) => e.apiId).map((e) => String(e.apiId)));
         const imports: MyEvent[] = [];

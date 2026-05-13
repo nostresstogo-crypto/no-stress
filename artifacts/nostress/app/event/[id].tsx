@@ -465,7 +465,7 @@ export default function EventDetailScreen() {
         {false && event.ticketTypes && event.ticketTypes.length > 0 && (
           <View style={s.section}>
             <Text style={[s.sectionTitle, { color: C.text }]}>{t("ticketTypes")}</Text>
-            {event.ticketTypes.map((tt) => {
+            {event.ticketTypes.map((tt: any) => {
               const ttName = lang === "fr" && tt.nameFr ? tt.nameFr : tt.name;
               const ttPrice =
                 tt.price === 0

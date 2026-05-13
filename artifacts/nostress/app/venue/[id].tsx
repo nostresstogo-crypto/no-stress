@@ -133,8 +133,8 @@ export default function VenueDetailScreen() {
       all = MOCK_EVENTS.filter(
         (e) =>
           e.venueId === venue.id ||
-          (e.venueName && venue.name &&
-            e.venueName.toLowerCase() === venue.name.toLowerCase()),
+          ((e as any).venueName && venue.name &&
+            (e as any).venueName.toLowerCase() === venue.name.toLowerCase()),
       );
     }
     const upcoming = all

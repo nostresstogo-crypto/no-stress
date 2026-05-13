@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Alert,
   Image,
@@ -289,6 +289,38 @@ export default function AccountScreen() {
       status: e.status || "approved",
     }));
 
+  const [venueNameCache, setVenueNameCache] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (favoriteVenues.length === 0) return;
+    const idsToFetch = favoriteVenues.filter((vid) => {
+      const numId = vid.startsWith("api_") ? vid.slice(4) : vid;
+      return !venueNameCache[numId];
+    });
+    if (idsToFetch.length === 0) return;
+    Promise.all(
+      idsToFetch.map(async (vid) => {
+        const numId = vid.startsWith("api_") ? vid.slice(4) : vid;
+        try {
+          const r = await fetch(`${API_BASE}/venues/${numId}`);
+          if (!r.ok) return null;
+          const data = await r.json();
+          return [numId, data.name || ""] as [string, string];
+        } catch {
+          return null;
+        }
+      })
+    ).then((results) => {
+      const map: Record<string, string> = {};
+      for (const result of results) {
+        if (result && result[1]) map[result[0]] = result[1];
+      }
+      if (Object.keys(map).length > 0) {
+        setVenueNameCache((prev) => ({ ...prev, ...map }));
+      }
+    });
+  }, [favoriteVenues]);
+
   if (!user) {
     return (
       <View style={[styles.root, { paddingTop: topInset }]}>
@@ -559,7 +591,10 @@ export default function AccountScreen() {
                   {t("favoriteVenues")}
                 </Text>
                 {favoriteVenues.map((vid) => {
+                  const numId = vid.startsWith("api_") ? vid.slice(4) : vid;
                   const navId = vid.startsWith("api_") ? vid : `api_${vid}`;
+                  const displayName = venueNameCache[numId]
+                    || (lang === "fr" ? `Lieu #${numId}` : `Venue #${numId}`);
                   return (
                     <TouchableOpacity
                       key={`fv_${vid}`}
@@ -567,7 +602,7 @@ export default function AccountScreen() {
                       onPress={() => safePush(`/venue/${navId}`)}
                     >
                       <Ionicons name="location" size={20} color={C.lavender} />
-                      <Text style={[styles.notifTitle, { flex: 1 }]}>#{vid}</Text>
+                      <Text style={[styles.notifTitle, { flex: 1 }]}>{displayName}</Text>
                       <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
                     </TouchableOpacity>
                   );
