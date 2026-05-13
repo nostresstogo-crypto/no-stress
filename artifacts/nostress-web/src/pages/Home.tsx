@@ -4,53 +4,106 @@ import { Footer } from "components/layout/Footer";
 import { motion } from "framer-motion";
 import { Button } from "components/ui/button";
 import { MapPin, Ticket, Calendar, Smartphone, Star, Quote } from "lucide-react";
+import { useLanguage } from "lib/i18n";
 
 export default function Home() {
+  const { t } = useLanguage();
+
+  const features = [
+    { icon: Calendar, title: t("home.features.f1.title"), desc: t("home.features.f1.desc") },
+    { icon: Ticket, title: t("home.features.f2.title"), desc: t("home.features.f2.desc") },
+    { icon: MapPin, title: t("home.features.f3.title"), desc: t("home.features.f3.desc") },
+    { icon: Smartphone, title: t("home.features.f4.title"), desc: t("home.features.f4.desc") },
+  ];
+
+  const appItems = [
+    t("home.app.li1"),
+    t("home.app.li2"),
+    t("home.app.li3"),
+    t("home.app.li4"),
+  ];
+
+  const plans = [
+    {
+      name: t("home.pricing.p1.name"),
+      price: "0 FCFA",
+      desc: t("home.pricing.p1.desc"),
+      features: [t("home.pricing.p1.f1"), t("home.pricing.p1.f2"), t("home.pricing.p1.f3")],
+    },
+    {
+      name: t("home.pricing.p2.name"),
+      price: "15 000 FCFA",
+      suffix: t("home.pricing.p2.suffix"),
+      desc: t("home.pricing.p2.desc"),
+      popular: true,
+      features: [
+        t("home.pricing.p2.f1"),
+        t("home.pricing.p2.f2"),
+        t("home.pricing.p2.f3"),
+        t("home.pricing.p2.f4"),
+      ],
+    },
+    {
+      name: t("home.pricing.p3.name"),
+      price: "45 000 FCFA",
+      suffix: t("home.pricing.p3.suffix"),
+      desc: t("home.pricing.p3.desc"),
+      features: [
+        t("home.pricing.p3.f1"),
+        t("home.pricing.p3.f2"),
+        t("home.pricing.p3.f3"),
+        t("home.pricing.p3.f4"),
+      ],
+    },
+  ];
+
+  const testimonials = [
+    { quote: t("home.testimonials.t1.quote"), name: "Komi A.", role: t("home.testimonials.t1.role"), initials: "KA" },
+    { quote: t("home.testimonials.t2.quote"), name: "Afiwa D.", role: t("home.testimonials.t2.role"), initials: "AD" },
+    { quote: t("home.testimonials.t3.quote"), name: "Marc T.", role: t("home.testimonials.t3.role"), initials: "MT" },
+  ];
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Navbar />
-      
+
       <main className="flex-1 pt-16">
-        {/* Hero Section */}
+        {/* Hero */}
         <section className="relative py-24 md:py-32 overflow-hidden">
           <div className="absolute inset-0 z-0">
             <div className="absolute inset-0 bg-background/80 z-10" />
-            <img 
-              src="/images/hero-club.png" 
-              alt="Nightclub scene" 
-              className="w-full h-full object-cover"
-            />
+            <img src="/images/hero-club.png" alt="Nightclub scene" className="w-full h-full object-cover" />
           </div>
-          
+
           <div className="container mx-auto px-4 relative z-20">
             <div className="max-w-3xl">
-              <motion.h1 
+              <motion.h1
                 className="text-5xl md:text-7xl font-bold mb-6 text-foreground leading-tight"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
               >
-                Vivez l'énergie du <span className="text-primary">Togo</span>, sans stress.
+                {t("home.hero.title")} <span className="text-primary">{t("home.hero.country")}</span>{t("home.hero.title2")}
               </motion.h1>
-              <motion.p 
+              <motion.p
                 className="text-xl md:text-2xl text-muted-foreground mb-8"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
               >
-                Découvrez les meilleurs concerts, festivals, et soirées. Le pouls de la vie nocturne togolaise dans votre poche.
+                {t("home.hero.sub")}
               </motion.p>
-              <motion.div 
+              <motion.div
                 className="flex flex-wrap gap-4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
                 <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 text-lg px-8">
-                  App Store
+                  {t("home.hero.appstore")}
                 </Button>
                 <Button size="lg" variant="outline" className="text-lg px-8 bg-card/50 backdrop-blur border-primary/20 hover:bg-card/80">
-                  Google Play
+                  {t("home.hero.googleplay")}
                 </Button>
               </motion.div>
             </div>
@@ -61,20 +114,13 @@ export default function Home() {
         <section className="py-24 bg-card">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-5xl font-bold mb-4">Tout ce qu'il vous faut pour sortir</h2>
-              <p className="text-muted-foreground text-xl max-w-2xl mx-auto">
-                NoStress simplifie votre vie sociale de la découverte à l'achat de billets.
-              </p>
+              <h2 className="text-3xl md:text-5xl font-bold mb-4">{t("home.features.title")}</h2>
+              <p className="text-muted-foreground text-xl max-w-2xl mx-auto">{t("home.features.sub")}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-              {[
-                { icon: Calendar, title: "Découverte", desc: "Trouvez des événements exclusifs et des soirées secrètes." },
-                { icon: Ticket, title: "Billetterie Mobile", desc: "Achetez vos tickets en un clic et recevez votre QR code instantanément." },
-                { icon: MapPin, title: "Carte Interactive", desc: "Localisez les lieux les plus chauds autour de vous." },
-                { icon: Smartphone, title: "Espace Partenaire", desc: "Gérez vos événements directement depuis l'application." }
-              ].map((feature, i) => (
-                <motion.div 
+              {features.map((feature, i) => (
+                <motion.div
                   key={i}
                   className="p-8 rounded-2xl bg-background border border-border hover:border-primary/50 transition-colors"
                   initial={{ opacity: 0, y: 20 }}
@@ -91,28 +137,21 @@ export default function Home() {
           </div>
         </section>
 
-        {/* App Mockup Section */}
+        {/* App Mockup */}
         <section className="py-24 bg-background overflow-hidden">
           <div className="container mx-auto px-4">
             <div className="flex flex-col lg:flex-row items-center gap-16">
-              <motion.div 
+              <motion.div
                 className="flex-1"
                 initial={{ opacity: 0, x: -50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.6 }}
               >
-                <h2 className="text-3xl md:text-5xl font-bold mb-6">L'expérience NoStress au bout des doigts</h2>
-                <p className="text-xl text-muted-foreground mb-8">
-                  Une interface fluide, pensée pour la nuit. Feuilletez les événements à venir, sauvegardez vos favoris et achetez vos tickets en un clic, sans quitter l'application.
-                </p>
+                <h2 className="text-3xl md:text-5xl font-bold mb-6">{t("home.app.title")}</h2>
+                <p className="text-xl text-muted-foreground mb-8">{t("home.app.sub")}</p>
                 <ul className="space-y-4">
-                  {[
-                    "Scanner de QR code intégré pour un accès rapide",
-                    "Notifications en temps réel pour vos artistes préférés",
-                    "Paiement sécurisé 100% togolais",
-                    "Mode sombre exclusif pour le confort visuel"
-                  ].map((item, i) => (
+                  {appItems.map((item, i) => (
                     <li key={i} className="flex items-center gap-3">
                       <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-primary shrink-0">✓</div>
                       <span className="text-lg">{item}</span>
@@ -120,7 +159,7 @@ export default function Home() {
                   ))}
                 </ul>
               </motion.div>
-              <motion.div 
+              <motion.div
                 className="flex-1 relative"
                 initial={{ opacity: 0, x: 50 }}
                 whileInView={{ opacity: 1, x: 0 }}
@@ -128,9 +167,9 @@ export default function Home() {
                 transition={{ duration: 0.6, delay: 0.2 }}
               >
                 <div className="absolute inset-0 bg-primary/10 blur-[100px] rounded-full" />
-                <img 
-                  src="/images/beach-party.png" 
-                  alt="App interface preview" 
+                <img
+                  src="/images/beach-party.png"
+                  alt="App interface preview"
                   className="relative z-10 w-full max-w-md mx-auto rounded-3xl border-8 border-border shadow-2xl"
                 />
               </motion.div>
@@ -142,20 +181,18 @@ export default function Home() {
         <section className="py-24 bg-background">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-5xl font-bold mb-4">Pour les Organisateurs</h2>
-              <p className="text-muted-foreground text-xl max-w-2xl mx-auto">
-                Gérez vos événements, scannez les billets et suivez vos ventes en temps réel.
-              </p>
+              <h2 className="text-3xl md:text-5xl font-bold mb-4">{t("home.pricing.title")}</h2>
+              <p className="text-muted-foreground text-xl max-w-2xl mx-auto">{t("home.pricing.sub")}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              {[
-                { name: "Gratuit", price: "0 FCFA", desc: "Pour les petits événements", features: ["1 événement actif", "Scan de billets basique", "Support par email"] },
-                { name: "Pro", price: "15 000 FCFA", suffix: "/mois", desc: "Pour les clubs et promoteurs", popular: true, features: ["Événements illimités", "Paiements sécurisés", "Dashboard analytique", "Support prioritaire"] },
-                { name: "Premium", price: "45 000 FCFA", suffix: "/mois", desc: "Pour les grands festivals", features: ["Fonctions Pro", "Mise en avant sur l'app", "Accès API", "Account manager dédié"] }
-              ].map((plan, i) => (
-                <div key={i} className={`p-8 rounded-2xl border ${plan.popular ? 'border-primary bg-card relative' : 'border-border bg-card'}`}>
-                  {plan.popular && <span className="absolute top-0 right-8 -translate-y-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-bold shadow-lg">Populaire</span>}
+              {plans.map((plan, i) => (
+                <div key={i} className={`p-8 rounded-2xl border ${plan.popular ? "border-primary bg-card relative" : "border-border bg-card"}`}>
+                  {plan.popular && (
+                    <span className="absolute top-0 right-8 -translate-y-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-bold shadow-lg">
+                      {t("home.pricing.popular")}
+                    </span>
+                  )}
                   <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
                   <p className="text-muted-foreground mb-6">{plan.desc}</p>
                   <div className="mb-8">
@@ -170,8 +207,11 @@ export default function Home() {
                       </li>
                     ))}
                   </ul>
-                  <Button className={`w-full ${plan.popular ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'bg-background hover:bg-muted text-foreground'}`} variant={plan.popular ? 'default' : 'outline'}>
-                    Commencer
+                  <Button
+                    className={`w-full ${plan.popular ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-background hover:bg-muted text-foreground"}`}
+                    variant={plan.popular ? "default" : "outline"}
+                  >
+                    {t("home.pricing.cta")}
                   </Button>
                 </div>
               ))}
@@ -182,29 +222,10 @@ export default function Home() {
         {/* Testimonials */}
         <section className="py-24 bg-card overflow-hidden">
           <div className="container mx-auto px-4">
-            <h2 className="text-3xl md:text-5xl font-bold mb-16 text-center">Ce qu'ils en disent</h2>
+            <h2 className="text-3xl md:text-5xl font-bold mb-16 text-center">{t("home.testimonials.title")}</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {[
-                { 
-                  quote: "Enfin une appli qui comprend comment on fait la fête à Lomé ! Je n'ai plus besoin de faire la queue pour mes billets, tout se fait directement dans l'app.", 
-                  name: "Komi A.", 
-                  role: "Étudiant",
-                  initials: "KA"
-                },
-                { 
-                  quote: "En tant que gérante de club, NoStress m'a permis de doubler ma visibilité le week-end. Le scan des billets à l'entrée est ultra rapide, fini les embouteillages.", 
-                  name: "Afiwa D.", 
-                  role: "Propriétaire de Club",
-                  initials: "AD"
-                },
-                { 
-                  quote: "J'ai découvert des festivals incroyables à Kpalimé que je n'aurais jamais trouvés autrement. L'interface est magnifique et super fluide.", 
-                  name: "Marc T.", 
-                  role: "Designer",
-                  initials: "MT"
-                }
-              ].map((testimonial, i) => (
-                <motion.div 
+              {testimonials.map((testimonial, i) => (
+                <motion.div
                   key={i}
                   className="bg-background p-8 rounded-2xl border border-border relative"
                   initial={{ opacity: 0, y: 20 }}
@@ -239,25 +260,23 @@ export default function Home() {
         {/* CTA */}
         <section className="py-24 bg-background relative overflow-hidden">
           <div className="absolute inset-0 z-0">
-            <img 
-              src="/images/festival.png" 
-              alt="Festival crowd" 
+            <img
+              src="/images/festival.png"
+              alt="Festival crowd"
               className="w-full h-full object-cover opacity-20"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/20" />
           </div>
-          
+
           <div className="container mx-auto px-4 relative z-10 text-center">
-            <h2 className="text-4xl md:text-6xl font-bold mb-8">Prêt à sortir ?</h2>
-            <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-              Rejoignez des milliers de togolais qui utilisent NoStress pour planifier leurs week-ends.
-            </p>
+            <h2 className="text-4xl md:text-6xl font-bold mb-8">{t("home.cta.title")}</h2>
+            <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">{t("home.cta.sub")}</p>
             <div className="flex flex-wrap justify-center gap-4">
               <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 text-lg px-8 h-14">
-                Télécharger pour iOS
+                {t("home.cta.ios")}
               </Button>
               <Button size="lg" className="bg-foreground text-background hover:bg-foreground/90 text-lg px-8 h-14">
-                Télécharger pour Android
+                {t("home.cta.android")}
               </Button>
             </div>
           </div>

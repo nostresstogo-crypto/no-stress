@@ -13,21 +13,17 @@ import {
   SelectValue,
 } from "components/ui/select";
 import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { useLanguage } from "lib/i18n";
 
-const API_BASE = process.env.NODE_ENV === "production"
-  ? "https://api.no-stress.net/api"
-  : `${(process.env.PUBLIC_URL || "")
-      .replace(/\/$/, "")
-      .replace("/nostress-web", "")}/api`;
-
-const REASON_LABELS: Record<string, string> = {
-  not_useful: "L'application ne m'est pas utile",
-  privacy: "Préoccupations liées à la vie privée",
-  too_many_emails: "Trop de notifications",
-  other: "Autre raison",
-};
+const API_BASE =
+  process.env.NODE_ENV === "production"
+    ? "https://api.no-stress.net/api"
+    : `${(process.env.PUBLIC_URL || "")
+        .replace(/\/$/, "")
+        .replace("/nostress-web", "")}/api`;
 
 export default function AccountDeletion() {
+  const { t } = useLanguage();
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
   const [name, setName] = useState(params.get("name") || "");
   const [email, setEmail] = useState(params.get("email") || "");
@@ -39,11 +35,18 @@ export default function AccountDeletion() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const REASON_LABELS: Record<string, string> = {
+    not_useful: t("delete.reason.not_useful"),
+    privacy: t("delete.reason.privacy"),
+    too_many_emails: t("delete.reason.too_many_emails"),
+    other: t("delete.reason.other"),
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     if (!confirmed) {
-      setError("Vous devez confirmer la suppression.");
+      setError(t("delete.error.confirm"));
       return;
     }
     setSubmitting(true);
@@ -60,11 +63,11 @@ export default function AccountDeletion() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        throw new Error(data.error || "Erreur serveur. Réessayez plus tard.");
+        throw new Error(data.error || t("delete.error.server"));
       }
       setSubmitted(true);
     } catch (err: any) {
-      setError(err?.message || "Erreur réseau. Réessayez.");
+      setError(err?.message || t("delete.error.network"));
     } finally {
       setSubmitting(false);
     }
@@ -76,20 +79,16 @@ export default function AccountDeletion() {
 
       <main className="flex-1 pt-24 pb-16">
         <div className="container mx-auto px-4 max-w-2xl">
-          <h1 className="text-4xl font-bold mb-4 text-primary">Demande de suppression de compte</h1>
-          <p className="text-muted-foreground mb-8 text-lg">
-            Nous sommes désolés de vous voir partir. La suppression de votre compte entraînera la perte définitive de toutes vos données.
-          </p>
+          <h1 className="text-4xl font-bold mb-4 text-primary">{t("delete.title")}</h1>
+          <p className="text-muted-foreground mb-8 text-lg">{t("delete.sub")}</p>
 
           {submitted ? (
             <div className="bg-card border border-border rounded-xl p-8 text-center">
               <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-6" />
-              <h2 className="text-2xl font-bold mb-4">Demande reçue</h2>
-              <p className="text-muted-foreground mb-6">
-                Votre demande de suppression de compte a été enregistrée. Elle sera traitée dans un délai maximum de 30 jours conformément au RGPD. Vous recevrez un email de confirmation lorsque la suppression sera effective.
-              </p>
+              <h2 className="text-2xl font-bold mb-4">{t("delete.success.title")}</h2>
+              <p className="text-muted-foreground mb-6">{t("delete.success.body")}</p>
               <p className="text-sm text-muted-foreground">
-                Si vous avez des questions, contactez-nous à{" "}
+                {t("delete.success.contact")}{" "}
                 <a href="mailto:nostresstogo@gmail.com" className="text-primary hover:underline">
                   nostresstogo@gmail.com
                 </a>
@@ -100,29 +99,27 @@ export default function AccountDeletion() {
               <div className="flex gap-4 items-start bg-destructive/10 border border-destructive/20 p-4 rounded-lg mb-8">
                 <AlertTriangle className="text-destructive w-6 h-6 shrink-0 mt-1" />
                 <div className="text-sm">
-                  <p className="font-semibold text-destructive mb-1">Attention : Action irréversible</p>
-                  <p className="text-muted-foreground">
-                    La suppression de votre compte effacera toutes vos données personnelles, vos favoris et votre historique. Pour les partenaires, vos lieux et événements seront retirés de la plateforme.
-                  </p>
+                  <p className="font-semibold text-destructive mb-1">{t("delete.warning.title")}</p>
+                  <p className="text-muted-foreground">{t("delete.warning.body")}</p>
                 </div>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name">Nom complet</Label>
+                    <Label htmlFor="name">{t("delete.name")}</Label>
                     <Input
                       id="name"
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Votre nom tel qu'il apparaît sur l'application"
+                      placeholder={t("delete.name.placeholder")}
                       className="bg-background"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email">Adresse e-mail associée au compte</Label>
+                    <Label htmlFor="email">{t("delete.email")}</Label>
                     <Input
                       id="email"
                       type="email"
@@ -135,33 +132,33 @@ export default function AccountDeletion() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Type de compte</Label>
+                    <Label>{t("delete.type")}</Label>
                     <Select
                       required
                       value={accountType}
                       onValueChange={(v) => setAccountType(v as "user" | "partner")}
                     >
                       <SelectTrigger className="bg-background">
-                        <SelectValue placeholder="Sélectionnez le type de compte" />
+                        <SelectValue placeholder={t("delete.type.placeholder")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="user">Utilisateur (Application mobile)</SelectItem>
-                        <SelectItem value="partner">Partenaire / Structure (Organisateur)</SelectItem>
+                        <SelectItem value="user">{t("delete.type.user")}</SelectItem>
+                        <SelectItem value="partner">{t("delete.type.partner")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Raison de la suppression (Optionnel)</Label>
+                    <Label>{t("delete.reason")}</Label>
                     <Select value={reason} onValueChange={setReason}>
                       <SelectTrigger className="bg-background">
-                        <SelectValue placeholder="Pourquoi souhaitez-vous nous quitter ?" />
+                        <SelectValue placeholder={t("delete.reason.placeholder")} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="not_useful">L'application ne m'est pas utile</SelectItem>
-                        <SelectItem value="privacy">Préoccupations liées à la vie privée</SelectItem>
-                        <SelectItem value="too_many_emails">Trop de notifications</SelectItem>
-                        <SelectItem value="other">Autre raison</SelectItem>
+                        <SelectItem value="not_useful">{t("delete.reason.not_useful")}</SelectItem>
+                        <SelectItem value="privacy">{t("delete.reason.privacy")}</SelectItem>
+                        <SelectItem value="too_many_emails">{t("delete.reason.too_many_emails")}</SelectItem>
+                        <SelectItem value="other">{t("delete.reason.other")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -177,11 +174,9 @@ export default function AccountDeletion() {
                   />
                   <div className="grid gap-1.5 leading-none">
                     <Label htmlFor="confirm" className="text-base font-medium">
-                      Je confirme vouloir supprimer définitivement mon compte
+                      {t("delete.confirm.label")}
                     </Label>
-                    <p className="text-sm text-muted-foreground">
-                      Je comprends que cette action est irréversible et que je perdrai l'accès à toutes mes données.
-                    </p>
+                    <p className="text-sm text-muted-foreground">{t("delete.confirm.desc")}</p>
                   </div>
                 </div>
 
@@ -200,10 +195,10 @@ export default function AccountDeletion() {
                   {submitting ? (
                     <>
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                      Envoi en cours...
+                      {t("delete.submitting")}
                     </>
                   ) : (
-                    "Soumettre la demande de suppression"
+                    t("delete.submit")
                   )}
                 </Button>
               </form>

@@ -9,17 +9,43 @@ import {
   DropdownMenuTrigger,
 } from "components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "components/ui/sheet";
+import { useLanguage } from "lib/i18n";
 
 export function Navbar() {
   const [location] = useLocation();
+  const { t, lang, setLang } = useLanguage();
 
   const links = [
-    { href: "/", label: "Accueil" },
-    { href: "/conditions-utilisation", label: "CGU" },
-    { href: "/politique-confidentialite", label: "Confidentialité" },
-    { href: "/suppression-compte", label: "Supprimer mon compte" },
-    { href: "/contact", label: "Contact" },
+    { href: "/", label: t("nav.home") },
+    { href: "/conditions-utilisation", label: t("nav.terms") },
+    { href: "/politique-confidentialite", label: t("nav.privacy") },
+    { href: "/suppression-compte", label: t("nav.delete") },
+    { href: "/contact", label: t("nav.contact") },
   ];
+
+  const LangSwitcher = () => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
+          <Globe className="h-5 w-5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          onClick={() => setLang("fr")}
+          className={lang === "fr" ? "text-primary font-semibold" : ""}
+        >
+          🇫🇷 Français
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => setLang("en")}
+          className={lang === "en" ? "text-primary font-semibold" : ""}
+        >
+          🇬🇧 English
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   return (
     <nav className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-border">
@@ -40,36 +66,16 @@ export function Navbar() {
               {link.label}
             </Link>
           ))}
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
-                <Globe className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>Français</DropdownMenuItem>
-              <DropdownMenuItem>English</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+
+          <LangSwitcher />
 
           <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
-            Télécharger l'App
+            {t("nav.download")}
           </Button>
         </div>
 
         <div className="md:hidden flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
-                <Globe className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>Français</DropdownMenuItem>
-              <DropdownMenuItem>English</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <LangSwitcher />
 
           <Sheet>
             <SheetTrigger asChild>
@@ -91,7 +97,7 @@ export function Navbar() {
                   </Link>
                 ))}
                 <Button className="mt-4 bg-primary text-primary-foreground">
-                  Télécharger l'App
+                  {t("nav.download")}
                 </Button>
               </div>
             </SheetContent>
