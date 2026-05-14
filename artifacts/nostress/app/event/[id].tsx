@@ -165,8 +165,7 @@ export default function EventDetailScreen() {
   const fav = isFavorite(event.id);
 
   const formattedDate = (() => {
-    const d = new Date(event.date);
-    return formatDateLocalized(d, lang, { withWeekday: true });
+    return formatDateLocalized(event.date, lang, { withWeekday: true });
   })();
 
   const handleShare = async () => {

@@ -105,9 +105,7 @@ export function EventCard({ event, onPress, horizontal = false }: EventCardProps
 
   const formattedDate = (() => {
     if (!event.date) return "";
-    const d = new Date(event.date);
-    if (isNaN(d.getTime())) return event.date;
-    return formatDateLocalized(d, lang, { short: true });
+    return formatDateLocalized(event.date, lang, { short: true });
   })();
 
   const fav = isFavorite(event.id);

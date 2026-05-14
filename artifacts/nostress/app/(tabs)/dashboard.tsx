@@ -23,7 +23,7 @@ import * as ImagePicker from "expo-image-picker";
 import type { ColorPalette } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_SUBSCRIPTION_PLANS } from "@/constants/data";
-import { formatDateLocalized, formatDateTimeLocalized } from "@/lib/formatDate";
+import { formatDateLocalized, formatDateTimeLocalized, parseDateLocal } from "@/lib/formatDate";
 import { API_BASE } from "@/lib/apiBase";
 import { TimeField } from "@/components/DateTimeField";
 
@@ -709,7 +709,7 @@ export default function DashboardScreen() {
           const color = expired ? C.error : "#F59E0B";
           const icon = expired ? "alert-circle" : "time-outline";
           const untilStr = subscription.subscriptionUntil
-            ? new Date(subscription.subscriptionUntil).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US")
+            ? (parseDateLocal(subscription.subscriptionUntil) ?? new Date(subscription.subscriptionUntil)).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US")
             : null;
           const title = expired
             ? (lang === "fr" ? "Abonnement expiré" : "Subscription expired")
@@ -823,8 +823,8 @@ export default function DashboardScreen() {
               </View>
             ) : (
               filtered.map((event) => {
-                const eventDate = new Date(event.date);
-                const isPast = !isNaN(eventDate.getTime()) && eventDate.getTime() < Date.now();
+                const eventDate = parseDateLocal(event.date);
+                const isPast = !!eventDate && eventDate.getTime() < Date.now();
                 const isCancelled = event.status === "cancelled";
                 const cancelEvent = () => {
                   Alert.alert(
@@ -1170,14 +1170,14 @@ export default function DashboardScreen() {
                 {subscription.subscriptionStart && subscription.subscriptionUntil ? (
                   <Text style={{ color: C.textMuted, fontSize: 12 }}>
                     {lang === "fr" ? "Du " : "From "}
-                    {new Date(subscription.subscriptionStart).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                    {(parseDateLocal(subscription.subscriptionStart) ?? new Date(subscription.subscriptionStart)).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}
                     {lang === "fr" ? " au " : " to "}
-                    {new Date(subscription.subscriptionUntil).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                    {(parseDateLocal(subscription.subscriptionUntil) ?? new Date(subscription.subscriptionUntil)).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}
                   </Text>
                 ) : subscription.subscriptionUntil ? (
                   <Text style={{ color: C.textMuted, fontSize: 12 }}>
                     {lang === "fr" ? "Expire le " : "Expires on "}
-                    {new Date(subscription.subscriptionUntil).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}
+                    {(parseDateLocal(subscription.subscriptionUntil) ?? new Date(subscription.subscriptionUntil)).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}
                   </Text>
                 ) : null}
               </View>

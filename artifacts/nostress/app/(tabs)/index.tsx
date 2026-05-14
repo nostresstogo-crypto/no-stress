@@ -20,6 +20,7 @@ import { safePush } from "@/lib/navigation";
 
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { ColorPalette } from "@/constants/colors";
+import { parseDateLocal } from "@/lib/formatDate";
 import { CategoryPill } from "@/components/CategoryPill";
 import { CitySelector } from "@/components/CitySelector";
 import { EventCard } from "@/components/EventCard";
@@ -241,8 +242,8 @@ export default function HomeScreen() {
     const endOfMonth = new Date(startOfToday.getTime() + 31 * 24 * 60 * 60 * 1000);
 
     const out = allEvents.filter((e) => {
-      const ed = new Date(e.date);
-      if (!isNaN(ed.getTime()) && ed < startOfToday) return false;
+      const ed = parseDateLocal(e.date);
+      if (ed && ed < startOfToday) return false;
       if ((e as any).status === "cancelled") return false;
       const matchCity = !selectedCity || (e.city || "").toLowerCase() === selectedCity.toLowerCase();
       const matchCat = !selectedCategory || e.category === selectedCategory;
@@ -256,8 +257,8 @@ export default function HomeScreen() {
 
       let matchDate = true;
       if (filters.dateRange !== "all") {
-        const d = new Date(e.date);
-        if (isNaN(d.getTime())) {
+        const d = parseDateLocal(e.date);
+        if (!d) {
           matchDate = false;
         } else if (filters.dateRange === "today") {
           matchDate = d >= startOfToday && d < endOfToday;

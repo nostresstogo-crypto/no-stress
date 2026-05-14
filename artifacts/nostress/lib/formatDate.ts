@@ -19,6 +19,16 @@ function toDate(date: Date | string): Date | null {
   return date;
 }
 
+/**
+ * Safely parse a date string to a local Date object.
+ * Date-only strings (YYYY-MM-DD) are treated as local midnight,
+ * not UTC midnight, to avoid off-by-one day on iOS.
+ */
+export function parseDateLocal(date: Date | string | null | undefined): Date | null {
+  if (!date) return null;
+  return toDate(date);
+}
+
 const WEEKDAYS_FR = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 const WEEKDAYS_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
