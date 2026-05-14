@@ -172,6 +172,41 @@ export const api = {
         { method: "POST" },
       ),
   },
+  config: {
+    // Countries
+    listCountries: () => request<{ countries: ConfigCountry[] }>("/config/countries"),
+    createCountry: (data: { code: string; name: string; emoji: string }) =>
+      request<{ country: ConfigCountry }>("/admin/config/countries", { method: "POST", body: JSON.stringify(data) }),
+    updateCountry: (id: number, data: Partial<{ code: string; name: string; emoji: string }>) =>
+      request<{ country: ConfigCountry }>(`/admin/config/countries/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    deleteCountry: (id: number) =>
+      request<{ deleted: ConfigCountry }>(`/admin/config/countries/${id}`, { method: "DELETE" }),
+    // Cities
+    listCities: (countryId?: number) =>
+      request<{ cities: ConfigCity[] }>(`/config/cities${countryId ? `?countryId=${countryId}` : ""}`),
+    createCity: (data: { slug: string; name: string; countryId: number; emoji: string; latitude?: number; longitude?: number }) =>
+      request<{ city: ConfigCity }>("/admin/config/cities", { method: "POST", body: JSON.stringify(data) }),
+    updateCity: (id: number, data: Partial<{ slug: string; name: string; countryId: number; emoji: string; latitude: number; longitude: number }>) =>
+      request<{ city: ConfigCity }>(`/admin/config/cities/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    deleteCity: (id: number) =>
+      request<{ deleted: ConfigCity }>(`/admin/config/cities/${id}`, { method: "DELETE" }),
+    // Event categories
+    listEventCategories: () => request<{ eventCategories: ConfigEventCategory[] }>("/config/event-categories"),
+    createEventCategory: (data: { key: string; labelFr: string; labelEn: string; icon: string; color: string; sortOrder?: number }) =>
+      request<{ eventCategory: ConfigEventCategory }>("/admin/config/event-categories", { method: "POST", body: JSON.stringify(data) }),
+    updateEventCategory: (id: number, data: Partial<{ key: string; labelFr: string; labelEn: string; icon: string; color: string; sortOrder: number }>) =>
+      request<{ eventCategory: ConfigEventCategory }>(`/admin/config/event-categories/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    deleteEventCategory: (id: number) =>
+      request<{ deleted: ConfigEventCategory }>(`/admin/config/event-categories/${id}`, { method: "DELETE" }),
+    // Venue types
+    listVenueTypes: () => request<{ venueTypes: ConfigVenueType[] }>("/config/venue-types"),
+    createVenueType: (data: { key: string; labelFr: string; labelEn: string; icon: string; sortOrder?: number }) =>
+      request<{ venueType: ConfigVenueType }>("/admin/config/venue-types", { method: "POST", body: JSON.stringify(data) }),
+    updateVenueType: (id: number, data: Partial<{ key: string; labelFr: string; labelEn: string; icon: string; sortOrder: number }>) =>
+      request<{ venueType: ConfigVenueType }>(`/admin/config/venue-types/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    deleteVenueType: (id: number) =>
+      request<{ deleted: ConfigVenueType }>(`/admin/config/venue-types/${id}`, { method: "DELETE" }),
+  },
 };
 
 export interface Partner {
@@ -250,4 +285,46 @@ export interface RegistrationStats {
   clientCount: number;
   total: number;
   buckets: { label: string; partners: number; clients: number }[];
+}
+
+export interface ConfigCountry {
+  id: number;
+  code: string;
+  name: string;
+  emoji: string;
+  createdAt: string;
+}
+
+export interface ConfigCity {
+  id: number;
+  slug: string;
+  name: string;
+  emoji: string;
+  latitude: number | null;
+  longitude: number | null;
+  countryId: number;
+  countryName?: string;
+  countryCode?: string;
+  createdAt?: string;
+}
+
+export interface ConfigEventCategory {
+  id: number;
+  key: string;
+  labelFr: string;
+  labelEn: string;
+  icon: string;
+  color: string;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface ConfigVenueType {
+  id: number;
+  key: string;
+  labelFr: string;
+  labelEn: string;
+  icon: string;
+  sortOrder: number;
+  createdAt: string;
 }

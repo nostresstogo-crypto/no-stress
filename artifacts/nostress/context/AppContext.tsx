@@ -13,7 +13,7 @@ import { useColorScheme } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import { Lang } from "@/constants/i18n";
 import { getThemeColors, ColorPalette } from "@/constants/colors";
-import { MOCK_CITIES, MOCK_EVENTS } from "@/constants/data";
+import { MOCK_CITIES, MOCK_EVENTS, EVENT_CATEGORIES, VENUE_TYPES, COUNTRIES } from "@/constants/data";
 import { registerPushPreferences } from "@/lib/pushNotifications";
 import {
   startNearbyAlerts,
@@ -36,6 +36,44 @@ export interface ApiEvent {
   price?: number;
   imageUrl?: string;
   status?: string;
+}
+
+export interface ConfigCity {
+  id: number;
+  slug: string;
+  name: string;
+  emoji: string;
+  latitude: number | null;
+  longitude: number | null;
+  countryId: number;
+  countryName?: string;
+  countryCode?: string;
+}
+
+export interface ConfigEventCategory {
+  id: number;
+  key: string;
+  labelFr: string;
+  labelEn: string;
+  icon: string;
+  color: string;
+  sortOrder: number;
+}
+
+export interface ConfigVenueType {
+  id: number;
+  key: string;
+  labelFr: string;
+  labelEn: string;
+  icon: string;
+  sortOrder: number;
+}
+
+export interface ConfigCountry {
+  id: number;
+  code: string;
+  name: string;
+  emoji: string;
 }
 
 type UserRole = "user" | "structure" | "admin";
@@ -129,6 +167,11 @@ interface AppContextValue {
   nearbyEventsCount: number;
   apiEvents: ApiEvent[];
   refreshApiEvents: () => Promise<void>;
+  configCities: ConfigCity[];
+  configEventCategories: ConfigEventCategory[];
+  configVenueTypes: ConfigVenueType[];
+  configCountries: ConfigCountry[];
+  refreshConfig: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -170,6 +213,73 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [locationNotificationsEnabled, setLocationNotificationsEnabledState] = useState<boolean>(true);
   const [apiEvents, setApiEvents] = useState<ApiEvent[]>([]);
   const notifiedCityRef = useRef<string>("");
+
+  // Config data — fallback to static constants
+  const [configCities, setConfigCities] = useState<ConfigCity[]>(() =>
+    MOCK_CITIES.map((c, i) => ({
+      id: i + 1,
+      slug: c.id,
+      name: c.name,
+      emoji: c.emoji,
+      latitude: c.latitude ?? null,
+      longitude: c.longitude ?? null,
+      countryId: 0,
+      countryName: c.country,
+    }))
+  );
+  const [configEventCategories, setConfigEventCategories] = useState<ConfigEventCategory[]>(() =>
+    EVENT_CATEGORIES.map((c, i) => ({
+      id: i + 1,
+      key: c.key,
+      labelFr: c.key,
+      labelEn: c.key,
+      icon: c.icon,
+      color: c.color,
+      sortOrder: i,
+    }))
+  );
+  const [configVenueTypes, setConfigVenueTypes] = useState<ConfigVenueType[]>(() =>
+    VENUE_TYPES.map((v, i) => ({
+      id: i + 1,
+      key: v,
+      labelFr: v,
+      labelEn: v,
+      icon: "business",
+      sortOrder: i,
+    }))
+  );
+  const [configCountries, setConfigCountries] = useState<ConfigCountry[]>(() =>
+    COUNTRIES.map((c, i) => ({ id: i + 1, code: c.code, name: c.name, emoji: c.emoji }))
+  );
+
+  const refreshConfig = useCallback(async () => {
+    try {
+      const [countriesRes, citiesRes, catsRes, typesRes] = await Promise.all([
+        fetch(`${API_BASE}/config/countries`),
+        fetch(`${API_BASE}/config/cities`),
+        fetch(`${API_BASE}/config/event-categories`),
+        fetch(`${API_BASE}/config/venue-types`),
+      ]);
+      if (countriesRes.ok) {
+        const data = await countriesRes.json();
+        if (Array.isArray(data?.countries) && data.countries.length > 0) setConfigCountries(data.countries);
+      }
+      if (citiesRes.ok) {
+        const data = await citiesRes.json();
+        if (Array.isArray(data?.cities) && data.cities.length > 0) setConfigCities(data.cities);
+      }
+      if (catsRes.ok) {
+        const data = await catsRes.json();
+        if (Array.isArray(data?.eventCategories) && data.eventCategories.length > 0) setConfigEventCategories(data.eventCategories);
+      }
+      if (typesRes.ok) {
+        const data = await typesRes.json();
+        if (Array.isArray(data?.venueTypes) && data.venueTypes.length > 0) setConfigVenueTypes(data.venueTypes);
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => { refreshConfig(); }, [refreshConfig]);
 
   const refreshApiEvents = useCallback(async () => {
     try {
@@ -738,6 +848,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       locationNotificationsEnabled, setLocationNotificationsEnabled,
       nearbyEventsCount,
       apiEvents, refreshApiEvents,
+      configCities, configEventCategories, configVenueTypes, configCountries, refreshConfig,
     }),
     [
       lang, setLang,
@@ -758,6 +869,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       locationNotificationsEnabled, setLocationNotificationsEnabled,
       nearbyEventsCount,
       apiEvents, refreshApiEvents,
+      configCities, configEventCategories, configVenueTypes, configCountries, refreshConfig,
     ]
   );
 

@@ -12,6 +12,7 @@ import Publications from "@/pages/Publications";
 import Venues from "@/pages/Venues";
 import Statistics from "@/pages/Statistics";
 import Profile from "@/pages/Profile";
+import Settings from "@/pages/Settings";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,9 @@ function Router() {
       </Route>
       <Route path="/statistiques">
         <ProtectedRoute component={Statistics} />
+      </Route>
+      <Route path="/parametres">
+        <ProtectedRoute component={Settings} />
       </Route>
       <Route path="/profil">
         <ProtectedRoute component={Profile} />

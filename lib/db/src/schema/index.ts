@@ -235,3 +235,57 @@ export const contactMessagesTable = pgTable("contact_messages", {
   ipAddress: text("ip_address"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// ─── Configuration tables ─────────────────────────────────────────────────────
+
+export const countriesTable = pgTable("countries", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  name: text("name").notNull(),
+  emoji: text("emoji").notNull().default("🌍"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type Country = typeof countriesTable.$inferSelect;
+export type InsertCountry = typeof countriesTable.$inferInsert;
+
+export const citiesTable = pgTable("cities", {
+  id: serial("id").primaryKey(),
+  slug: text("slug").notNull().unique(),
+  name: text("name").notNull(),
+  countryId: integer("country_id").notNull().references(() => countriesTable.id, { onDelete: "restrict" }),
+  emoji: text("emoji").notNull().default("🏙️"),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type City = typeof citiesTable.$inferSelect;
+export type InsertCity = typeof citiesTable.$inferInsert;
+
+export const eventCategoriesTable = pgTable("event_categories", {
+  id: serial("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  labelFr: text("label_fr").notNull(),
+  labelEn: text("label_en").notNull(),
+  icon: text("icon").notNull().default("calendar"),
+  color: text("color").notNull().default("#9B8FE8"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type EventCategory = typeof eventCategoriesTable.$inferSelect;
+export type InsertEventCategory = typeof eventCategoriesTable.$inferInsert;
+
+export const venueTypesTable = pgTable("venue_types", {
+  id: serial("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  labelFr: text("label_fr").notNull(),
+  labelEn: text("label_en").notNull(),
+  icon: text("icon").notNull().default("business"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type VenueType = typeof venueTypesTable.$inferSelect;
+export type InsertVenueType = typeof venueTypesTable.$inferInsert;

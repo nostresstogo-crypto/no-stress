@@ -15,6 +15,7 @@ import {
   Menu,
   MapPin,
   UserCog,
+  Settings,
 } from "lucide-react";
 
 const navItems = [
@@ -24,6 +25,7 @@ const navItems = [
   { href: "/publications", label: "Publications", icon: FileText },
   { href: "/suppressions", label: "Suppressions de compte", icon: Trash2 },
   { href: "/statistiques", label: "Statistiques", icon: BarChart2 },
+  { href: "/parametres", label: "Paramètres", icon: Settings },
   { href: "/profil", label: "Mon profil", icon: UserCog },
 ];
 

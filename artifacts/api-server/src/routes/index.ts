@@ -14,6 +14,7 @@ import storageRouter from "./storage.js";
 import pushRouter from "./push.js";
 import meRouter from "./me";
 import reportsRouter from "./reports";
+import configRouter from "./config.js";
 
 const router: IRouter = Router();
 
@@ -21,6 +22,7 @@ router.use(healthRouter);
 router.use(eventsRouter);
 router.use(venuesRouter);
 router.use(citiesRouter);
+router.use(configRouter);
 router.use(authRouter);
 router.use(ticketsRouter);
 router.use(subscriptionsRouter);
