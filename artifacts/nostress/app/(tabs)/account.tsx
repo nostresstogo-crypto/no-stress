@@ -23,7 +23,7 @@ import { LANG_LABELS, type Lang } from "@/constants/i18n";
 import { formatDateTimeLocalized } from "@/lib/formatDate";
 import { API_BASE } from "@/lib/apiBase";
 
-const SUPPORT_WHATSAPP = "+22891003501";
+const SUPPORT_WHATSAPP = "+22872770767";
 const SUPPORT_WHATSAPP_URL = `https://wa.me/${SUPPORT_WHATSAPP.replace(/[^0-9]/g, "")}?text=${encodeURIComponent("Bonjour NoStress, j'ai besoin d'aide.")}`;
 
 type Tab = "favorites" | "notifications";
