@@ -120,6 +120,8 @@ export default function DashboardScreen() {
   const [venueOpening, setVenueOpening] = useState("");
   const [venueClosing, setVenueClosing] = useState("");
   const [venueSpecialties, setVenueSpecialties] = useState<Array<{ id?: string; name: string; imageUrl: string; description?: string; price?: string }>>([]);
+  const [venueTypeSearch, setVenueTypeSearch] = useState("");
+  const [venueCitySearch, setVenueCitySearch] = useState("");
   const [savingVenue, setSavingVenue] = useState(false);
 
   const loadMyVenues = useCallback(async () => {
@@ -162,6 +164,7 @@ export default function DashboardScreen() {
     setEditingVenueId(null);
     setVenueName(""); setVenueType(""); setVenueCity(""); setVenueAddress(""); setVenueDesc(""); setVenueImages([]);
     setVenueOpening(""); setVenueClosing(""); setVenueSpecialties([]);
+    setVenueTypeSearch(""); setVenueCitySearch("");
     setShowVenueModal(true);
   };
 
@@ -176,6 +179,7 @@ export default function DashboardScreen() {
     setVenueOpening((v as any).openingTime || "");
     setVenueClosing((v as any).closingTime || "");
     setVenueSpecialties([]);
+    setVenueTypeSearch(""); setVenueCitySearch("");
     setShowVenueModal(true);
     try {
       const r = await authFetch(`${API_BASE}/partners/me/venues/${v.id}/specialties`);
@@ -1263,9 +1267,17 @@ export default function DashboardScreen() {
                 <Text style={[styles.modalLabel, { color: C.textMuted }]}>
                   {lang === "fr" ? "Type de lieu" : "Venue type"}
                 </Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-                  <View style={{ flexDirection: "row", gap: 8 }}>
-                    {configVenueTypes.map((vt) => {
+                <TextInput
+                  style={[styles.modalInput, { backgroundColor: C.bg, borderColor: C.border, color: C.text, marginBottom: 8 }]}
+                  placeholder={lang === "fr" ? "Filtrer les types…" : "Filter types…"}
+                  placeholderTextColor={C.textMuted}
+                  value={venueTypeSearch}
+                  onChangeText={setVenueTypeSearch}
+                />
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+                  {configVenueTypes
+                    .filter(vt => !venueTypeSearch.trim() || (lang === "fr" ? vt.labelFr : vt.labelEn).toLowerCase().includes(venueTypeSearch.toLowerCase()))
+                    .map((vt) => {
                       const label = lang === "fr" ? vt.labelFr : vt.labelEn;
                       return (
                         <TouchableOpacity
@@ -1282,15 +1294,22 @@ export default function DashboardScreen() {
                         </TouchableOpacity>
                       );
                     })}
-                  </View>
-                </ScrollView>
+                </View>
 
                 <Text style={[styles.modalLabel, { color: C.textMuted }]}>
                   {lang === "fr" ? "Ville *" : "City *"}
                 </Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
-                  <View style={{ flexDirection: "row", gap: 8 }}>
-                    {configCities.map((c) => (
+                <TextInput
+                  style={[styles.modalInput, { backgroundColor: C.bg, borderColor: C.border, color: C.text, marginBottom: 8 }]}
+                  placeholder={lang === "fr" ? "Filtrer les villes…" : "Filter cities…"}
+                  placeholderTextColor={C.textMuted}
+                  value={venueCitySearch}
+                  onChangeText={setVenueCitySearch}
+                />
+                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+                  {configCities
+                    .filter(c => !venueCitySearch.trim() || c.name.toLowerCase().includes(venueCitySearch.toLowerCase()) || (c.countryName || "").toLowerCase().includes(venueCitySearch.toLowerCase()))
+                    .map((c) => (
                       <TouchableOpacity
                         key={c.slug}
                         onPress={() => setVenueCity(c.name)}
@@ -1304,8 +1323,7 @@ export default function DashboardScreen() {
                         </Text>
                       </TouchableOpacity>
                     ))}
-                  </View>
-                </ScrollView>
+                </View>
 
                 <Text style={[styles.modalLabel, { color: C.textMuted }]}>
                   {lang === "fr" ? "Adresse" : "Address"}

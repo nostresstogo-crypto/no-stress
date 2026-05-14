@@ -235,6 +235,11 @@ function CountriesTab() {
 
   const handleSave = async () => {
     if (!form.code.trim() || !form.name.trim()) { show("Code et nom requis.", "error"); return; }
+    const codeUp = form.code.trim().toUpperCase();
+    const dupCode = countries.find(c => (!editing || c.id !== editing.id) && c.code === codeUp);
+    if (dupCode) { show(`Le code « ${codeUp} » est déjà utilisé par « ${dupCode.name} ».`, "error"); return; }
+    const dupName = countries.find(c => (!editing || c.id !== editing.id) && c.name.toLowerCase() === form.name.trim().toLowerCase());
+    if (dupName) { show(`Le pays « ${form.name.trim()} » existe déjà.`, "error"); return; }
     setSaving(true);
     try {
       const emoji = codeToFlagEmoji(form.code.trim());
@@ -418,6 +423,8 @@ function CitiesTab() {
 
   const handleSave = async () => {
     if (!form.name.trim() || !form.countryId) { show("Nom et pays requis.", "error"); return; }
+    const dupName = cities.find(c => (!editing || c.id !== editing.id) && c.name.toLowerCase() === form.name.trim().toLowerCase() && String(c.countryId) === form.countryId);
+    if (dupName) { show(`La ville « ${form.name.trim()} » existe déjà dans ce pays.`, "error"); return; }
     setSaving(true);
     try {
       const slug = slugify(form.name.trim());
@@ -607,6 +614,8 @@ function EventCategoriesTab() {
 
   const handleSave = async () => {
     if (!form.labelFr.trim() || !form.labelEn.trim()) { show("Libellé FR et EN requis.", "error"); return; }
+    const dupFr = cats.find(c => (!editing || c.id !== editing.id) && c.labelFr.toLowerCase() === form.labelFr.trim().toLowerCase());
+    if (dupFr) { show(`La catégorie « ${form.labelFr.trim()} » existe déjà.`, "error"); return; }
     setSaving(true);
     try {
       const key = editing ? editing.key : slugify(form.labelFr.trim());
@@ -789,6 +798,8 @@ function VenueTypesTab() {
 
   const handleSave = async () => {
     if (!form.labelFr.trim() || !form.labelEn.trim()) { show("Libellé FR et EN requis.", "error"); return; }
+    const dupFr = types.find(t => (!editing || t.id !== editing.id) && t.labelFr.toLowerCase() === form.labelFr.trim().toLowerCase());
+    if (dupFr) { show(`Le type « ${form.labelFr.trim()} » existe déjà.`, "error"); return; }
     setSaving(true);
     try {
       const key = editing ? editing.key : slugify(form.labelFr.trim());

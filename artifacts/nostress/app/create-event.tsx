@@ -63,7 +63,6 @@ type FormData = {
   titleFr: string;
   titleEn: string;
   category: CategoryKey | "";
-  city: string;
   venue: string;
   venueId: string;
   date: string;
@@ -83,7 +82,6 @@ const INITIAL_FORM: FormData = {
   titleFr: "",
   titleEn: "",
   category: "",
-  city: "",
   venue: "",
   venueId: "",
   date: "",
@@ -101,7 +99,7 @@ export default function CreateEventScreen() {
   const styles = useMemo(() => makeStyles(C), [C]);
   const sectionStyles = useMemo(() => makeSectionStyles(C), [C]);
   const fieldStyles = useMemo(() => makeFieldStyles(C), [C]);
-  const { lang, addMyEvent, updateMyEvent, user, authFetch, token, configEventCategories, configCities } = useApp();
+  const { lang, addMyEvent, updateMyEvent, user, authFetch, token, configEventCategories } = useApp();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ editId?: string; localId?: string }>();
   const editId = typeof params.editId === "string" ? params.editId : undefined;
@@ -113,6 +111,8 @@ export default function CreateEventScreen() {
   const [submitted, setSubmitted] = useState(false);
   const [loadingExisting, setLoadingExisting] = useState(isEdit);
   const [apiVenues, setApiVenues] = useState<Array<{ id: string; name: string; city?: string | null; partnerId?: string | null }>>([]);
+  const [catSearch, setCatSearch] = useState("");
+  const [venueSearch, setVenueSearch] = useState("");
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -131,7 +131,6 @@ export default function CreateEventScreen() {
           titleFr: ev.title || "",
           titleEn: ev.title || "",
           category: (ev.category as CategoryKey) || "",
-          city: ev.city || "",
           venue: ev.venue || "",
           venueId: ev.venueId ? String(ev.venueId) : "",
           date: ev.date || "",
@@ -182,7 +181,6 @@ export default function CreateEventScreen() {
     const newErrors: FieldErrors = {};
     if (!form.titleFr.trim()) newErrors.titleFr = t("requiredField");
     if (!form.category) newErrors.category = t("requiredField");
-    if (!form.city) newErrors.city = t("requiredField");
     if (!form.venueId) newErrors.venue = t("requiredField");
     const trimmedDate = form.date.trim();
     if (!trimmedDate) {
@@ -247,6 +245,7 @@ export default function CreateEventScreen() {
       }
       const finalImageUrl = uploadedImages[0] || null;
       const priceFCFA = form.isFree ? 0 : parseInt(form.priceFCFA, 10) || 0;
+      const derivedCity = apiVenues.find(v => v.id === form.venueId)?.city || "";
       const payload = {
         title: form.titleFr.trim(),
         titleFr: form.titleFr.trim(),
@@ -255,7 +254,7 @@ export default function CreateEventScreen() {
         descriptionFr: form.descriptionFr.trim(),
         descriptionEn: form.descriptionEn.trim(),
         category: form.category,
-        city: form.city,
+        city: derivedCity,
         venue: form.venue,
         venueId: form.venueId || null,
         date: form.date.trim(),
@@ -285,7 +284,7 @@ export default function CreateEventScreen() {
           titleFr: form.titleFr.trim(),
           titleEn: form.titleEn.trim(),
           category: form.category,
-          city: form.city,
+          city: derivedCity,
           venue: form.venue,
           date: form.date.trim(),
           time: form.time.trim(),
@@ -302,7 +301,7 @@ export default function CreateEventScreen() {
           titleFr: form.titleFr.trim(),
           titleEn: form.titleEn.trim(),
           category: form.category,
-          city: form.city,
+          city: derivedCity,
           venue: form.venue,
           date: form.date.trim(),
           time: form.time.trim(),
@@ -394,41 +393,31 @@ export default function CreateEventScreen() {
 
         {/* Category selector */}
         <Field label={t("category")} required error={errors.category} fieldStyles={fieldStyles}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
-            {configEventCategories.map((cat) => {
-              const label = t(cat.key as any);
-              const active = form.category === cat.key;
-              return (
-                <TouchableOpacity
-                  key={cat.key}
-                  style={[styles.pill, active && { backgroundColor: cat.color + "33", borderColor: cat.color }]}
-                  onPress={() => setField("category", cat.key)}
-                >
-                  <Ionicons name={cat.icon as any} size={14} color={active ? cat.color : C.textMuted} />
-                  <Text style={[styles.pillText, active && { color: cat.color }]}>{label}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        </Field>
-
-        {/* City selector */}
-        <Field label={t("city")} required error={errors.city} fieldStyles={fieldStyles}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
-            {configCities.map((c) => {
-              const active = form.city === c.name;
-              return (
-                <TouchableOpacity
-                  key={c.slug}
-                  style={[styles.pill, active && styles.pillActive]}
-                  onPress={() => setField("city", c.name)}
-                >
-                  <Text style={[styles.pillText, active && styles.pillTextActive]}>{c.name}</Text>
-                  <Text style={styles.pillCountry}>{c.countryName}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+          <TextInput
+            style={[styles.input, { marginBottom: 8 }]}
+            placeholder={lang === "fr" ? "Filtrer les catégories…" : "Filter categories…"}
+            placeholderTextColor={C.textMuted}
+            value={catSearch}
+            onChangeText={setCatSearch}
+          />
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {configEventCategories
+              .filter(cat => !catSearch.trim() || t(cat.key as any).toLowerCase().includes(catSearch.toLowerCase()))
+              .map((cat) => {
+                const label = t(cat.key as any);
+                const active = form.category === cat.key;
+                return (
+                  <TouchableOpacity
+                    key={cat.key}
+                    style={[styles.pill, active && { backgroundColor: cat.color + "33", borderColor: cat.color }]}
+                    onPress={() => setField("category", cat.key)}
+                  >
+                    <Ionicons name={cat.icon as any} size={14} color={active ? cat.color : C.textMuted} />
+                    <Text style={[styles.pillText, active && { color: cat.color }]}>{label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+          </View>
         </Field>
 
         <Field label={t("selectVenue")} required error={errors.venue} fieldStyles={fieldStyles}>
@@ -441,49 +430,56 @@ export default function CreateEventScreen() {
               </Text>
             </View>
           ) : (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
-              {(() => {
-                const norm = (s: string) =>
-                  (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
-                const formCityN = norm(form.city);
-                const myPid = user?.id ? String(user.id) : null;
-                const combined = apiVenues
-                  .map((v) => ({
-                    id: v.id,
-                    name: v.name,
-                    city: v.city || "",
-                    isMine: !!(myPid && v.partnerId === myPid),
-                    cityMatch: !formCityN || norm(v.city || "") === formCityN,
-                  }))
-                  .sort((a, b) => {
-                    if (a.isMine !== b.isMine) return a.isMine ? -1 : 1;
-                    if (a.cityMatch !== b.cityMatch) return a.cityMatch ? -1 : 1;
-                    return a.name.localeCompare(b.name);
+            <>
+              <TextInput
+                style={[styles.input, { marginBottom: 8 }]}
+                placeholder={lang === "fr" ? "Filtrer les lieux…" : "Filter venues…"}
+                placeholderTextColor={C.textMuted}
+                value={venueSearch}
+                onChangeText={setVenueSearch}
+              />
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {(() => {
+                  const norm = (s: string) =>
+                    (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                  const myPid = user?.id ? String(user.id) : null;
+                  const query = norm(venueSearch);
+                  const combined = apiVenues
+                    .filter(v => !query || norm(v.name).includes(query) || norm(v.city || "").includes(query))
+                    .map((v) => ({
+                      id: v.id,
+                      name: v.name,
+                      city: v.city || "",
+                      isMine: !!(myPid && v.partnerId === myPid),
+                    }))
+                    .sort((a, b) => {
+                      if (a.isMine !== b.isMine) return a.isMine ? -1 : 1;
+                      return a.name.localeCompare(b.name);
+                    });
+                  return combined.map((v) => {
+                    const active = form.venueId === v.id;
+                    return (
+                      <TouchableOpacity
+                        key={v.id}
+                        style={[styles.pill, active && styles.pillActive]}
+                        onPress={() => {
+                          setField("venueId", v.id);
+                          setField("venue", v.name);
+                        }}
+                      >
+                        <Ionicons
+                          name={v.isMine ? "star" : "business-outline"}
+                          size={13}
+                          color={active ? C.lavender : v.isMine ? C.gold : C.textMuted}
+                        />
+                        <Text style={[styles.pillText, active && styles.pillTextActive]}>{v.name}</Text>
+                        {v.city ? <Text style={styles.pillCountry}>{v.city}</Text> : null}
+                      </TouchableOpacity>
+                    );
                   });
-                return combined.map((v) => {
-                  const active = form.venueId === v.id;
-                  return (
-                    <TouchableOpacity
-                      key={v.id}
-                      style={[styles.pill, active && styles.pillActive, !v.cityMatch && { opacity: 0.55 }]}
-                      onPress={() => {
-                        setField("venueId", v.id);
-                        setField("venue", v.name);
-                        if (v.city && !form.city) setField("city", v.city);
-                      }}
-                    >
-                      <Ionicons
-                        name={v.isMine ? "star" : "business-outline"}
-                        size={13}
-                        color={active ? C.lavender : v.isMine ? C.gold : C.textMuted}
-                      />
-                      <Text style={[styles.pillText, active && styles.pillTextActive]}>{v.name}</Text>
-                      {v.city ? <Text style={styles.pillCountry}>{v.city}</Text> : null}
-                    </TouchableOpacity>
-                  );
-                });
-              })()}
-            </ScrollView>
+                })()}
+              </View>
+            </>
           )}
         </Field>
 
