@@ -22,9 +22,79 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, RefreshCw, Globe, MapPin, Tag, Building2 } from "lucide-react";
+import { Plus, Pencil, Trash2, RefreshCw, Globe, MapPin, Tag, Building2, Search } from "lucide-react";
 
-// ─── Toast helper ──────────────────────────────────────────────────────────────
+// ─── Ionicons web component type declaration ────────────────────────────────
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      "ion-icon": React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & { name?: string }, HTMLElement>;
+    }
+  }
+}
+
+function useIonicons() {
+  useEffect(() => {
+    if (document.getElementById("ionicons-esm")) return;
+    const s1 = document.createElement("script");
+    s1.id = "ionicons-esm";
+    s1.type = "module";
+    s1.src = "https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js";
+    document.head.appendChild(s1);
+    const s2 = document.createElement("script");
+    s2.setAttribute("nomodule", "");
+    s2.src = "https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js";
+    document.head.appendChild(s2);
+  }, []);
+}
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+// ─── Data lists ─────────────────────────────────────────────────────────────
+
+const FLAG_EMOJIS = [
+  "🇹🇬","🇧🇯","🇨🇮","🇸🇳","🇬🇳","🇧🇫","🇲🇱","🇳🇪","🇨🇲","🇬🇭","🇳🇬","🇿🇦","🇰🇪","🇪🇹","🇹🇿",
+  "🇺🇬","🇷🇼","🇲🇿","🇲🇬","🇲🇺","🇫🇷","🇩🇪","🇬🇧","🇪🇸","🇵🇹","🇮🇹","🇧🇪","🇨🇭","🇺🇸","🇨🇦",
+  "🇧🇷","🇦🇷","🇲🇽","🇨🇳","🇯🇵","🇮🇳","🇦🇺","🇸🇦","🇦🇪","🇲🇦","🇩🇿","🇹🇳","🇱🇾","🇪🇬","🌍",
+];
+
+const CITY_EMOJIS = [
+  "🏙️","🌆","🌇","🌃","🌉","🏖️","🏝️","🏜️","🏔️","⛰️","🗺️","📍","🏠","🏢","🏛️","🕌","⛪","🗼",
+  "🌴","🌊","🌺","🌸","🌻","🌹","🦁","🐘","🦒","🐊","🦅","🌅","🌄","🏞️","🏕️","🛖","🌾","🎪",
+  "🎡","🎢","🎠","⚓","🚢","✈️","🚂","🌐","💫","⭐","🌟","✨","🎆","🎇","🪐","🌙","☀️",
+];
+
+const IONICONS_LIST = [
+  // Events & Entertainment
+  "musical-notes","musical-note","ticket","calendar","star","heart","trophy","medal","ribbon",
+  "mic","headset","tv","radio","camera","film","game-controller","color-palette","brush",
+  // Places
+  "business","restaurant","wine","beer","cafe","home","building","storefront","library","school",
+  "football","basketball","fitness","bicycle","boat","airplane","train","car",
+  // People & Social
+  "people","person","happy","flower","leaf","tree","water","flame","flash","sunny","moon","cloud",
+  // Misc
+  "globe","map","location","time","cash","card","wallet","gift","bag","shirt","diamond",
+  "phone","mail","chatbubble","notifications","shield","key","settings","analytics","search",
+  "star-half","heart-half","thumbs-up","hand-left","accessibility","body","eye","ear",
+  "paw","fish","bug","cube","diamond-outline","sparkles","bonfire","balloon","party-popper",
+];
+
+const CATEGORY_COLORS = [
+  "#9B8FE8","#F87171","#FB923C","#FBBF24","#34D399","#38BDF8","#818CF8","#F472B6",
+  "#A78BFA","#4ADE80","#F59E0B","#EC4899","#06B6D4","#84CC16","#EF4444","#8B5CF6",
+];
+
+// ─── Toast helper ────────────────────────────────────────────────────────────
 
 function useToast() {
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
@@ -46,7 +116,77 @@ function Toast({ toast }: { toast: { msg: string; type: "success" | "error" } | 
   );
 }
 
-// ─── Countries tab ─────────────────────────────────────────────────────────────
+// ─── EmojiPicker ─────────────────────────────────────────────────────────────
+
+function EmojiPicker({ value, onChange, list }: { value: string; onChange: (e: string) => void; list: string[] }) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 p-2 border border-border rounded-md bg-muted/30">
+        <span className="text-2xl w-8 text-center">{value || "?"}</span>
+        <span className="text-xs text-muted-foreground">Sélectionné</span>
+      </div>
+      <div className="grid grid-cols-10 gap-1 max-h-36 overflow-y-auto p-1 border border-border rounded-md bg-background">
+        {list.map((em) => (
+          <button
+            key={em}
+            type="button"
+            onClick={() => onChange(em)}
+            className={`text-xl h-8 w-8 rounded hover:bg-muted transition-colors flex items-center justify-center ${value === em ? "bg-primary/20 ring-1 ring-primary" : ""}`}
+            title={em}
+          >
+            {em}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── IconPicker ──────────────────────────────────────────────────────────────
+
+function IconPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  useIonicons();
+  const [search, setSearch] = useState("");
+  const filtered = IONICONS_LIST.filter((ic) => !search || ic.includes(search.toLowerCase()));
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 p-2 border border-border rounded-md bg-muted/30">
+        <span className="text-xl w-8 text-center">
+          <ion-icon name={value} style={{ fontSize: "20px" }} />
+        </span>
+        <span className="text-xs font-mono text-muted-foreground">{value || "—"}</span>
+      </div>
+      <div className="relative">
+        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          className="w-full pl-7 pr-3 py-1.5 text-sm border border-border rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+          placeholder="Rechercher une icône…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+      <div className="grid grid-cols-8 gap-1 max-h-40 overflow-y-auto p-1 border border-border rounded-md bg-background">
+        {filtered.map((ic) => (
+          <button
+            key={ic}
+            type="button"
+            onClick={() => onChange(ic)}
+            title={ic}
+            className={`h-9 w-9 rounded hover:bg-muted transition-colors flex flex-col items-center justify-center gap-0.5 ${value === ic ? "bg-primary/20 ring-1 ring-primary" : ""}`}
+          >
+            <ion-icon name={ic} style={{ fontSize: "18px" }} />
+          </button>
+        ))}
+        {filtered.length === 0 && (
+          <div className="col-span-8 py-4 text-center text-xs text-muted-foreground">Aucune icône trouvée</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Countries tab ───────────────────────────────────────────────────────────
 
 function CountriesTab() {
   const { toast, show } = useToast();
@@ -126,7 +266,7 @@ function CountriesTab() {
             <tbody>
               {countries.map((c, i) => (
                 <tr key={c.id} className={`border-t border-border ${i % 2 === 0 ? "" : "bg-muted/20"}`}>
-                  <td className="px-4 py-2.5 text-lg">{c.emoji}</td>
+                  <td className="px-4 py-2.5 text-xl">{c.emoji}</td>
                   <td className="px-4 py-2.5 font-mono font-medium">{c.code}</td>
                   <td className="px-4 py-2.5">{c.name}</td>
                   <td className="px-4 py-2.5 text-right">
@@ -144,25 +284,23 @@ function CountriesTab() {
       )}
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>{editing ? "Modifier le pays" : "Ajouter un pays"}</DialogTitle>
             <DialogDescription>Renseignez les informations du pays.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Code (ex: TG)</Label>
-                <Input value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))} placeholder="TG" maxLength={3} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Emoji drapeau</Label>
-                <Input value={form.emoji} onChange={(e) => setForm((f) => ({ ...f, emoji: e.target.value }))} placeholder="🇹🇬" />
-              </div>
+            <div className="space-y-1.5">
+              <Label>Code (ex: TG)</Label>
+              <Input value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))} placeholder="TG" maxLength={3} />
             </div>
             <div className="space-y-1.5">
               <Label>Nom du pays</Label>
               <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Togo" />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Emoji drapeau</Label>
+              <EmojiPicker value={form.emoji} onChange={(em) => setForm((f) => ({ ...f, emoji: em }))} list={FLAG_EMOJIS} />
             </div>
           </div>
           <DialogFooter>
@@ -192,7 +330,7 @@ function CountriesTab() {
   );
 }
 
-// ─── Cities tab ────────────────────────────────────────────────────────────────
+// ─── Cities tab ──────────────────────────────────────────────────────────────
 
 function CitiesTab() {
   const { toast, show } = useToast();
@@ -206,7 +344,7 @@ function CitiesTab() {
   const [deleteTarget, setDeleteTarget] = useState<ConfigCity | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [form, setForm] = useState({ slug: "", name: "", countryId: "", emoji: "🏙️", latitude: "", longitude: "" });
+  const [form, setForm] = useState({ name: "", countryId: "", emoji: "🏙️", latitude: "", longitude: "" });
 
   const load = useCallback(() => {
     setLoading(true);
@@ -220,28 +358,29 @@ function CitiesTab() {
 
   const filtered = cities.filter((c) => {
     const q = search.toLowerCase();
-    const matchSearch = !search || c.name.toLowerCase().includes(q) || c.slug.toLowerCase().includes(q) || (c.countryName ?? "").toLowerCase().includes(q);
+    const matchSearch = !search || c.name.toLowerCase().includes(q) || (c.countryName ?? "").toLowerCase().includes(q);
     const matchCountry = filterCountry === "" || c.countryId === filterCountry;
     return matchSearch && matchCountry;
   });
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ slug: "", name: "", countryId: countries[0] ? String(countries[0].id) : "", emoji: "🏙️", latitude: "", longitude: "" });
+    setForm({ name: "", countryId: countries[0] ? String(countries[0].id) : "", emoji: "🏙️", latitude: "", longitude: "" });
     setFormOpen(true);
   };
   const openEdit = (c: ConfigCity) => {
     setEditing(c);
-    setForm({ slug: c.slug, name: c.name, countryId: String(c.countryId), emoji: c.emoji, latitude: c.latitude != null ? String(c.latitude) : "", longitude: c.longitude != null ? String(c.longitude) : "" });
+    setForm({ name: c.name, countryId: String(c.countryId), emoji: c.emoji, latitude: c.latitude != null ? String(c.latitude) : "", longitude: c.longitude != null ? String(c.longitude) : "" });
     setFormOpen(true);
   };
 
   const handleSave = async () => {
-    if (!form.slug.trim() || !form.name.trim() || !form.countryId) { show("Slug, nom et pays requis.", "error"); return; }
+    if (!form.name.trim() || !form.countryId) { show("Nom et pays requis.", "error"); return; }
     setSaving(true);
     try {
+      const slug = slugify(form.name.trim());
       const payload = {
-        slug: form.slug.trim(),
+        slug,
         name: form.name.trim(),
         countryId: Number(form.countryId),
         emoji: form.emoji || "🏙️",
@@ -304,7 +443,6 @@ function CitiesTab() {
             <thead className="bg-muted/50">
               <tr>
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Ville</th>
-                <th className="text-left px-4 py-2.5 font-medium text-muted-foreground hidden sm:table-cell">Slug</th>
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Pays</th>
                 <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Actions</th>
               </tr>
@@ -315,7 +453,6 @@ function CitiesTab() {
                   <td className="px-4 py-2.5">
                     <span className="mr-1.5">{c.emoji}</span>{c.name}
                   </td>
-                  <td className="px-4 py-2.5 font-mono text-xs text-muted-foreground hidden sm:table-cell">{c.slug}</td>
                   <td className="px-4 py-2.5 text-muted-foreground">{c.countryCode}</td>
                   <td className="px-4 py-2.5 text-right">
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(c)}><Pencil className="w-3.5 h-3.5" /></Button>
@@ -324,7 +461,7 @@ function CitiesTab() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">Aucune ville trouvée</td></tr>
+                <tr><td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">Aucune ville trouvée</td></tr>
               )}
             </tbody>
           </table>
@@ -332,25 +469,18 @@ function CitiesTab() {
       )}
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>{editing ? "Modifier la ville" : "Ajouter une ville"}</DialogTitle>
             <DialogDescription>Renseignez les informations de la ville.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Nom</Label>
-                <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Lomé" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Emoji</Label>
-                <Input value={form.emoji} onChange={(e) => setForm((f) => ({ ...f, emoji: e.target.value }))} placeholder="🏙️" />
-              </div>
-            </div>
             <div className="space-y-1.5">
-              <Label>Slug (identifiant unique)</Label>
-              <Input value={form.slug} onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value.toLowerCase().replace(/\s+/g, "-") }))} placeholder="lome" />
+              <Label>Nom</Label>
+              <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Lomé" />
+              {form.name && (
+                <p className="text-xs text-muted-foreground">Slug généré : <span className="font-mono">{slugify(form.name)}</span></p>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label>Pays</Label>
@@ -362,6 +492,10 @@ function CitiesTab() {
                 <option value="">-- Choisir un pays --</option>
                 {countries.map((c) => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
               </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Emoji</Label>
+              <EmojiPicker value={form.emoji} onChange={(em) => setForm((f) => ({ ...f, emoji: em }))} list={CITY_EMOJIS} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
@@ -403,7 +537,7 @@ function CitiesTab() {
   );
 }
 
-// ─── Event Categories tab ──────────────────────────────────────────────────────
+// ─── Event Categories tab ────────────────────────────────────────────────────
 
 function EventCategoriesTab() {
   const { toast, show } = useToast();
@@ -414,7 +548,7 @@ function EventCategoriesTab() {
   const [deleteTarget, setDeleteTarget] = useState<ConfigEventCategory | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [form, setForm] = useState({ key: "", labelFr: "", labelEn: "", icon: "calendar", color: "#9B8FE8", sortOrder: "0" });
+  const [form, setForm] = useState({ labelFr: "", labelEn: "", icon: "calendar", color: "#9B8FE8" });
 
   const load = useCallback(() => {
     setLoading(true);
@@ -426,14 +560,16 @@ function EventCategoriesTab() {
 
   useEffect(() => { load(); }, [load]);
 
-  const openCreate = () => { setEditing(null); setForm({ key: "", labelFr: "", labelEn: "", icon: "calendar", color: "#9B8FE8", sortOrder: String(cats.length + 1) }); setFormOpen(true); };
-  const openEdit = (c: ConfigEventCategory) => { setEditing(c); setForm({ key: c.key, labelFr: c.labelFr, labelEn: c.labelEn, icon: c.icon, color: c.color, sortOrder: String(c.sortOrder) }); setFormOpen(true); };
+  const openCreate = () => { setEditing(null); setForm({ labelFr: "", labelEn: "", icon: "calendar", color: "#9B8FE8" }); setFormOpen(true); };
+  const openEdit = (c: ConfigEventCategory) => { setEditing(c); setForm({ labelFr: c.labelFr, labelEn: c.labelEn, icon: c.icon, color: c.color }); setFormOpen(true); };
 
   const handleSave = async () => {
-    if (!form.key.trim() || !form.labelFr.trim() || !form.labelEn.trim()) { show("Clé, libellé FR et EN requis.", "error"); return; }
+    if (!form.labelFr.trim() || !form.labelEn.trim()) { show("Libellé FR et EN requis.", "error"); return; }
     setSaving(true);
     try {
-      const payload = { ...form, sortOrder: Number(form.sortOrder) };
+      const key = editing ? editing.key : slugify(form.labelFr.trim());
+      const sortOrder = editing ? editing.sortOrder : cats.length + 1;
+      const payload = { key, ...form, sortOrder };
       if (editing) {
         await api.config.updateEventCategory(editing.id, payload);
         show("Catégorie mise à jour.");
@@ -476,10 +612,9 @@ function EventCategoriesTab() {
             <thead className="bg-muted/50">
               <tr>
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Couleur</th>
-                <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Clé</th>
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Libellé FR</th>
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground hidden md:table-cell">Libellé EN</th>
-                <th className="text-left px-4 py-2.5 font-medium text-muted-foreground hidden md:table-cell">Ordre</th>
+                <th className="text-left px-4 py-2.5 font-medium text-muted-foreground hidden md:table-cell">Icône</th>
                 <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
@@ -489,10 +624,9 @@ function EventCategoriesTab() {
                   <td className="px-4 py-2.5">
                     <div className="w-5 h-5 rounded-full border border-border" style={{ backgroundColor: c.color }} />
                   </td>
-                  <td className="px-4 py-2.5 font-mono text-xs">{c.key}</td>
                   <td className="px-4 py-2.5 font-medium">{c.labelFr}</td>
                   <td className="px-4 py-2.5 text-muted-foreground hidden md:table-cell">{c.labelEn}</td>
-                  <td className="px-4 py-2.5 text-muted-foreground hidden md:table-cell">{c.sortOrder}</td>
+                  <td className="px-4 py-2.5 text-muted-foreground hidden md:table-cell font-mono text-xs">{c.icon}</td>
                   <td className="px-4 py-2.5 text-right">
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(c)}><Pencil className="w-3.5 h-3.5" /></Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(c)}><Trash2 className="w-3.5 h-3.5" /></Button>
@@ -500,7 +634,7 @@ function EventCategoriesTab() {
                 </tr>
               ))}
               {cats.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Aucune catégorie</td></tr>
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">Aucune catégorie</td></tr>
               )}
             </tbody>
           </table>
@@ -508,42 +642,54 @@ function EventCategoriesTab() {
       )}
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{editing ? "Modifier la catégorie" : "Ajouter une catégorie"}</DialogTitle>
             <DialogDescription>Catégorie d'événement proposée dans le formulaire de création.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label>Clé (identifiant unique, ex: concerts)</Label>
-              <Input value={form.key} onChange={(e) => setForm((f) => ({ ...f, key: e.target.value.trim() }))} placeholder="concerts" />
-            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Libellé français</Label>
-                <Input value={form.labelFr} onChange={(e) => setForm((f) => ({ ...f, labelFr: e.target.value }))} placeholder="Concerts" />
+                <Input
+                  value={form.labelFr}
+                  onChange={(e) => setForm((f) => ({ ...f, labelFr: e.target.value }))}
+                  placeholder="Concerts"
+                />
+                {!editing && form.labelFr && (
+                  <p className="text-xs text-muted-foreground">Clé : <span className="font-mono">{slugify(form.labelFr)}</span></p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label>Libellé anglais</Label>
                 <Input value={form.labelEn} onChange={(e) => setForm((f) => ({ ...f, labelEn: e.target.value }))} placeholder="Concerts" />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-1.5 col-span-2">
-                <Label>Icône (Ionicons)</Label>
-                <Input value={form.icon} onChange={(e) => setForm((f) => ({ ...f, icon: e.target.value }))} placeholder="musical-notes" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Couleur</Label>
-                <div className="flex gap-2 items-center">
-                  <Input type="color" className="w-10 h-9 p-0.5 cursor-pointer" value={form.color} onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))} />
-                  <Input value={form.color} onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))} placeholder="#9B8FE8" className="flex-1" />
-                </div>
+            <div className="space-y-1.5">
+              <Label>Couleur</Label>
+              <div className="flex gap-2 items-center flex-wrap">
+                {CATEGORY_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, color: c }))}
+                    className={`w-7 h-7 rounded-full border-2 transition-transform ${form.color === c ? "border-foreground scale-110" : "border-transparent"}`}
+                    style={{ backgroundColor: c }}
+                  />
+                ))}
+                <input
+                  type="color"
+                  className="w-7 h-7 rounded-full cursor-pointer border border-border p-0.5"
+                  value={form.color}
+                  onChange={(e) => setForm((f) => ({ ...f, color: e.target.value }))}
+                  title="Couleur personnalisée"
+                />
+                <span className="text-xs font-mono text-muted-foreground">{form.color}</span>
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Ordre d'affichage</Label>
-              <Input type="number" value={form.sortOrder} onChange={(e) => setForm((f) => ({ ...f, sortOrder: e.target.value }))} placeholder="0" />
+              <Label>Icône</Label>
+              <IconPicker value={form.icon} onChange={(v) => setForm((f) => ({ ...f, icon: v }))} />
             </div>
           </div>
           <DialogFooter>
@@ -573,7 +719,7 @@ function EventCategoriesTab() {
   );
 }
 
-// ─── Venue Types tab ───────────────────────────────────────────────────────────
+// ─── Venue Types tab ─────────────────────────────────────────────────────────
 
 function VenueTypesTab() {
   const { toast, show } = useToast();
@@ -584,7 +730,7 @@ function VenueTypesTab() {
   const [deleteTarget, setDeleteTarget] = useState<ConfigVenueType | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [form, setForm] = useState({ key: "", labelFr: "", labelEn: "", icon: "business", sortOrder: "0" });
+  const [form, setForm] = useState({ labelFr: "", labelEn: "", icon: "business" });
 
   const load = useCallback(() => {
     setLoading(true);
@@ -596,14 +742,16 @@ function VenueTypesTab() {
 
   useEffect(() => { load(); }, [load]);
 
-  const openCreate = () => { setEditing(null); setForm({ key: "", labelFr: "", labelEn: "", icon: "business", sortOrder: String(types.length + 1) }); setFormOpen(true); };
-  const openEdit = (t: ConfigVenueType) => { setEditing(t); setForm({ key: t.key, labelFr: t.labelFr, labelEn: t.labelEn, icon: t.icon, sortOrder: String(t.sortOrder) }); setFormOpen(true); };
+  const openCreate = () => { setEditing(null); setForm({ labelFr: "", labelEn: "", icon: "business" }); setFormOpen(true); };
+  const openEdit = (t: ConfigVenueType) => { setEditing(t); setForm({ labelFr: t.labelFr, labelEn: t.labelEn, icon: t.icon }); setFormOpen(true); };
 
   const handleSave = async () => {
-    if (!form.key.trim() || !form.labelFr.trim() || !form.labelEn.trim()) { show("Clé, libellé FR et EN requis.", "error"); return; }
+    if (!form.labelFr.trim() || !form.labelEn.trim()) { show("Libellé FR et EN requis.", "error"); return; }
     setSaving(true);
     try {
-      const payload = { ...form, sortOrder: Number(form.sortOrder) };
+      const key = editing ? editing.key : slugify(form.labelFr.trim());
+      const sortOrder = editing ? editing.sortOrder : types.length + 1;
+      const payload = { key, ...form, sortOrder };
       if (editing) {
         await api.config.updateVenueType(editing.id, payload);
         show("Type de lieu mis à jour.");
@@ -645,22 +793,18 @@ function VenueTypesTab() {
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr>
-                <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Clé</th>
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Libellé FR</th>
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground hidden md:table-cell">Libellé EN</th>
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground hidden md:table-cell">Icône</th>
-                <th className="text-left px-4 py-2.5 font-medium text-muted-foreground hidden md:table-cell">Ordre</th>
                 <th className="text-right px-4 py-2.5 font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
               {types.map((t, i) => (
                 <tr key={t.id} className={`border-t border-border ${i % 2 === 0 ? "" : "bg-muted/20"}`}>
-                  <td className="px-4 py-2.5 font-mono text-xs">{t.key}</td>
                   <td className="px-4 py-2.5 font-medium">{t.labelFr}</td>
                   <td className="px-4 py-2.5 text-muted-foreground hidden md:table-cell">{t.labelEn}</td>
                   <td className="px-4 py-2.5 text-muted-foreground hidden md:table-cell font-mono text-xs">{t.icon}</td>
-                  <td className="px-4 py-2.5 text-muted-foreground hidden md:table-cell">{t.sortOrder}</td>
                   <td className="px-4 py-2.5 text-right">
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(t)}><Pencil className="w-3.5 h-3.5" /></Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={() => setDeleteTarget(t)}><Trash2 className="w-3.5 h-3.5" /></Button>
@@ -668,7 +812,7 @@ function VenueTypesTab() {
                 </tr>
               ))}
               {types.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Aucun type de lieu</td></tr>
+                <tr><td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">Aucun type de lieu</td></tr>
               )}
             </tbody>
           </table>
@@ -676,35 +820,32 @@ function VenueTypesTab() {
       )}
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{editing ? "Modifier le type de lieu" : "Ajouter un type de lieu"}</DialogTitle>
             <DialogDescription>Type de lieu proposé dans le formulaire d'inscription partenaire.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label>Clé (identifiant unique, ex: Nightclub)</Label>
-              <Input value={form.key} onChange={(e) => setForm((f) => ({ ...f, key: e.target.value }))} placeholder="Nightclub" />
-            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label>Libellé français</Label>
-                <Input value={form.labelFr} onChange={(e) => setForm((f) => ({ ...f, labelFr: e.target.value }))} placeholder="Boîte de nuit" />
+                <Input
+                  value={form.labelFr}
+                  onChange={(e) => setForm((f) => ({ ...f, labelFr: e.target.value }))}
+                  placeholder="Boîte de nuit"
+                />
+                {!editing && form.labelFr && (
+                  <p className="text-xs text-muted-foreground">Clé : <span className="font-mono">{slugify(form.labelFr)}</span></p>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label>Libellé anglais</Label>
                 <Input value={form.labelEn} onChange={(e) => setForm((f) => ({ ...f, labelEn: e.target.value }))} placeholder="Nightclub" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Icône (Ionicons)</Label>
-                <Input value={form.icon} onChange={(e) => setForm((f) => ({ ...f, icon: e.target.value }))} placeholder="wine" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Ordre d'affichage</Label>
-                <Input type="number" value={form.sortOrder} onChange={(e) => setForm((f) => ({ ...f, sortOrder: e.target.value }))} placeholder="0" />
-              </div>
+            <div className="space-y-1.5">
+              <Label>Icône</Label>
+              <IconPicker value={form.icon} onChange={(v) => setForm((f) => ({ ...f, icon: v }))} />
             </div>
           </div>
           <DialogFooter>
@@ -734,15 +875,15 @@ function VenueTypesTab() {
   );
 }
 
-// ─── Main Settings page ────────────────────────────────────────────────────────
+// ─── Main Settings page ──────────────────────────────────────────────────────
 
 type TabId = "countries" | "cities" | "event-categories" | "venue-types";
 
 const TABS: { id: TabId; label: string; icon: React.ReactNode }[] = [
-  { id: "countries",         label: "Pays",                  icon: <Globe className="w-4 h-4" /> },
-  { id: "cities",            label: "Villes",                icon: <MapPin className="w-4 h-4" /> },
-  { id: "event-categories",  label: "Catégories d'événements", icon: <Tag className="w-4 h-4" /> },
-  { id: "venue-types",       label: "Types de lieux",        icon: <Building2 className="w-4 h-4" /> },
+  { id: "countries",        label: "Pays",                    icon: <Globe className="w-4 h-4" /> },
+  { id: "cities",           label: "Villes",                  icon: <MapPin className="w-4 h-4" /> },
+  { id: "event-categories", label: "Catégories d'événements", icon: <Tag className="w-4 h-4" /> },
+  { id: "venue-types",      label: "Types de lieux",          icon: <Building2 className="w-4 h-4" /> },
 ];
 
 export default function Settings() {
@@ -756,7 +897,6 @@ export default function Settings() {
           <p className="text-muted-foreground mt-1">Gérez les listes de référence utilisées dans l'application.</p>
         </div>
 
-        {/* Tab bar */}
         <div className="flex flex-wrap gap-1 mb-6 bg-muted/40 rounded-lg p-1">
           {TABS.map((tab) => (
             <button
@@ -774,12 +914,10 @@ export default function Settings() {
           ))}
         </div>
 
-        {/* Tab label for mobile */}
         <div className="sm:hidden mb-4">
           <h2 className="text-base font-semibold">{TABS.find((t) => t.id === activeTab)?.label}</h2>
         </div>
 
-        {/* Tab content */}
         {activeTab === "countries" && <CountriesTab />}
         {activeTab === "cities" && <CitiesTab />}
         {activeTab === "event-categories" && <EventCategoriesTab />}
