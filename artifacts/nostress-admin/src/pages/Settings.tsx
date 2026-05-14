@@ -59,13 +59,34 @@ function slugify(text: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-// ─── Data lists ─────────────────────────────────────────────────────────────
+/** Converts a 2-letter ISO country code to its flag emoji (e.g. "TG" → "🇹🇬") */
+function codeToFlagEmoji(code: string): string {
+  if (!code || code.length < 2) return "🌍";
+  const upper = code.toUpperCase().slice(0, 2);
+  return Array.from(upper)
+    .map((ch) => String.fromCodePoint(0x1F1E6 + ch.charCodeAt(0) - 65))
+    .join("");
+}
 
-const FLAG_EMOJIS = [
-  "🇹🇬","🇧🇯","🇨🇮","🇸🇳","🇬🇳","🇧🇫","🇲🇱","🇳🇪","🇨🇲","🇬🇭","🇳🇬","🇿🇦","🇰🇪","🇪🇹","🇹🇿",
-  "🇺🇬","🇷🇼","🇲🇿","🇲🇬","🇲🇺","🇫🇷","🇩🇪","🇬🇧","🇪🇸","🇵🇹","🇮🇹","🇧🇪","🇨🇭","🇺🇸","🇨🇦",
-  "🇧🇷","🇦🇷","🇲🇽","🇨🇳","🇯🇵","🇮🇳","🇦🇺","🇸🇦","🇦🇪","🇲🇦","🇩🇿","🇹🇳","🇱🇾","🇪🇬","🌍",
-];
+/** Returns the flagcdn.com image URL for a 2-letter code */
+function flagImgUrl(code: string, size: 20 | 40 = 20): string {
+  return `https://flagcdn.com/w${size}/${code.toLowerCase()}.png`;
+}
+
+function FlagImg({ code, size = 20, className = "" }: { code: string; size?: 20 | 40; className?: string }) {
+  return (
+    <img
+      src={flagImgUrl(code, size)}
+      alt={code}
+      width={size}
+      height={Math.round(size * 0.75)}
+      className={`inline-block object-cover rounded-sm ${className}`}
+      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+    />
+  );
+}
+
+// ─── Data lists ─────────────────────────────────────────────────────────────
 
 const CITY_EMOJIS = [
   "🏙️","🌆","🌇","🌃","🌉","🏖️","🏝️","🏜️","🏔️","⛰️","🗺️","📍","🏠","🏢","🏛️","🕌","⛪","🗼",
@@ -197,7 +218,7 @@ function CountriesTab() {
   const [deleteTarget, setDeleteTarget] = useState<ConfigCountry | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [form, setForm] = useState({ code: "", name: "", emoji: "🌍" });
+  const [form, setForm] = useState({ code: "", name: "" });
 
   const load = useCallback(() => {
     setLoading(true);
@@ -209,18 +230,20 @@ function CountriesTab() {
 
   useEffect(() => { load(); }, [load]);
 
-  const openCreate = () => { setEditing(null); setForm({ code: "", name: "", emoji: "🌍" }); setFormOpen(true); };
-  const openEdit = (c: ConfigCountry) => { setEditing(c); setForm({ code: c.code, name: c.name, emoji: c.emoji }); setFormOpen(true); };
+  const openCreate = () => { setEditing(null); setForm({ code: "", name: "" }); setFormOpen(true); };
+  const openEdit = (c: ConfigCountry) => { setEditing(c); setForm({ code: c.code, name: c.name }); setFormOpen(true); };
 
   const handleSave = async () => {
     if (!form.code.trim() || !form.name.trim()) { show("Code et nom requis.", "error"); return; }
     setSaving(true);
     try {
+      const emoji = codeToFlagEmoji(form.code.trim());
+      const payload = { code: form.code.trim(), name: form.name.trim(), emoji };
       if (editing) {
-        await api.config.updateCountry(editing.id, form);
+        await api.config.updateCountry(editing.id, payload);
         show("Pays mis à jour.");
       } else {
-        await api.config.createCountry(form);
+        await api.config.createCountry(payload);
         show("Pays ajouté.");
       }
       setFormOpen(false);
@@ -266,7 +289,9 @@ function CountriesTab() {
             <tbody>
               {countries.map((c, i) => (
                 <tr key={c.id} className={`border-t border-border ${i % 2 === 0 ? "" : "bg-muted/20"}`}>
-                  <td className="px-4 py-2.5 text-xl">{c.emoji}</td>
+                  <td className="px-4 py-2.5">
+                    <FlagImg code={c.code} size={20} />
+                  </td>
                   <td className="px-4 py-2.5 font-mono font-medium">{c.code}</td>
                   <td className="px-4 py-2.5">{c.name}</td>
                   <td className="px-4 py-2.5 text-right">
@@ -290,18 +315,35 @@ function CountriesTab() {
             <DialogDescription>Renseignez les informations du pays.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label>Code (ex: TG)</Label>
-              <Input value={form.code} onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase() }))} placeholder="TG" maxLength={3} />
+            <div className="grid grid-cols-[1fr_auto] gap-4 items-end">
+              <div className="space-y-1.5">
+                <Label>Code ISO (ex: TG)</Label>
+                <Input
+                  value={form.code}
+                  onChange={(e) => setForm((f) => ({ ...f, code: e.target.value.toUpperCase().replace(/[^A-Z]/g, "") }))}
+                  placeholder="TG"
+                  maxLength={2}
+                  className="font-mono uppercase"
+                />
+              </div>
+              <div className="flex flex-col items-center justify-end gap-1 pb-1">
+                {form.code.length >= 2 ? (
+                  <>
+                    <FlagImg code={form.code} size={40} className="rounded" />
+                    <span className="text-xs text-muted-foreground font-mono">{form.code}</span>
+                  </>
+                ) : (
+                  <div className="w-10 h-[30px] rounded border border-dashed border-border bg-muted/30 flex items-center justify-center">
+                    <span className="text-xs text-muted-foreground">?</span>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>Nom du pays</Label>
               <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Togo" />
             </div>
-            <div className="space-y-1.5">
-              <Label>Emoji drapeau</Label>
-              <EmojiPicker value={form.emoji} onChange={(em) => setForm((f) => ({ ...f, emoji: em }))} list={FLAG_EMOJIS} />
-            </div>
+            <p className="text-xs text-muted-foreground">Le drapeau est généré automatiquement depuis le code ISO.</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)}>Annuler</Button>
