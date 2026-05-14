@@ -17,7 +17,6 @@ import * as Location from "expo-location";
 
 import type { ColorPalette } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
-import { VENUE_TYPES, MOCK_CITIES } from "@/constants/data";
 import { MapWebView, type MapWebViewHandle } from "@/components/MapWebView";
 import { router } from "expo-router";
 import { safePush } from "@/lib/navigation";
@@ -533,7 +532,8 @@ function CityPickerModal({
   const C = useColors();
   const modal = useMemo(() => makeModalStyles(C), [C]);
   const insets = useSafeAreaInsets();
-  const items = [{ id: "", name: "Toutes les villes", emoji: "🌍" }, ...MOCK_CITIES];
+  const { configCities } = useApp();
+  const items = [{ slug: "", id: "", name: "Toutes les villes", emoji: "🌍" }, ...configCities.map(c => ({ slug: c.slug, id: c.slug, name: c.name, emoji: c.emoji }))];
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -596,7 +596,7 @@ export default function MapScreen() {
   const t = useT();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
-  const { lang, selectedCity, setSelectedCity } = useApp();
+  const { lang, selectedCity, setSelectedCity, configCities, configVenueTypes } = useApp();
   const insets = useSafeAreaInsets();
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
@@ -672,7 +672,7 @@ export default function MapScreen() {
 
   const filteredVenues = useMemo(() => {
     return apiVenues.filter((v) => {
-      const cityObj = MOCK_CITIES.find((c) => c.id === selectedCity);
+      const cityObj = configCities.find((c) => c.slug === selectedCity);
       const matchCity =
         !selectedCity ||
         v.city.toLowerCase() === selectedCity.toLowerCase() ||
@@ -761,8 +761,8 @@ export default function MapScreen() {
 
   const selectedCityLabel = useMemo(() => {
     if (!selectedCity) return null;
-    return MOCK_CITIES.find((c) => c.id === selectedCity)?.name ?? selectedCity;
-  }, [selectedCity]);
+    return configCities.find((c) => c.slug === selectedCity)?.name ?? selectedCity;
+  }, [selectedCity, configCities]);
 
   return (
     <View style={[styles.root, { backgroundColor: C.bg }]}>
@@ -859,16 +859,17 @@ export default function MapScreen() {
                 {t("allTypes")}
               </Text>
             </TouchableOpacity>
-            {VENUE_TYPES.map((type) => {
-              const active = selectedType === type;
+            {configVenueTypes.map((vt) => {
+              const active = selectedType === vt.key;
+              const label = lang === "fr" ? vt.labelFr : vt.labelEn;
               return (
                 <TouchableOpacity
-                  key={type}
+                  key={vt.key}
                   style={[styles.typePill, active && { backgroundColor: C.gold + "22", borderColor: C.gold }, { borderColor: C.border }]}
-                  onPress={() => setSelectedType(active ? "" : type)}
+                  onPress={() => setSelectedType(active ? "" : vt.key)}
                 >
                   <Text style={[styles.typePillText, { color: active ? C.gold : C.textMuted }, active && styles.typePillTextActive]}>
-                    {type}
+                    {label}
                   </Text>
                 </TouchableOpacity>
               );

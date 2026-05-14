@@ -20,7 +20,7 @@ import * as ImagePicker from "expo-image-picker";
 
 import type { ColorPalette } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
-import { EVENT_CATEGORIES, MOCK_CITIES, CategoryKey } from "@/constants/data";
+import { CategoryKey } from "@/constants/data";
 import type { MyEvent } from "@/context/AppContext";
 import { API_BASE } from "@/lib/apiBase";
 import { DateField, TimeField, todayISO } from "@/components/DateTimeField";
@@ -101,7 +101,7 @@ export default function CreateEventScreen() {
   const styles = useMemo(() => makeStyles(C), [C]);
   const sectionStyles = useMemo(() => makeSectionStyles(C), [C]);
   const fieldStyles = useMemo(() => makeFieldStyles(C), [C]);
-  const { lang, addMyEvent, updateMyEvent, user, authFetch, token } = useApp();
+  const { lang, addMyEvent, updateMyEvent, user, authFetch, token, configEventCategories, configCities } = useApp();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ editId?: string; localId?: string }>();
   const editId = typeof params.editId === "string" ? params.editId : undefined;
@@ -395,7 +395,7 @@ export default function CreateEventScreen() {
         {/* Category selector */}
         <Field label={t("category")} required error={errors.category} fieldStyles={fieldStyles}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
-            {EVENT_CATEGORIES.map((cat) => {
+            {configEventCategories.map((cat) => {
               const label = t(cat.key as any);
               const active = form.category === cat.key;
               return (
@@ -415,16 +415,16 @@ export default function CreateEventScreen() {
         {/* City selector */}
         <Field label={t("city")} required error={errors.city} fieldStyles={fieldStyles}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
-            {MOCK_CITIES.map((c) => {
+            {configCities.map((c) => {
               const active = form.city === c.name;
               return (
                 <TouchableOpacity
-                  key={c.id}
+                  key={c.slug}
                   style={[styles.pill, active && styles.pillActive]}
                   onPress={() => setField("city", c.name)}
                 >
                   <Text style={[styles.pillText, active && styles.pillTextActive]}>{c.name}</Text>
-                  <Text style={styles.pillCountry}>{c.country}</Text>
+                  <Text style={styles.pillCountry}>{c.countryName}</Text>
                 </TouchableOpacity>
               );
             })}

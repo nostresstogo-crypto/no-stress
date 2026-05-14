@@ -22,7 +22,7 @@ import * as ImagePicker from "expo-image-picker";
 
 import type { ColorPalette } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
-import { MOCK_SUBSCRIPTION_PLANS, MOCK_CITIES } from "@/constants/data";
+import { MOCK_SUBSCRIPTION_PLANS } from "@/constants/data";
 import { formatDateLocalized, formatDateTimeLocalized } from "@/lib/formatDate";
 import { API_BASE } from "@/lib/apiBase";
 import { TimeField } from "@/components/DateTimeField";
@@ -86,8 +86,6 @@ async function uploadVenueImage(uri: string, apiBase: string): Promise<string> {
   return `${apiBase}/storage${objectPath}`;
 }
 
-const VENUE_TYPES_FR = ["Boîte de nuit", "Bar", "Restaurant", "Salle de concert", "Plage", "Stade", "Salle culturelle", "Autre"];
-const VENUE_TYPES_EN = ["Nightclub", "Bar", "Restaurant", "Concert Hall", "Beach", "Stadium", "Cultural Center", "Other"];
 const NS_MY_VENUES_KEY = "ns_my_venues";
 
 type DashTab = "events" | "venues" | "plan";
@@ -96,7 +94,7 @@ type EventStatusFilter = "all" | "pending" | "approved" | "rejected";
 
 export default function DashboardScreen() {
   const t = useT();
-  const { user, lang, myEvents, setUser, addNotification, updateMyEvent, removeMyEvent, syncMyEventsStatus, syncMyEventsFromBackend, refreshApiEvents, authFetch, token } = useApp();
+  const { user, lang, myEvents, setUser, addNotification, updateMyEvent, removeMyEvent, syncMyEventsStatus, syncMyEventsFromBackend, refreshApiEvents, authFetch, token, configCities, configVenueTypes } = useApp();
   const insets = useSafeAreaInsets();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
@@ -1267,20 +1265,23 @@ export default function DashboardScreen() {
                 </Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
                   <View style={{ flexDirection: "row", gap: 8 }}>
-                    {(lang === "fr" ? VENUE_TYPES_FR : VENUE_TYPES_EN).map((type) => (
-                      <TouchableOpacity
-                        key={type}
-                        onPress={() => setVenueType(type)}
-                        style={[styles.typeChip, {
-                          backgroundColor: venueType === type ? C.lavender : C.bg,
-                          borderColor: venueType === type ? C.lavender : C.border,
-                        }]}
-                      >
-                        <Text style={[styles.typeChipText, { color: venueType === type ? C.bg : C.textMuted }]}>
-                          {type}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                    {configVenueTypes.map((vt) => {
+                      const label = lang === "fr" ? vt.labelFr : vt.labelEn;
+                      return (
+                        <TouchableOpacity
+                          key={vt.key}
+                          onPress={() => setVenueType(label)}
+                          style={[styles.typeChip, {
+                            backgroundColor: venueType === label ? C.lavender : C.bg,
+                            borderColor: venueType === label ? C.lavender : C.border,
+                          }]}
+                        >
+                          <Text style={[styles.typeChipText, { color: venueType === label ? C.bg : C.textMuted }]}>
+                            {label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
                 </ScrollView>
 
@@ -1289,9 +1290,9 @@ export default function DashboardScreen() {
                 </Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
                   <View style={{ flexDirection: "row", gap: 8 }}>
-                    {MOCK_CITIES.map((c) => (
+                    {configCities.map((c) => (
                       <TouchableOpacity
-                        key={c.name}
+                        key={c.slug}
                         onPress={() => setVenueCity(c.name)}
                         style={[styles.typeChip, {
                           backgroundColor: venueCity === c.name ? C.gold : C.bg,

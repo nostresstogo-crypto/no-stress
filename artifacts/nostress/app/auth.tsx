@@ -17,7 +17,6 @@ import { safeReplace, dismissAndReplace } from "@/lib/navigation";
 
 import type { ColorPalette } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
-import { MOCK_CITIES, COUNTRIES } from "@/constants/data";
 import { API_BASE } from "@/lib/apiBase";
 
 type Mode = "login" | "register";
@@ -37,7 +36,7 @@ const BUSINESS_TYPES = [
 
 export default function AuthScreen() {
   const t = useT();
-  const { setUser, setSession, lang, addNotification } = useApp();
+  const { setUser, setSession, lang, addNotification, configCities, configCountries } = useApp();
   const insets = useSafeAreaInsets();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
@@ -70,7 +69,7 @@ export default function AuthScreen() {
   const [registeredEmail, setRegisteredEmail] = useState("");
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
-  const handleSelectCity = (c: typeof MOCK_CITIES[0]) => {
+  const handleSelectCity = (c: { name: string; latitude: number | null; longitude: number | null }) => {
     setCity(c.name);
     setLatitude(c.latitude.toString());
     setLongitude(c.longitude.toString());
@@ -581,7 +580,7 @@ export default function AuthScreen() {
               >
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
                   <Text style={{ fontSize: 18 }}>
-                    {COUNTRIES.find(c => c.name === country)?.emoji ?? "🌍"}
+                    {configCountries.find(c => c.name === country)?.emoji ?? "🌍"}
                   </Text>
                   <Text style={[styles.input, { color: C.text }]}>{country}</Text>
                 </View>
@@ -793,7 +792,7 @@ export default function AuthScreen() {
             </TouchableOpacity>
           </View>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}>
-            {COUNTRIES.map((c) => {
+            {configCountries.map((c) => {
               const selected = country === c.name;
               return (
                 <TouchableOpacity
@@ -834,11 +833,11 @@ export default function AuthScreen() {
             </TouchableOpacity>
           </View>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}>
-            {MOCK_CITIES.filter((c) => c.country === country).map((c) => {
+            {configCities.filter((c) => c.countryName === country).map((c) => {
               const selected = city === c.name;
               return (
                 <TouchableOpacity
-                  key={c.id}
+                  key={c.slug}
                   style={[modal.item, selected && modal.itemActive]}
                   onPress={() => handleSelectCity(c)}
                   activeOpacity={0.7}
@@ -847,7 +846,7 @@ export default function AuthScreen() {
                   <View style={{ flex: 1 }}>
                     <Text style={[modal.cityName, selected && { color: C.gold }]}>{c.name}</Text>
                     <Text style={modal.coords}>
-                      {c.latitude.toFixed(4)}, {c.longitude.toFixed(4)}
+                      {c.latitude != null ? c.latitude.toFixed(4) : "—"}, {c.longitude != null ? c.longitude.toFixed(4) : "—"}
                     </Text>
                   </View>
                   {selected && <Ionicons name="checkmark-circle" size={20} color={C.gold} />}

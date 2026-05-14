@@ -10,8 +10,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { ColorPalette } from "@/constants/colors";
-import { useT, useColors } from "@/context/AppContext";
-import { MOCK_CITIES } from "@/constants/data";
+import { useT, useColors, useApp } from "@/context/AppContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface CitySelectorProps {
@@ -25,7 +24,8 @@ export function CitySelector({ value, onChange }: CitySelectorProps) {
   const styles = useMemo(() => makeStyles(C), [C]);
   const [open, setOpen] = useState(false);
   const insets = useSafeAreaInsets();
-  const cities = MOCK_CITIES;
+  const { configCities } = useApp();
+  const cities = configCities.map((c) => ({ id: c.slug, name: c.name, country: c.countryName ?? "" }));
   const hasCity = !!value;
 
   return (

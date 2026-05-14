@@ -750,7 +750,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (upcomingInCity.length === 0) return;
     notifiedCityRef.current = city;
     AsyncStorage.setItem(KEYS.lastNotifCity, city);
-    const cityObj = MOCK_CITIES.find((c) => c.name === city);
+    const cityObj = configCities.find((c) => c.name === city);
     const emoji = cityObj ? cityObj.emoji + " " : "";
     const count = upcomingInCity.length;
     const titles = upcomingInCity.slice(0, 3).map((e) => e.titleFr || e.title || "").filter(Boolean);

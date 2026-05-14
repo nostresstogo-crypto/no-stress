@@ -16,7 +16,7 @@ import { router, useFocusEffect } from "expo-router";
 import * as Location from "expo-location";
 import { safePush } from "@/lib/navigation";
 import { useApp, useColors, useT } from "@/context/AppContext";
-import { CATEGORIES, COUNTRIES, MOCK_CITIES } from "@/constants/data";
+import { CATEGORIES } from "@/constants/data";
 import { EventCard } from "@/components/EventCard";
 import { API_BASE } from "@/lib/apiBase";
 
@@ -24,7 +24,7 @@ const DISTANCE_OPTIONS = [2, 5, 10, 25, 50];
 
 export default function AllEventsScreen() {
   const C = useColors();
-  const { lang } = useApp();
+  const { lang, configCountries, configCities } = useApp();
   const t = useT();
   const insets = useSafeAreaInsets();
   const isFr = lang === "fr";
@@ -168,7 +168,7 @@ export default function AllEventsScreen() {
               {isFr ? "Tous" : "All"}
             </Text>
           </TouchableOpacity>
-          {COUNTRIES.map((co) => (
+          {configCountries.map((co) => (
             <TouchableOpacity
               key={co.code}
               onPress={() => {
@@ -195,9 +195,9 @@ export default function AllEventsScreen() {
               {isFr ? "Toutes" : "All"}
             </Text>
           </TouchableOpacity>
-          {MOCK_CITIES.filter((ci) => !country || ci.country === country).map((ci) => (
+          {configCities.filter((ci) => !country || ci.countryName === country).map((ci) => (
             <TouchableOpacity
-              key={ci.id}
+              key={ci.slug}
               onPress={() => setCity(city === ci.name ? "" : ci.name)}
               style={[styles.chip, city === ci.name && styles.chipActive]}
             >

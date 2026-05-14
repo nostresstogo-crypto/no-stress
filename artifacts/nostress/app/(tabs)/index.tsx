@@ -20,7 +20,6 @@ import { safePush } from "@/lib/navigation";
 
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { ColorPalette } from "@/constants/colors";
-import { EVENT_CATEGORIES } from "@/constants/data";
 import { CategoryPill } from "@/components/CategoryPill";
 import { CitySelector } from "@/components/CitySelector";
 import { EventCard } from "@/components/EventCard";
@@ -151,7 +150,7 @@ function makeStyles(C: ColorPalette) {
 export default function HomeScreen() {
   const t = useT();
   const C = useColors();
-  const { lang, selectedCity, setSelectedCity, selectedCategory, setSelectedCategory, myEvents } = useApp();
+  const { lang, selectedCity, setSelectedCity, selectedCategory, setSelectedCategory, myEvents, configEventCategories } = useApp();
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
@@ -356,7 +355,7 @@ export default function HomeScreen() {
             selected={selectedCategory === ""}
             onPress={() => setSelectedCategory("")}
           />
-          {EVENT_CATEGORIES.map((cat) => (
+          {configEventCategories.map((cat) => (
             <CategoryPill
               key={cat.key}
               categoryKey={cat.key}

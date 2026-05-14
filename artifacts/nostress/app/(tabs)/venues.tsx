@@ -18,7 +18,6 @@ import * as Location from "expo-location";
 import { safePush } from "@/lib/navigation";
 
 import { useT, useApp, useColors } from "@/context/AppContext";
-import { VENUE_TYPES, COUNTRIES, MOCK_CITIES } from "@/constants/data";
 import { VenueCard } from "@/components/VenueCard";
 import { API_BASE } from "@/lib/apiBase";
 
@@ -27,6 +26,7 @@ const DISTANCE_OPTIONS = [2, 5, 10, 25, 50];
 export default function VenuesScreen() {
   const t = useT();
   const C = useColors();
+  const { lang, configVenueTypes, configCountries, configCities } = useApp();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(C), [C]);
   const topInset = Platform.OS === "web" ? 67 : insets.top;
@@ -167,7 +167,7 @@ export default function VenuesScreen() {
           >
             <Text style={[styles.chipText, country === "" && styles.chipTextActive]}>Tous</Text>
           </TouchableOpacity>
-          {COUNTRIES.map((co) => (
+          {configCountries.map((co) => (
             <TouchableOpacity
               key={co.code}
               onPress={() => {
@@ -192,9 +192,9 @@ export default function VenuesScreen() {
           >
             <Text style={[styles.chipText, city === "" && styles.chipTextActive]}>Toutes</Text>
           </TouchableOpacity>
-          {MOCK_CITIES.filter((ci) => !country || ci.country === country).map((ci) => (
+          {configCities.filter((ci) => !country || ci.countryName === country).map((ci) => (
             <TouchableOpacity
-              key={ci.id}
+              key={ci.slug}
               onPress={() => setCity(city === ci.name ? "" : ci.name)}
               style={[styles.chip, city === ci.name && styles.chipActive]}
             >
@@ -214,17 +214,20 @@ export default function VenuesScreen() {
               {t("allTypes")}
             </Text>
           </TouchableOpacity>
-          {VENUE_TYPES.map((type) => (
-            <TouchableOpacity
-              key={type}
-              style={[styles.chip, selectedType === type && styles.chipActive]}
-              onPress={() => setSelectedType(selectedType === type ? "" : type)}
-            >
-              <Text style={[styles.chipText, selectedType === type && styles.chipTextActive]}>
-                {type}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {configVenueTypes.map((vt) => {
+            const label = lang === "fr" ? vt.labelFr : vt.labelEn;
+            return (
+              <TouchableOpacity
+                key={vt.key}
+                style={[styles.chip, selectedType === vt.key && styles.chipActive]}
+                onPress={() => setSelectedType(selectedType === vt.key ? "" : vt.key)}
+              >
+                <Text style={[styles.chipText, selectedType === vt.key && styles.chipTextActive]}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
         <View style={styles.distanceRow}>
