@@ -3,9 +3,20 @@ function pad2(n: number): string {
 }
 
 function toDate(date: Date | string): Date | null {
-  const d = typeof date === "string" ? new Date(date) : date;
-  if (!d || isNaN(d.getTime())) return null;
-  return d;
+  if (typeof date === "string") {
+    // Date-only strings (YYYY-MM-DD) are parsed as UTC midnight by iOS,
+    // which shifts the displayed day by -1 in UTC+ timezones.
+    // Parse them as local time explicitly to avoid this.
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      const [year, month, day] = date.split("-").map(Number);
+      return new Date(year, month - 1, day);
+    }
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return null;
+    return d;
+  }
+  if (!(date instanceof Date) || isNaN(date.getTime())) return null;
+  return date;
 }
 
 const WEEKDAYS_FR = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
