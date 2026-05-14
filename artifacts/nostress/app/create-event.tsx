@@ -113,6 +113,7 @@ export default function CreateEventScreen() {
   const [apiVenues, setApiVenues] = useState<Array<{ id: string; name: string; city?: string | null; partnerId?: string | null }>>([]);
   const [catSearch, setCatSearch] = useState("");
   const [venueSearch, setVenueSearch] = useState("");
+  const loadedCityRef = useRef<string>("");
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
@@ -127,6 +128,7 @@ export default function CreateEventScreen() {
         const evImages: string[] = Array.isArray(ev.images) && ev.images.length > 0
           ? ev.images.filter((s: any) => typeof s === "string" && s).slice(0, MAX_EVENT_IMAGES)
           : ev.imageUrl ? [ev.imageUrl] : [];
+        loadedCityRef.current = ev.city || "";
         setForm({
           titleFr: ev.title || "",
           titleEn: ev.title || "",
@@ -245,7 +247,7 @@ export default function CreateEventScreen() {
       }
       const finalImageUrl = uploadedImages[0] || null;
       const priceFCFA = form.isFree ? 0 : parseInt(form.priceFCFA, 10) || 0;
-      const derivedCity = apiVenues.find(v => v.id === form.venueId)?.city || "";
+      const derivedCity = apiVenues.find(v => v.id === form.venueId)?.city || loadedCityRef.current || "";
       const payload = {
         title: form.titleFr.trim(),
         titleFr: form.titleFr.trim(),
