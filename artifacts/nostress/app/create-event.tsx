@@ -400,7 +400,7 @@ export default function CreateEventScreen() {
             value={catSearch}
             onChangeText={setCatSearch}
           />
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
             {configEventCategories
               .filter(cat => !catSearch.trim() || t(cat.key as any).toLowerCase().includes(catSearch.toLowerCase()))
               .map((cat) => {
@@ -417,7 +417,7 @@ export default function CreateEventScreen() {
                   </TouchableOpacity>
                 );
               })}
-          </View>
+          </ScrollView>
         </Field>
 
         <Field label={t("selectVenue")} required error={errors.venue} fieldStyles={fieldStyles}>
@@ -438,7 +438,7 @@ export default function CreateEventScreen() {
                 value={venueSearch}
                 onChangeText={setVenueSearch}
               />
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pillScroll}>
                 {(() => {
                   const norm = (s: string) =>
                     (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -478,7 +478,7 @@ export default function CreateEventScreen() {
                     );
                   });
                 })()}
-              </View>
+              </ScrollView>
             </>
           )}
         </Field>

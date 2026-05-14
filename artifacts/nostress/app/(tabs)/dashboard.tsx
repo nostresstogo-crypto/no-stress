@@ -94,7 +94,7 @@ type EventStatusFilter = "all" | "pending" | "approved" | "rejected";
 
 export default function DashboardScreen() {
   const t = useT();
-  const { user, lang, myEvents, setUser, addNotification, updateMyEvent, removeMyEvent, syncMyEventsStatus, syncMyEventsFromBackend, refreshApiEvents, authFetch, token, configCities, configVenueTypes } = useApp();
+  const { user, lang, myEvents, setUser, addNotification, updateMyEvent, removeMyEvent, syncMyEventsStatus, syncMyEventsFromBackend, refreshApiEvents, authFetch, token, configCities, configVenueTypes, configCountries } = useApp();
   const insets = useSafeAreaInsets();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
@@ -121,7 +121,7 @@ export default function DashboardScreen() {
   const [venueClosing, setVenueClosing] = useState("");
   const [venueSpecialties, setVenueSpecialties] = useState<Array<{ id?: string; name: string; imageUrl: string; description?: string; price?: string }>>([]);
   const [venueTypeSearch, setVenueTypeSearch] = useState("");
-  const [venueCitySearch, setVenueCitySearch] = useState("");
+  const [venueCountryId, setVenueCountryId] = useState("");
   const [savingVenue, setSavingVenue] = useState(false);
 
   const loadMyVenues = useCallback(async () => {
@@ -164,7 +164,7 @@ export default function DashboardScreen() {
     setEditingVenueId(null);
     setVenueName(""); setVenueType(""); setVenueCity(""); setVenueAddress(""); setVenueDesc(""); setVenueImages([]);
     setVenueOpening(""); setVenueClosing(""); setVenueSpecialties([]);
-    setVenueTypeSearch(""); setVenueCitySearch("");
+    setVenueTypeSearch(""); setVenueCountryId("");
     setShowVenueModal(true);
   };
 
@@ -179,7 +179,9 @@ export default function DashboardScreen() {
     setVenueOpening((v as any).openingTime || "");
     setVenueClosing((v as any).closingTime || "");
     setVenueSpecialties([]);
-    setVenueTypeSearch(""); setVenueCitySearch("");
+    const existingCityObj = configCities.find(c => c.name === v.city);
+    setVenueTypeSearch("");
+    setVenueCountryId(existingCityObj ? String(existingCityObj.countryId) : "");
     setShowVenueModal(true);
     try {
       const r = await authFetch(`${API_BASE}/partners/me/venues/${v.id}/specialties`);
@@ -1274,56 +1276,74 @@ export default function DashboardScreen() {
                   value={venueTypeSearch}
                   onChangeText={setVenueTypeSearch}
                 />
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-                  {configVenueTypes
-                    .filter(vt => !venueTypeSearch.trim() || (lang === "fr" ? vt.labelFr : vt.labelEn).toLowerCase().includes(venueTypeSearch.toLowerCase()))
-                    .map((vt) => {
-                      const label = lang === "fr" ? vt.labelFr : vt.labelEn;
-                      return (
-                        <TouchableOpacity
-                          key={vt.key}
-                          onPress={() => setVenueType(label)}
-                          style={[styles.typeChip, {
-                            backgroundColor: venueType === label ? C.lavender : C.bg,
-                            borderColor: venueType === label ? C.lavender : C.border,
-                          }]}
-                        >
-                          <Text style={[styles.typeChipText, { color: venueType === label ? C.bg : C.textMuted }]}>
-                            {label}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    {configVenueTypes
+                      .filter(vt => !venueTypeSearch.trim() || (lang === "fr" ? vt.labelFr : vt.labelEn).toLowerCase().includes(venueTypeSearch.toLowerCase()))
+                      .map((vt) => {
+                        const label = lang === "fr" ? vt.labelFr : vt.labelEn;
+                        return (
+                          <TouchableOpacity
+                            key={vt.key}
+                            onPress={() => setVenueType(label)}
+                            style={[styles.typeChip, {
+                              backgroundColor: venueType === label ? C.lavender : C.bg,
+                              borderColor: venueType === label ? C.lavender : C.border,
+                            }]}
+                          >
+                            <Text style={[styles.typeChipText, { color: venueType === label ? C.bg : C.textMuted }]}>
+                              {label}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                  </View>
+                </ScrollView>
 
                 <Text style={[styles.modalLabel, { color: C.textMuted }]}>
                   {lang === "fr" ? "Ville *" : "City *"}
                 </Text>
-                <TextInput
-                  style={[styles.modalInput, { backgroundColor: C.bg, borderColor: C.border, color: C.text, marginBottom: 8 }]}
-                  placeholder={lang === "fr" ? "Filtrer les villes…" : "Filter cities…"}
-                  placeholderTextColor={C.textMuted}
-                  value={venueCitySearch}
-                  onChangeText={setVenueCitySearch}
-                />
-                <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-                  {configCities
-                    .filter(c => !venueCitySearch.trim() || c.name.toLowerCase().includes(venueCitySearch.toLowerCase()) || (c.countryName || "").toLowerCase().includes(venueCitySearch.toLowerCase()))
-                    .map((c) => (
-                      <TouchableOpacity
-                        key={c.slug}
-                        onPress={() => setVenueCity(c.name)}
-                        style={[styles.typeChip, {
-                          backgroundColor: venueCity === c.name ? C.gold : C.bg,
-                          borderColor: venueCity === c.name ? C.gold : C.border,
-                        }]}
-                      >
-                        <Text style={[styles.typeChipText, { color: venueCity === c.name ? C.bg : C.textMuted }]}>
-                          {c.emoji} {c.name}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    {configCountries.map((country) => {
+                      const active = venueCountryId === String(country.id);
+                      return (
+                        <TouchableOpacity
+                          key={country.id}
+                          onPress={() => { setVenueCountryId(String(country.id)); setVenueCity(""); }}
+                          style={[styles.typeChip, {
+                            backgroundColor: active ? C.lavender : C.bg,
+                            borderColor: active ? C.lavender : C.border,
+                          }]}
+                        >
+                          <Text style={[styles.typeChipText, { color: active ? C.bg : C.textMuted }]}>
+                            {country.emoji} {country.name}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </ScrollView>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    {configCities
+                      .filter(c => !venueCountryId || String(c.countryId) === venueCountryId)
+                      .map((c) => (
+                        <TouchableOpacity
+                          key={c.slug}
+                          onPress={() => setVenueCity(c.name)}
+                          style={[styles.typeChip, {
+                            backgroundColor: venueCity === c.name ? C.gold : C.bg,
+                            borderColor: venueCity === c.name ? C.gold : C.border,
+                          }]}
+                        >
+                          <Text style={[styles.typeChipText, { color: venueCity === c.name ? C.bg : C.textMuted }]}>
+                            {c.emoji} {c.name}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                  </View>
+                </ScrollView>
 
                 <Text style={[styles.modalLabel, { color: C.textMuted }]}>
                   {lang === "fr" ? "Adresse" : "Address"}
