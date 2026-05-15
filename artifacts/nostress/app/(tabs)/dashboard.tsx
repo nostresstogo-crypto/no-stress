@@ -121,6 +121,7 @@ export default function DashboardScreen() {
   const [venueClosing, setVenueClosing] = useState("");
   const [venueSpecialties, setVenueSpecialties] = useState<Array<{ id?: string; name: string; imageUrl: string; description?: string; price?: string }>>([]);
   const [venueTypeSearch, setVenueTypeSearch] = useState("");
+  const [venueCitySearch, setVenueCitySearch] = useState("");
 
   const partnerCountryId = useMemo(() => {
     const rawCity: string = (user as any)?.city || "";
@@ -171,7 +172,7 @@ export default function DashboardScreen() {
     setEditingVenueId(null);
     setVenueName(""); setVenueType(""); setVenueCity(""); setVenueAddress(""); setVenueDesc(""); setVenueImages([]);
     setVenueOpening(""); setVenueClosing(""); setVenueSpecialties([]);
-    setVenueTypeSearch("");
+    setVenueTypeSearch(""); setVenueCitySearch("");
     setShowVenueModal(true);
   };
 
@@ -186,7 +187,7 @@ export default function DashboardScreen() {
     setVenueOpening((v as any).openingTime || "");
     setVenueClosing((v as any).closingTime || "");
     setVenueSpecialties([]);
-    setVenueTypeSearch("");
+    setVenueTypeSearch(""); setVenueCitySearch("");
     setShowVenueModal(true);
     try {
       const r = await authFetch(`${API_BASE}/partners/me/venues/${v.id}/specialties`);
@@ -1308,10 +1309,17 @@ export default function DashboardScreen() {
                 <Text style={[styles.modalLabel, { color: C.textMuted }]}>
                   {lang === "fr" ? "Ville *" : "City *"}
                 </Text>
+                <TextInput
+                  style={[styles.modalInput, { backgroundColor: C.bg, borderColor: C.border, color: C.text, marginBottom: 8 }]}
+                  placeholder={lang === "fr" ? "Filtrer les villes…" : "Filter cities…"}
+                  placeholderTextColor={C.textMuted}
+                  value={venueCitySearch}
+                  onChangeText={setVenueCitySearch}
+                />
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
                   <View style={{ flexDirection: "row", gap: 8 }}>
                     {configCities
-                      .filter(c => !partnerCountryId || String(c.countryId) === partnerCountryId)
+                      .filter(c => (!partnerCountryId || String(c.countryId) === partnerCountryId) && (!venueCitySearch.trim() || c.name.toLowerCase().includes(venueCitySearch.trim().toLowerCase())))
                       .map((c) => (
                         <TouchableOpacity
                           key={c.slug}
