@@ -289,3 +289,6 @@ export const venueTypesTable = pgTable("venue_types", {
 
 export type VenueType = typeof venueTypesTable.$inferSelect;
 export type InsertVenueType = typeof venueTypesTable.$inferInsert;
+
+export * from "./conversations";
+export * from "./messages";

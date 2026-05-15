@@ -15,6 +15,7 @@ import pushRouter from "./push.js";
 import meRouter from "./me";
 import reportsRouter from "./reports";
 import configRouter from "./config.js";
+import openaiRouter from "./openai.js";
 
 const router: IRouter = Router();
 
@@ -34,5 +35,6 @@ router.use(storageRouter);
 router.use(pushRouter);
 router.use(meRouter);
 router.use(reportsRouter);
+router.use(openaiRouter);
 
 export default router;
