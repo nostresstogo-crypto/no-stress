@@ -343,6 +343,13 @@ export default function HomeScreen() {
               </View>
             )}
           </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => safePush("/ai-assistant")}
+            style={styles.filterBtn}
+            accessibilityLabel="Assistant IA"
+          >
+            <Ionicons name="sparkles" size={20} color={C.gold} />
+          </TouchableOpacity>
         </View>
 
         {/* Categories */}
@@ -650,29 +657,6 @@ export default function HomeScreen() {
         )}
       </Modal>
 
-      {/* Floating AI Assistant button */}
-      <TouchableOpacity
-        onPress={() => safePush("/ai-assistant")}
-        activeOpacity={0.85}
-        style={{
-          position: "absolute",
-          bottom: 24,
-          right: 20,
-          width: 56,
-          height: 56,
-          borderRadius: 28,
-          backgroundColor: C.gold,
-          alignItems: "center",
-          justifyContent: "center",
-          shadowColor: C.gold,
-          shadowOpacity: 0.55,
-          shadowRadius: 14,
-          shadowOffset: { width: 0, height: 4 },
-          elevation: 10,
-        }}
-      >
-        <Ionicons name="sparkles" size={24} color={C.isDark ? "#1A1830" : "#fff"} />
-      </TouchableOpacity>
     </View>
   );
 }
