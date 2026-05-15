@@ -120,12 +120,8 @@ export default function EditProfileScreen() {
   const saveProfile = async () => {
     if (savingProfile) return;
     if (isPartner) {
-      if (!name.trim() || name.trim().length < 2) {
-        Alert.alert(lang === "fr" ? "Nom du contact trop court" : "Contact name too short");
-        return;
-      }
-      if (!businessName.trim()) {
-        Alert.alert(lang === "fr" ? "Nom de la structure requis" : "Business name required");
+      if (!businessName.trim() || businessName.trim().length < 2) {
+        Alert.alert(lang === "fr" ? "Nom de la structure trop court" : "Business name too short");
         return;
       }
     }
@@ -133,7 +129,7 @@ export default function EditProfileScreen() {
     try {
       const url = isPartner ? `${API_BASE}/partners/me` : `${API_BASE}/users/me`;
       const body: any = isPartner
-        ? { contactName: name.trim(), businessName: businessName.trim(), phone: phone.trim(), city: city.trim(), profileImage }
+        ? { contactName: businessName.trim(), businessName: businessName.trim(), phone: phone.trim(), city: city.trim(), profileImage }
         : {
             firstName: firstName.trim() || undefined,
             lastName: lastName.trim() || undefined,
@@ -232,12 +228,7 @@ export default function EditProfileScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("editProfile")}</Text>
-          {isPartner ? (
-            <View>
-              <Text style={styles.label}>{lang === "fr" ? "Nom du contact" : "Contact name"}</Text>
-              <TextInput value={name} onChangeText={setName} style={styles.input} placeholderTextColor={C.textMuted} />
-            </View>
-          ) : (
+          {isPartner ? null : (
             <>
               <View>
                 <Text style={styles.label}>{lang === "fr" ? "Prénoms" : "First name"}</Text>

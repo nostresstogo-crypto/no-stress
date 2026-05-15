@@ -93,8 +93,8 @@ export default function AuthScreen() {
     const cleanEmail = email.trim().toLowerCase();
     try {
       if (mode === "register" && registerRole === "structure") {
-        if (!name || !partnerBusinessName || !phone || !city || !businessType) {
-          setError(lang === "fr" ? "Veuillez remplir tous les champs requis (nom contact, nom structure, téléphone, ville, type d'activité)." : "Please fill all required fields (contact name, business name, phone, city, business type).");
+        if (!partnerBusinessName || !phone || !city || !businessType) {
+          setError(lang === "fr" ? "Veuillez remplir tous les champs requis (nom structure, téléphone, ville, type d'activité)." : "Please fill all required fields (business name, phone, city, business type).");
           setLoading(false);
           return;
         }
@@ -103,7 +103,7 @@ export default function AuthScreen() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             email: cleanEmail,
-            contactName: name,
+            contactName: partnerBusinessName,
             businessName: partnerBusinessName,
             businessType,
             phone,
@@ -435,36 +435,20 @@ export default function AuthScreen() {
                   </View>
                 </>
               ) : (
-                <>
-                  <View style={styles.field}>
-                    <Text style={styles.fieldLabel}>{lang === "fr" ? "Nom du contact *" : "Contact name *"}</Text>
-                    <View style={styles.inputRow}>
-                      <Ionicons name="person-outline" size={18} color={C.textMuted} />
-                      <TextInput
-                        value={name}
-                        onChangeText={setName}
-                        placeholder={lang === "fr" ? "Votre nom et prénom" : "Your full name"}
-                        placeholderTextColor={C.textMuted}
-                        style={styles.input}
-                        autoCapitalize="words"
-                      />
-                    </View>
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>{lang === "fr" ? "Nom de la structure *" : "Business name *"}</Text>
+                  <View style={styles.inputRow}>
+                    <Ionicons name="business-outline" size={18} color={C.textMuted} />
+                    <TextInput
+                      value={partnerBusinessName}
+                      onChangeText={setPartnerBusinessName}
+                      placeholder={lang === "fr" ? "Nom de votre établissement" : "Your establishment name"}
+                      placeholderTextColor={C.textMuted}
+                      style={styles.input}
+                      autoCapitalize="words"
+                    />
                   </View>
-                  <View style={styles.field}>
-                    <Text style={styles.fieldLabel}>{lang === "fr" ? "Nom de la structure *" : "Business name *"}</Text>
-                    <View style={styles.inputRow}>
-                      <Ionicons name="business-outline" size={18} color={C.textMuted} />
-                      <TextInput
-                        value={partnerBusinessName}
-                        onChangeText={setPartnerBusinessName}
-                        placeholder={lang === "fr" ? "Nom de votre établissement" : "Your establishment name"}
-                        placeholderTextColor={C.textMuted}
-                        style={styles.input}
-                        autoCapitalize="words"
-                      />
-                    </View>
-                  </View>
-                </>
+                </View>
               )}
             </>
           )}
