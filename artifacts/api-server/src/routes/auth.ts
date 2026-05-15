@@ -48,7 +48,7 @@ function publicUser(u: typeof usersTable.$inferSelect) {
 const ALLOWED_GENDERS = new Set(["F", "M", "ND"]);
 function isStrongPassword(p: string): boolean {
   return typeof p === "string"
-    && p.length >= 6
+    && p.length >= 8
     && /[A-Za-z]/.test(p)
     && /[0-9]/.test(p);
 }
@@ -218,7 +218,7 @@ router.post("/auth/register", registerLimiter, async (req, res) => {
     return res.status(400).json({ error: "Sexe invalide. Valeurs acceptées : F, M, ND." });
   }
   if (!isStrongPassword(password)) {
-    return res.status(400).json({ error: "Le mot de passe doit contenir au moins 6 caractères, avec lettres et chiffres." });
+    return res.status(400).json({ error: "Le mot de passe doit contenir au moins 8 caractères, avec lettres et chiffres." });
   }
   const name = fullName;
   const [existingUser] = await db.select({ id: usersTable.id, emailVerified: usersTable.emailVerified }).from(usersTable).where(eq(usersTable.email, email));

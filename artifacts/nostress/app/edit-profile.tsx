@@ -73,7 +73,8 @@ export default function EditProfileScreen() {
   const [name, setName] = useState(user?.name || "");
   const [phone, setPhone] = useState(user?.phone || "");
   const [businessName, setBusinessName] = useState((user as any)?.businessName || "");
-  const [city, setCity] = useState((user as any)?.city || "");
+  const rawCity: string = (user as any)?.city || "";
+  const [city, setCity] = useState(rawCity.includes(",") ? rawCity.split(",")[0].trim() : rawCity);
   const [profileImage, setProfileImage] = useState<string | null>(user?.avatarUrl || (user as any)?.profileImage || null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploading, setUploading] = useState(false);

@@ -62,6 +62,7 @@ export default function AuthScreen() {
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
   const [cityModalVisible, setCityModalVisible] = useState(false);
+  const [partnerBusinessName, setPartnerBusinessName] = useState("");
   const [businessType, setBusinessType] = useState("");
   const [businessTypeModal, setBusinessTypeModal] = useState(false);
   const [description, setDescription] = useState("");
@@ -92,8 +93,8 @@ export default function AuthScreen() {
     const cleanEmail = email.trim().toLowerCase();
     try {
       if (mode === "register" && registerRole === "structure") {
-        if (!name || !phone || !city || !businessType) {
-          setError(lang === "fr" ? "Veuillez remplir tous les champs requis (nom, téléphone, ville, type d'activité)." : "Please fill all required fields (name, phone, city, business type).");
+        if (!name || !partnerBusinessName || !phone || !city || !businessType) {
+          setError(lang === "fr" ? "Veuillez remplir tous les champs requis (nom contact, nom structure, téléphone, ville, type d'activité)." : "Please fill all required fields (contact name, business name, phone, city, business type).");
           setLoading(false);
           return;
         }
@@ -103,7 +104,7 @@ export default function AuthScreen() {
           body: JSON.stringify({
             email: cleanEmail,
             contactName: name,
-            businessName: name,
+            businessName: partnerBusinessName,
             businessType,
             phone,
             city,
@@ -207,11 +208,11 @@ export default function AuthScreen() {
           setLoading(false);
           return;
         }
-        const strong = password.length >= 6 && /[A-Za-z]/.test(password) && /[0-9]/.test(password);
+        const strong = password.length >= 8 && /[A-Za-z]/.test(password) && /[0-9]/.test(password);
         if (!strong) {
           setError(lang === "fr"
-            ? "Mot de passe trop faible : 6 caractères minimum, avec lettres et chiffres."
-            : "Password too weak: minimum 6 characters with letters and digits.");
+            ? "Mot de passe trop faible : 8 caractères minimum, avec lettres et chiffres."
+            : "Password too weak: minimum 8 characters with letters and digits.");
           setLoading(false);
           return;
         }
@@ -434,20 +435,36 @@ export default function AuthScreen() {
                   </View>
                 </>
               ) : (
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>{t("name")}</Text>
-                  <View style={styles.inputRow}>
-                    <Ionicons name="person-outline" size={18} color={C.textMuted} />
-                    <TextInput
-                      value={name}
-                      onChangeText={setName}
-                      placeholder={t("name")}
-                      placeholderTextColor={C.textMuted}
-                      style={styles.input}
-                      autoCapitalize="words"
-                    />
+                <>
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>{lang === "fr" ? "Nom du contact *" : "Contact name *"}</Text>
+                    <View style={styles.inputRow}>
+                      <Ionicons name="person-outline" size={18} color={C.textMuted} />
+                      <TextInput
+                        value={name}
+                        onChangeText={setName}
+                        placeholder={lang === "fr" ? "Votre nom et prénom" : "Your full name"}
+                        placeholderTextColor={C.textMuted}
+                        style={styles.input}
+                        autoCapitalize="words"
+                      />
+                    </View>
                   </View>
-                </View>
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>{lang === "fr" ? "Nom de la structure *" : "Business name *"}</Text>
+                    <View style={styles.inputRow}>
+                      <Ionicons name="business-outline" size={18} color={C.textMuted} />
+                      <TextInput
+                        value={partnerBusinessName}
+                        onChangeText={setPartnerBusinessName}
+                        placeholder={lang === "fr" ? "Nom de votre établissement" : "Your establishment name"}
+                        placeholderTextColor={C.textMuted}
+                        style={styles.input}
+                        autoCapitalize="words"
+                      />
+                    </View>
+                  </View>
+                </>
               )}
             </>
           )}
@@ -495,11 +512,11 @@ export default function AuthScreen() {
                 {mode === "register" && (
                   <Text style={{ marginTop: 6, fontSize: 11, color: C.textMuted, fontFamily: "Inter_400Regular" }}>
                     {lang === "fr"
-                      ? "6 caractères min · lettres + chiffres requis"
-                      : "Min 6 chars · letters + digits required"}
+                      ? "8 caractères min · lettres + chiffres requis"
+                      : "Min 8 chars · letters + digits required"}
                     {password.length > 0 && (
-                      <Text style={{ color: (password.length >= 6 && /[A-Za-z]/.test(password) && /[0-9]/.test(password)) ? C.success : C.error }}>
-                        {"  "}{(password.length >= 6 && /[A-Za-z]/.test(password) && /[0-9]/.test(password))
+                      <Text style={{ color: (password.length >= 8 && /[A-Za-z]/.test(password) && /[0-9]/.test(password)) ? C.success : C.error }}>
+                        {"  "}{(password.length >= 8 && /[A-Za-z]/.test(password) && /[0-9]/.test(password))
                           ? (lang === "fr" ? "✓ Fort" : "✓ Strong")
                           : (lang === "fr" ? "✗ Faible" : "✗ Weak")}
                       </Text>
