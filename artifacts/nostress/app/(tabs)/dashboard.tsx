@@ -121,7 +121,14 @@ export default function DashboardScreen() {
   const [venueClosing, setVenueClosing] = useState("");
   const [venueSpecialties, setVenueSpecialties] = useState<Array<{ id?: string; name: string; imageUrl: string; description?: string; price?: string }>>([]);
   const [venueTypeSearch, setVenueTypeSearch] = useState("");
-  const [venueCountryId, setVenueCountryId] = useState("");
+
+  const partnerCountryId = useMemo(() => {
+    const rawCity: string = (user as any)?.city || "";
+    const countryName = rawCity.includes(",") ? rawCity.split(",").pop()?.trim() : "";
+    if (!countryName) return "";
+    const found = configCountries.find(c => c.name === countryName);
+    return found ? String(found.id) : "";
+  }, [user, configCountries]);
   const [savingVenue, setSavingVenue] = useState(false);
 
   const loadMyVenues = useCallback(async () => {
@@ -164,7 +171,7 @@ export default function DashboardScreen() {
     setEditingVenueId(null);
     setVenueName(""); setVenueType(""); setVenueCity(""); setVenueAddress(""); setVenueDesc(""); setVenueImages([]);
     setVenueOpening(""); setVenueClosing(""); setVenueSpecialties([]);
-    setVenueTypeSearch(""); setVenueCountryId("");
+    setVenueTypeSearch("");
     setShowVenueModal(true);
   };
 
@@ -179,9 +186,7 @@ export default function DashboardScreen() {
     setVenueOpening((v as any).openingTime || "");
     setVenueClosing((v as any).closingTime || "");
     setVenueSpecialties([]);
-    const existingCityObj = configCities.find(c => c.name === v.city);
     setVenueTypeSearch("");
-    setVenueCountryId(existingCityObj ? String(existingCityObj.countryId) : "");
     setShowVenueModal(true);
     try {
       const r = await authFetch(`${API_BASE}/partners/me/venues/${v.id}/specialties`);
@@ -1303,31 +1308,10 @@ export default function DashboardScreen() {
                 <Text style={[styles.modalLabel, { color: C.textMuted }]}>
                   {lang === "fr" ? "Ville *" : "City *"}
                 </Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
-                  <View style={{ flexDirection: "row", gap: 8 }}>
-                    {configCountries.map((country) => {
-                      const active = venueCountryId === String(country.id);
-                      return (
-                        <TouchableOpacity
-                          key={country.id}
-                          onPress={() => { setVenueCountryId(String(country.id)); setVenueCity(""); }}
-                          style={[styles.typeChip, {
-                            backgroundColor: active ? C.lavender : C.bg,
-                            borderColor: active ? C.lavender : C.border,
-                          }]}
-                        >
-                          <Text style={[styles.typeChipText, { color: active ? C.bg : C.textMuted }]}>
-                            {country.emoji} {country.name}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-                </ScrollView>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
                   <View style={{ flexDirection: "row", gap: 8 }}>
                     {configCities
-                      .filter(c => !venueCountryId || String(c.countryId) === venueCountryId)
+                      .filter(c => !partnerCountryId || String(c.countryId) === partnerCountryId)
                       .map((c) => (
                         <TouchableOpacity
                           key={c.slug}
