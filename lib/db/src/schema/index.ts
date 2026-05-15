@@ -258,7 +258,7 @@ export const citiesTable = pgTable("cities", {
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (t) => [uniqueIndex("cities_name_country_unique").on(t.name, t.countryId)]);
 
 export type City = typeof citiesTable.$inferSelect;
 export type InsertCity = typeof citiesTable.$inferInsert;

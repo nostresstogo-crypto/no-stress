@@ -403,12 +403,14 @@ function CitiesTab() {
 
   useEffect(() => { load(); }, [load]);
 
-  const filtered = cities.filter((c) => {
-    const q = search.toLowerCase();
-    const matchSearch = !search || c.name.toLowerCase().includes(q) || (c.countryName ?? "").toLowerCase().includes(q);
-    const matchCountry = filterCountry === "" || c.countryId === filterCountry;
-    return matchSearch && matchCountry;
-  });
+  const filtered = cities
+    .filter((c, idx, arr) => arr.findIndex(x => x.name === c.name && x.countryId === c.countryId) === idx)
+    .filter((c) => {
+      const q = search.toLowerCase();
+      const matchSearch = !search || c.name.toLowerCase().includes(q) || (c.countryName ?? "").toLowerCase().includes(q);
+      const matchCountry = filterCountry === "" || c.countryId === filterCountry;
+      return matchSearch && matchCountry;
+    });
 
   const openCreate = () => {
     setEditing(null);
