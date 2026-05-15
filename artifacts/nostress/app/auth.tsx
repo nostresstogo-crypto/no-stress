@@ -834,7 +834,7 @@ export default function AuthScreen() {
             </TouchableOpacity>
           </View>
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}>
-            {configCities.filter((c) => c.countryName === country).map((c) => {
+            {configCities.filter((c) => c.countryName === country).filter((c, idx, arr) => arr.findIndex(x => x.name === c.name) === idx).map((c) => {
               const selected = city === c.name;
               return (
                 <TouchableOpacity

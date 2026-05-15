@@ -1320,6 +1320,7 @@ export default function DashboardScreen() {
                   <View style={{ flexDirection: "row", gap: 8 }}>
                     {configCities
                       .filter(c => (!partnerCountryId || String(c.countryId) === partnerCountryId) && (!venueCitySearch.trim() || c.name.toLowerCase().includes(venueCitySearch.trim().toLowerCase())))
+                      .filter((c, idx, arr) => arr.findIndex(x => x.name === c.name) === idx)
                       .map((c) => (
                         <TouchableOpacity
                           key={c.slug}
