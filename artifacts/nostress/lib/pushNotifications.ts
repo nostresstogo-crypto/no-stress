@@ -1,7 +1,6 @@
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 import * as Device from "expo-device";
-import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 
 import { API_BASE } from "@/lib/apiBase";
@@ -11,48 +10,67 @@ const PROJECT_ID =
   (Constants.easConfig as any)?.projectId ||
   "b372c0cb-009a-40b0-bd7c-720947a2a462";
 
+// Expo Go doesn't support push notifications since SDK 53.
+// We skip all notification setup when running inside Expo Go.
+const isExpoGo = Constants.appOwnership === "expo";
+
+let Notifications: typeof import("expo-notifications") | null = null;
+
+if (!isExpoGo) {
+  try {
+    // Dynamic-style guard: only executed in dev builds and production
+    Notifications = require("expo-notifications");
+    Notifications!.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowBanner: true,
+        shouldShowList: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+        shouldShowAlert: true,
+      }),
+    });
+  } catch {
+    Notifications = null;
+  }
+}
+
 let cachedToken: string | null = null;
 let inflight: Promise<string | null> | null = null;
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowAlert: true,
-  }),
-});
-
 async function ensureAndroidChannels(): Promise<void> {
-  if (Platform.OS !== "android") return;
-  await Notifications.setNotificationChannelAsync("default", {
-    name: "Général",
-    description:
-      "Annonces importantes et mises à jour générales de NoStress (nouveautés, informations sur votre compte).",
-    importance: Notifications.AndroidImportance.DEFAULT,
-    vibrationPattern: [0, 250, 250, 250],
-    lightColor: "#B5A8F0",
-  });
-  await Notifications.setNotificationChannelAsync("nearby_events", {
-    name: "Événements à proximité",
-    description:
-      "Alertes sur les concerts, soirées et festivals à venir près de votre ville et dans vos catégories favorites.",
-    importance: Notifications.AndroidImportance.HIGH,
-    vibrationPattern: [0, 250, 250, 250],
-    lightColor: "#E5C46B",
-  });
-  await Notifications.setNotificationChannelAsync("bookings", {
-    name: "Réservations & billets",
-    description:
-      "Confirmations de réservation, rappels d'événement et mises à jour sur vos billets achetés.",
-    importance: Notifications.AndroidImportance.HIGH,
-    vibrationPattern: [0, 250, 250, 250],
-    lightColor: "#3FBE7A",
-  });
+  if (!Notifications || Platform.OS !== "android") return;
+  try {
+    await Notifications.setNotificationChannelAsync("default", {
+      name: "Général",
+      description:
+        "Annonces importantes et mises à jour générales de NoStress (nouveautés, informations sur votre compte).",
+      importance: Notifications.AndroidImportance.DEFAULT,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: "#B5A8F0",
+    });
+    await Notifications.setNotificationChannelAsync("nearby_events", {
+      name: "Événements à proximité",
+      description:
+        "Alertes sur les concerts, soirées et festivals à venir près de votre ville et dans vos catégories favorites.",
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: "#E5C46B",
+    });
+    await Notifications.setNotificationChannelAsync("bookings", {
+      name: "Réservations & billets",
+      description:
+        "Confirmations de réservation, rappels d'événement et mises à jour sur vos billets achetés.",
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+      lightColor: "#3FBE7A",
+    });
+  } catch (err) {
+    console.warn("[push] ensureAndroidChannels failed", err);
+  }
 }
 
 export async function getExpoPushToken(): Promise<string | null> {
+  if (isExpoGo || !Notifications) return null;
   if (cachedToken) return cachedToken;
   if (inflight) return inflight;
   inflight = (async () => {
@@ -60,21 +78,17 @@ export async function getExpoPushToken(): Promise<string | null> {
       if (!Device.isDevice) return null;
       await ensureAndroidChannels();
 
-      const existing = await Notifications.getPermissionsAsync();
+      const existing = await Notifications!.getPermissionsAsync();
       let status = existing.status;
       if (status !== "granted") {
-        const req = await Notifications.requestPermissionsAsync({
-          ios: {
-            allowAlert: true,
-            allowBadge: true,
-            allowSound: true,
-          },
+        const req = await Notifications!.requestPermissionsAsync({
+          ios: { allowAlert: true, allowBadge: true, allowSound: true },
         });
         status = req.status;
       }
       if (status !== "granted") return null;
 
-      const tokenResponse = await Notifications.getExpoPushTokenAsync({
+      const tokenResponse = await Notifications!.getExpoPushTokenAsync({
         projectId: PROJECT_ID,
       });
       cachedToken = tokenResponse.data || null;
@@ -97,6 +111,7 @@ export async function registerPushPreferences(prefs: {
   language?: "fr" | "en";
   authToken?: string | null;
 }): Promise<void> {
+  if (isExpoGo || !Notifications) return;
   try {
     const token = await getExpoPushToken();
     if (!token) return;
@@ -109,8 +124,6 @@ export async function registerPushPreferences(prefs: {
       language: prefs.language || "fr",
     };
 
-    // La signature inclut authToken complet pour ré-enregistrer à chaque
-    // changement d'identité (login/logout/switch d'un compte à l'autre).
     const sig = JSON.stringify({ ...payload, auth: prefs.authToken || "" });
     if (sig === lastSig) return;
     lastSig = sig;
@@ -132,16 +145,12 @@ export async function registerPushPreferences(prefs: {
   }
 }
 
-/* ─── Deep-link sur tap d'une notification ───────────────────────────── */
-
 function routeFromNotificationData(data: any): string | null {
   if (!data || typeof data !== "object") return null;
   const type = typeof data.type === "string" ? data.type : "";
   const eventId = data.eventId != null ? String(data.eventId) : null;
   const venueId = data.venueId != null ? String(data.venueId) : null;
 
-  // Évent (géofencing, approbation, modification, nouvel event sur lieu favori,
-  // validation/rejet partenaire d'un évent)
   if (
     eventId &&
     (type === "nearby_event" ||
@@ -153,7 +162,6 @@ function routeFromNotificationData(data: any): string | null {
     return `/event/${eventId}`;
   }
 
-  // Lieu (modification, validation/rejet partenaire d'un lieu)
   if (
     venueId &&
     (type === "venue_updated" ||
@@ -163,53 +171,45 @@ function routeFromNotificationData(data: any): string | null {
     return `/venue/${venueId}`;
   }
 
-  // Fallback : on a un eventId/venueId sans type connu
   if (eventId) return `/event/${eventId}`;
   if (venueId) return `/venue/${venueId}`;
   return null;
 }
 
-function navigateFromNotification(response: Notifications.NotificationResponse | null) {
+function navigateFromNotification(response: any) {
   if (!response) return;
-  const data = response.notification.request.content.data;
+  const data = response.notification?.request?.content?.data;
   const path = routeFromNotificationData(data);
   if (!path) return;
   try {
-    // push : conserve l'historique, l'utilisateur peut revenir
     router.push(path as any);
   } catch (err) {
     console.warn("[push] navigation failed", err);
   }
 }
 
-/**
- * Branche les listeners de tap sur notifications.
- * - foreground/background tap → response listener
- * - cold start (app fermée puis ouverte via la notif) → getLastNotificationResponseAsync
- *
- * Retourne une fonction de cleanup.
- */
 export function setupNotificationResponseHandling(): () => void {
-  const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-    navigateFromNotification(response);
-  });
+  if (isExpoGo || !Notifications) return () => {};
 
-  // Cold start : si l'app a été ouverte par un tap sur notif, on récupère la réponse.
-  Notifications.getLastNotificationResponseAsync()
-    .then((last) => {
-      if (last) {
-        // Léger délai pour laisser le router se monter
-        setTimeout(() => navigateFromNotification(last), 400);
-      }
-    })
-    .catch(() => {});
+  try {
+    const sub = Notifications!.addNotificationResponseReceivedListener((response) => {
+      navigateFromNotification(response);
+    });
 
-  return () => {
-    sub.remove();
-  };
+    Notifications!.getLastNotificationResponseAsync()
+      .then((last) => {
+        if (last) setTimeout(() => navigateFromNotification(last), 400);
+      })
+      .catch(() => {});
+
+    return () => { sub.remove(); };
+  } catch {
+    return () => {};
+  }
 }
 
 export async function unregisterPushToken(): Promise<void> {
+  if (isExpoGo || !Notifications) return;
   try {
     if (!cachedToken) return;
     await fetch(`${API_BASE}/push/unregister`, {
