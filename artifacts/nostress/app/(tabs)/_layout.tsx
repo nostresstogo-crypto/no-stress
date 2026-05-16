@@ -167,17 +167,53 @@ function AIFloatingButton() {
   const C = useColors();
   const insets = useSafeAreaInsets();
   const pulse = useRef(new Animated.Value(1)).current;
+  const wave = useRef(new Animated.Value(0)).current;
+  const bounce = useRef(new Animated.Value(0)).current;
 
+  /* Glow pulse — continu */
   useEffect(() => {
     const anim = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1.18, duration: 1200, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 1, duration: 1200, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1.18, duration: 1400, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 1400, useNativeDriver: true }),
       ])
     );
     anim.start();
     return () => anim.stop();
   }, [pulse]);
+
+  /* Salutation — joue au démarrage puis toutes les 6 secondes */
+  useEffect(() => {
+    function greet() {
+      Animated.sequence([
+        /* légère élévation */
+        Animated.timing(bounce, { toValue: -6, duration: 180, useNativeDriver: true }),
+        /* balancement : droite → gauche → droite → gauche → centre */
+        Animated.timing(wave, { toValue: 18, duration: 140, useNativeDriver: true }),
+        Animated.timing(wave, { toValue: -14, duration: 130, useNativeDriver: true }),
+        Animated.timing(wave, { toValue: 16, duration: 130, useNativeDriver: true }),
+        Animated.timing(wave, { toValue: -10, duration: 130, useNativeDriver: true }),
+        Animated.timing(wave, { toValue: 8, duration: 120, useNativeDriver: true }),
+        Animated.timing(wave, { toValue: 0, duration: 160, useNativeDriver: true }),
+        /* retour au sol */
+        Animated.timing(bounce, { toValue: 0, duration: 200, useNativeDriver: true }),
+      ]).start();
+    }
+
+    /* premier salut après 600 ms (app bien chargée) */
+    const first = setTimeout(greet, 600);
+    /* saluts périodiques toutes les 6 s */
+    const interval = setInterval(greet, 6000);
+    return () => {
+      clearTimeout(first);
+      clearInterval(interval);
+    };
+  }, [wave, bounce]);
+
+  const rotate = wave.interpolate({
+    inputRange: [-20, 0, 20],
+    outputRange: ["-20deg", "0deg", "20deg"],
+  });
 
   const TAB_H = Platform.OS === "ios" ? 82 : 64;
   const bottom = insets.bottom + TAB_H + 12;
@@ -189,22 +225,27 @@ function AIFloatingButton() {
       accessibilityLabel="Assistant IA"
       style={[fabStyles.wrap, { bottom, right: 18 }]}
     >
+      {/* Anneau de lueur pulsant */}
       <Animated.View
         style={[fabStyles.glow, { backgroundColor: C.lavender + "28", transform: [{ scale: pulse }] }]}
         pointerEvents="none"
       />
-      <LinearGradient
-        colors={["#1A1040", "#2D1F6E"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={fabStyles.circle}
-      >
-        <Image
-          source={require("@/assets/images/ai-mascot.png")}
-          style={fabStyles.mascot}
-          resizeMode="contain"
-        />
-      </LinearGradient>
+
+      {/* Cercle + robot animé */}
+      <Animated.View style={{ transform: [{ translateY: bounce }] }}>
+        <LinearGradient
+          colors={["#1A1040", "#2D1F6E"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={fabStyles.circle}
+        >
+          <Animated.Image
+            source={require("@/assets/images/ai-mascot.png")}
+            style={[fabStyles.mascot, { transform: [{ rotate }] }]}
+            resizeMode="contain"
+          />
+        </LinearGradient>
+      </Animated.View>
     </TouchableOpacity>
   );
 }
