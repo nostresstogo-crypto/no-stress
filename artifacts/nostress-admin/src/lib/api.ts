@@ -142,6 +142,26 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ months }),
       }),
+    suspend: (id: string, reason: string, until?: string) =>
+      request<{ partner: AdminPartner }>(`/admin/partners/${id}/suspend`, {
+        method: "PUT",
+        body: JSON.stringify({ reason, until }),
+      }),
+    ban: (id: string, reason: string) =>
+      request<{ partner: AdminPartner }>(`/admin/partners/${id}/ban`, {
+        method: "PUT",
+        body: JSON.stringify({ reason }),
+      }),
+    reactivate: (id: string) =>
+      request<{ partner: AdminPartner }>(`/admin/partners/${id}/reactivate`, {
+        method: "PUT",
+      }),
+    listAccounts: (params: Record<string, string>) => {
+      const qs = new URLSearchParams(params).toString();
+      return request<{ partners: AdminPartner[]; total: number; page: number; limit: number }>(
+        `/admin/partner-accounts${qs ? `?${qs}` : ""}`,
+      );
+    },
   },
   publications: {
     list: () => request<PartnerEvent[]>("/admin/events"),
@@ -273,12 +293,28 @@ export interface Partner {
   longitude: number | null;
   description: string | null;
   websiteUrl: string | null;
-  status: "pending" | "approved" | "rejected" | "archived";
+  status: "pending" | "approved" | "rejected" | "archived" | "suspended" | "banned";
   rejectionReason: string | null;
+  statusReason: string | null;
+  statusUntil: string | null;
   subscriptionUntil?: string | null;
   subscription?: { active: boolean; subscriptionUntil: string | null; subscriptionStart: string | null; daysRemaining: number };
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AdminPartner {
+  id: string;
+  email: string;
+  contactName: string;
+  businessName: string;
+  businessType: string;
+  city: string;
+  phone: string;
+  status: string;
+  statusReason: string | null;
+  statusUntil: string | null;
+  createdAt: string;
 }
 
 export interface PartnerEvent {

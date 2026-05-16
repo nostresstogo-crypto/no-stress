@@ -44,6 +44,8 @@ export const partnersTable = pgTable("partners", {
   longitude: doublePrecision("longitude"),
   status: text("status").notNull().default("pending"),
   rejectionReason: text("rejection_reason"),
+  statusReason: text("status_reason"),
+  statusUntil: timestamp("status_until"),
   profileImage: text("profile_image"),
   emailVerified: timestamp("email_verified"),
   verificationCode: text("verification_code"),

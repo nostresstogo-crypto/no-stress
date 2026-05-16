@@ -137,6 +137,25 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
         partnerRejectionReason: partner.rejectionReason ?? null,
       });
     }
+    if (partner.status === "suspended") {
+      return res.status(403).json({
+        error: (partner as any).statusReason
+          ? `Votre compte partenaire a été suspendu : ${(partner as any).statusReason}`
+          : "Votre compte partenaire a été temporairement suspendu.",
+        partnerStatus: "suspended",
+        statusReason: (partner as any).statusReason ?? null,
+        statusUntil: (partner as any).statusUntil ?? null,
+      });
+    }
+    if (partner.status === "banned") {
+      return res.status(403).json({
+        error: (partner as any).statusReason
+          ? `Votre compte partenaire a été banni : ${(partner as any).statusReason}`
+          : "Votre compte partenaire a été définitivement banni.",
+        partnerStatus: "banned",
+        statusReason: (partner as any).statusReason ?? null,
+      });
+    }
     if (partner.status !== "approved") {
       // Pending (or any other non-approved state) — no session until admin approves.
       return res.status(403).json({

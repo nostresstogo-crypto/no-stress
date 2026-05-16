@@ -32,7 +32,9 @@ import {
   CalendarClock,
   CalendarPlus,
   RefreshCw,
+  Ban,
 } from "lucide-react";
+import { format } from "date-fns";
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
   pending: {
@@ -52,6 +54,18 @@ const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; 
     color: "text-destructive",
     bg: "bg-destructive/10",
     icon: <XCircle className="w-3.5 h-3.5" />,
+  },
+  suspended: {
+    label: "Suspendu",
+    color: "text-orange-400",
+    bg: "bg-orange-400/10",
+    icon: <AlertTriangle className="w-3.5 h-3.5" />,
+  },
+  banned: {
+    label: "Banni",
+    color: "text-red-500",
+    bg: "bg-red-500/10",
+    icon: <Ban className="w-3.5 h-3.5" />,
   },
 };
 
@@ -127,6 +141,12 @@ export default function Partners() {
   const [deletePartnerReason, setDeletePartnerReason] = useState("");
   const [extendOpen, setExtendOpen] = useState(false);
   const [extendMonths, setExtendMonths] = useState<1 | 2 | 3 | 6>(1);
+  const [suspendOpen, setSuspendOpen] = useState(false);
+  const [suspendReason, setSuspendReason] = useState("");
+  const [suspendUntil, setSuspendUntil] = useState("");
+  const [banOpen, setBanOpen] = useState(false);
+  const [banReason, setBanReason] = useState("");
+  const [reactivateOpen, setReactivateOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
@@ -236,6 +256,59 @@ export default function Partners() {
     }
   };
 
+  const handleSuspend = async () => {
+    if (!selected) return;
+    if (!suspendReason.trim()) { showToast("Le motif est requis.", "error"); return; }
+    setActionLoading(true);
+    try {
+      await api.partners.suspend(selected.id, suspendReason.trim(), suspendUntil || undefined);
+      showToast(`${selected.businessName} a été suspendu.`);
+      loadPartners();
+      setSuspendOpen(false);
+      setDetailOpen(false);
+      setSuspendReason("");
+      setSuspendUntil("");
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleBan = async () => {
+    if (!selected) return;
+    if (!banReason.trim()) { showToast("Le motif est requis.", "error"); return; }
+    setActionLoading(true);
+    try {
+      await api.partners.ban(selected.id, banReason.trim());
+      showToast(`${selected.businessName} a été banni définitivement.`);
+      loadPartners();
+      setBanOpen(false);
+      setDetailOpen(false);
+      setBanReason("");
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReactivate = async () => {
+    if (!selected) return;
+    setActionLoading(true);
+    try {
+      await api.partners.reactivate(selected.id);
+      showToast(`${selected.businessName} a été réactivé.`);
+      loadPartners();
+      setReactivateOpen(false);
+      setDetailOpen(false);
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="p-4 md:p-8">
@@ -273,8 +346,8 @@ export default function Partners() {
               className="pl-9 bg-background"
             />
           </div>
-          <div className="flex gap-2">
-            {["", "pending", "approved", "rejected"].map((s) => (
+          <div className="flex flex-wrap gap-2">
+            {["", "pending", "approved", "rejected", "suspended", "banned"].map((s) => (
               <Button
                 key={s}
                 variant={filterStatus === s ? "default" : "outline"}
@@ -358,6 +431,42 @@ export default function Partners() {
                               Rejeter
                             </Button>
                           </>
+                        )}
+                        {partner.status === "approved" && (
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-orange-400 border-orange-400/30 hover:bg-orange-400/10 h-7 text-xs gap-1"
+                              onClick={() => { setSelected(partner); setSuspendReason(""); setSuspendUntil(""); setSuspendOpen(true); }}
+                              disabled={actionLoading}
+                            >
+                              <AlertTriangle className="w-3 h-3" />
+                              Suspendre
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-500 border-red-500/30 hover:bg-red-500/10 h-7 text-xs gap-1"
+                              onClick={() => { setSelected(partner); setBanReason(""); setBanOpen(true); }}
+                              disabled={actionLoading}
+                            >
+                              <Ban className="w-3 h-3" />
+                              Bannir
+                            </Button>
+                          </>
+                        )}
+                        {(partner.status === "suspended" || partner.status === "banned") && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-green-400 border-green-400/30 hover:bg-green-400/10 h-7 text-xs gap-1"
+                            onClick={() => { setSelected(partner); setReactivateOpen(true); }}
+                            disabled={actionLoading}
+                          >
+                            <CheckCircle className="w-3 h-3" />
+                            Réactiver
+                          </Button>
                         )}
                         {isSuperAdmin && (
                           <Button
@@ -530,6 +639,38 @@ export default function Partners() {
                   Étendre l'abonnement
                 </Button>
               )}
+              <Button
+                variant="outline"
+                className="text-orange-400 border-orange-400/30 hover:bg-orange-400/10"
+                onClick={() => { setSuspendReason(""); setSuspendUntil(""); setSuspendOpen(true); }}
+                disabled={actionLoading}
+              >
+                <AlertTriangle className="w-4 h-4 mr-1" />
+                Suspendre
+              </Button>
+              <Button
+                variant="outline"
+                className="text-red-500 border-red-500/30 hover:bg-red-500/10"
+                onClick={() => { setBanReason(""); setBanOpen(true); }}
+                disabled={actionLoading}
+              >
+                <Ban className="w-4 h-4 mr-1" />
+                Bannir
+              </Button>
+            </DialogFooter>
+          )}
+
+          {(selected?.status === "suspended" || selected?.status === "banned") && (
+            <DialogFooter className="gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                className="text-green-400 border-green-400/30 hover:bg-green-400/10"
+                onClick={() => setReactivateOpen(true)}
+                disabled={actionLoading}
+              >
+                <CheckCircle className="w-4 h-4 mr-1" />
+                Réactiver le compte
+              </Button>
             </DialogFooter>
           )}
         </DialogContent>
@@ -692,6 +833,132 @@ export default function Partners() {
             >
               <CalendarPlus className="w-4 h-4" />
               {actionLoading ? "Extension en cours..." : `Étendre de ${extendMonths} mois`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={suspendOpen} onOpenChange={(o) => { setSuspendOpen(o); if (!o) { setSuspendReason(""); setSuspendUntil(""); } }}>
+        <DialogContent className="bg-card border-border max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-orange-400">
+              <AlertTriangle className="w-5 h-5" />
+              Suspendre le compte partenaire
+            </DialogTitle>
+            <DialogDescription>
+              Suspendre temporairement le compte de <strong>{selected?.businessName}</strong>. Le partenaire sera notifié par email et ne pourra plus se connecter.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div>
+              <Label htmlFor="suspend-reason">Motif de la suspension <span className="text-destructive">*</span></Label>
+              <Textarea
+                id="suspend-reason"
+                value={suspendReason}
+                onChange={(e) => setSuspendReason(e.target.value)}
+                placeholder="Ex: Contenu non conforme, abus signalés..."
+                rows={3}
+                className="bg-background mt-1.5"
+              />
+            </div>
+            <div>
+              <Label htmlFor="suspend-until">Date de fin de suspension (optionnel)</Label>
+              <Input
+                id="suspend-until"
+                type="date"
+                value={suspendUntil}
+                onChange={(e) => setSuspendUntil(e.target.value)}
+                min={format(new Date(), "yyyy-MM-dd")}
+                className="bg-background mt-1.5"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Si non renseignée, la suspension est indéfinie.</p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSuspendOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              className="bg-orange-500 hover:bg-orange-600 text-white"
+              onClick={handleSuspend}
+              disabled={actionLoading || !suspendReason.trim()}
+            >
+              {actionLoading ? "En cours..." : "Confirmer la suspension"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={banOpen} onOpenChange={(o) => { setBanOpen(o); if (!o) setBanReason(""); }}>
+        <DialogContent className="bg-card border-border max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-500">
+              <Ban className="w-5 h-5" />
+              Bannir le compte partenaire
+            </DialogTitle>
+            <DialogDescription>
+              Bannir définitivement le compte de <strong>{selected?.businessName}</strong>. Le partenaire sera notifié par email et ne pourra plus se connecter.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 flex gap-2">
+              <AlertTriangle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-destructive">
+                Le bannissement est une action sévère. Le compte sera bloqué indéfiniment.
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="ban-reason">Motif du bannissement <span className="text-destructive">*</span></Label>
+              <Textarea
+                id="ban-reason"
+                value={banReason}
+                onChange={(e) => setBanReason(e.target.value)}
+                placeholder="Ex: Fraude avérée, contenu illicite, récidive..."
+                rows={3}
+                className="bg-background mt-1.5"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBanOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBan}
+              disabled={actionLoading || !banReason.trim()}
+            >
+              {actionLoading ? "En cours..." : "Confirmer le bannissement"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={reactivateOpen} onOpenChange={setReactivateOpen}>
+        <DialogContent className="bg-card border-border max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-green-400">
+              <CheckCircle className="w-5 h-5" />
+              Réactiver le compte partenaire
+            </DialogTitle>
+            <DialogDescription>
+              Réactiver le compte de <strong>{selected?.businessName}</strong>. Le partenaire retrouvera l'accès à son espace et sera notifié par email.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReactivateOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              className="bg-green-500 hover:bg-green-600 text-white"
+              onClick={handleReactivate}
+              disabled={actionLoading}
+            >
+              {actionLoading ? "En cours..." : "Confirmer la réactivation"}
             </Button>
           </DialogFooter>
         </DialogContent>

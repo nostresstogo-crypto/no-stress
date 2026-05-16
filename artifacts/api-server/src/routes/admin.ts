@@ -17,6 +17,9 @@ import {
   sendUserSuspendedEmail,
   sendUserBannedEmail,
   sendUserReactivatedEmail,
+  sendPartnerSuspendedEmail,
+  sendPartnerBannedEmail,
+  sendPartnerReactivatedEmail,
 } from "../email.js";
 
 const router: IRouter = Router();
@@ -398,6 +401,117 @@ router.put("/admin/users/:id/reactivate", requireAdmin, async (req, res) => {
     );
   }
   res.json({ user: { ...updated, id: String(updated.id) } });
+});
+
+// ── Partner account management ────────────────────────────────────────────────
+router.get("/admin/partner-accounts", requireAdmin, async (req, res) => {
+  const page = Math.max(1, parseInt(String(req.query.page || "1"), 10));
+  const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || "50"), 10)));
+  const offset = (page - 1) * limit;
+  const search = String(req.query.search || "").trim();
+  const status = req.query.status ? String(req.query.status) : undefined;
+
+  const conds: any[] = [];
+  if (search) {
+    conds.push(
+      or(
+        ilike(partnersTable.email, `%${search}%`),
+        ilike(partnersTable.businessName, `%${search}%`),
+        ilike(partnersTable.contactName, `%${search}%`),
+      ),
+    );
+  }
+  if (status) conds.push(eq(partnersTable.status, status));
+  const whereClause = conds.length ? and(...conds) : undefined;
+
+  const [{ total }] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(partnersTable)
+    .where(whereClause);
+  const rows = await db
+    .select({
+      id: partnersTable.id,
+      email: partnersTable.email,
+      contactName: partnersTable.contactName,
+      businessName: partnersTable.businessName,
+      businessType: partnersTable.businessType,
+      city: partnersTable.city,
+      phone: partnersTable.phone,
+      status: partnersTable.status,
+      statusReason: (partnersTable as any).statusReason,
+      statusUntil: (partnersTable as any).statusUntil,
+      createdAt: partnersTable.createdAt,
+    })
+    .from(partnersTable)
+    .where(whereClause)
+    .orderBy(desc(partnersTable.createdAt))
+    .limit(limit)
+    .offset(offset);
+  res.json({ partners: rows.map((p) => ({ ...p, id: String(p.id) })), total, page, limit });
+});
+
+router.put("/admin/partners/:id/suspend", requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(404).json({ error: "Partenaire introuvable." });
+  const { reason, until } = req.body || {};
+  if (!reason || typeof reason !== "string" || !reason.trim()) {
+    return res.status(400).json({ error: "Le motif est requis." });
+  }
+  let untilDate: Date | null = null;
+  if (until) {
+    untilDate = new Date(String(until));
+    if (isNaN(untilDate.getTime())) return res.status(400).json({ error: "Date de fin invalide." });
+  }
+  const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.id, id));
+  if (!partner) return res.status(404).json({ error: "Partenaire introuvable." });
+  const [updated] = await db
+    .update(partnersTable)
+    .set({ status: "suspended", statusReason: reason.trim(), statusUntil: untilDate, updatedAt: new Date() } as any)
+    .where(eq(partnersTable.id, id))
+    .returning();
+  sendPartnerSuspendedEmail(partner.email, partner.contactName, reason.trim(), untilDate).catch(
+    (e) => console.error("[admin] Partner suspension email failed:", e),
+  );
+  res.json({ partner: { ...updated, id: String((updated as any).id) } });
+});
+
+router.put("/admin/partners/:id/ban", requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(404).json({ error: "Partenaire introuvable." });
+  const { reason } = req.body || {};
+  if (!reason || typeof reason !== "string" || !reason.trim()) {
+    return res.status(400).json({ error: "Le motif est requis." });
+  }
+  const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.id, id));
+  if (!partner) return res.status(404).json({ error: "Partenaire introuvable." });
+  const [updated] = await db
+    .update(partnersTable)
+    .set({ status: "banned", statusReason: reason.trim(), statusUntil: null, updatedAt: new Date() } as any)
+    .where(eq(partnersTable.id, id))
+    .returning();
+  sendPartnerBannedEmail(partner.email, partner.contactName, reason.trim()).catch(
+    (e) => console.error("[admin] Partner ban email failed:", e),
+  );
+  res.json({ partner: { ...updated, id: String((updated as any).id) } });
+});
+
+router.put("/admin/partners/:id/reactivate", requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(404).json({ error: "Partenaire introuvable." });
+  const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.id, id));
+  if (!partner) return res.status(404).json({ error: "Partenaire introuvable." });
+  if (partner.status !== "suspended" && partner.status !== "banned") {
+    return res.status(400).json({ error: "Le partenaire n'est pas suspendu ou banni." });
+  }
+  const [updated] = await db
+    .update(partnersTable)
+    .set({ status: "approved", statusReason: null, statusUntil: null, updatedAt: new Date() } as any)
+    .where(eq(partnersTable.id, id))
+    .returning();
+  sendPartnerReactivatedEmail(partner.email, partner.contactName).catch(
+    (e) => console.error("[admin] Partner reactivation email failed:", e),
+  );
+  res.json({ partner: { ...updated, id: String((updated as any).id) } });
 });
 
 // ── Reviews moderation ────────────────────────────────────────────────────────
