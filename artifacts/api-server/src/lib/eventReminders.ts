@@ -1,7 +1,7 @@
 import { db, eventsTable, favoritesTable } from "@workspace/db";
-import { and, eq, gte, isNull, lte } from "drizzle-orm";
+import { and, eq, gte, isNotNull, isNull, lte } from "drizzle-orm";
 import { logger } from "./logger.js";
-import { notifyEventReminderUser, notifyEventReminderPartner } from "./pushNotifications.js";
+import { notifyEventReminderUser, notifyEventReminderPartners } from "./pushNotifications.js";
 
 const RUN_INTERVAL_MS = 30 * 60 * 1000;
 const INITIAL_DELAY_MS = 90_000;
@@ -65,37 +65,46 @@ async function processReminders(
   now: Date,
 ): Promise<void> {
   const reminderField = type === "24h" ? favoritesTable.reminder24hSentAt : favoritesTable.reminder2hSentAt;
-  const partnerField = type === "24h" ? eventsTable.partnerReminder24hSentAt : eventsTable.partnerReminder2hSentAt;
+  const reminderKey = type === "24h" ? "reminder24hSentAt" : "reminder2hSentAt";
 
   for (const event of events) {
     try {
-      const claimedFavs = await db
+      // ── User favorites ────────────────────────────────────────────────────
+      const claimedUserFavs = await db
         .update(favoritesTable)
-        .set({ [type === "24h" ? "reminder24hSentAt" : "reminder2hSentAt"]: now })
+        .set({ [reminderKey]: now })
         .where(
           and(
             eq(favoritesTable.itemType, "event"),
             eq(favoritesTable.itemId, event.id),
             isNull(reminderField),
+            isNotNull(favoritesTable.userId),
           ),
         )
         .returning({ userId: favoritesTable.userId });
 
-      if (claimedFavs.length > 0) {
-        const userIds = claimedFavs.map((f) => f.userId);
+      if (claimedUserFavs.length > 0) {
+        const userIds = claimedUserFavs.map((f) => f.userId!);
         await notifyEventReminderUser({ event, type, userIds });
       }
 
-      if (event.partnerId) {
-        const [claimedPartner] = await db
-          .update(eventsTable)
-          .set({ [type === "24h" ? "partnerReminder24hSentAt" : "partnerReminder2hSentAt"]: now } as any)
-          .where(and(eq(eventsTable.id, event.id), isNull(partnerField as any)))
-          .returning({ id: eventsTable.id });
+      // ── Partner favorites ─────────────────────────────────────────────────
+      const claimedPartnerFavs = await db
+        .update(favoritesTable)
+        .set({ [reminderKey]: now })
+        .where(
+          and(
+            eq(favoritesTable.itemType, "event"),
+            eq(favoritesTable.itemId, event.id),
+            isNull(reminderField),
+            isNotNull(favoritesTable.partnerId),
+          ),
+        )
+        .returning({ partnerId: favoritesTable.partnerId });
 
-        if (claimedPartner) {
-          await notifyEventReminderPartner({ event, type });
-        }
+      if (claimedPartnerFavs.length > 0) {
+        const partnerIds = claimedPartnerFavs.map((f) => f.partnerId!);
+        await notifyEventReminderPartners({ event, type, partnerIds });
       }
     } catch (err) {
       logger.warn({ err, eventId: event.id, type }, "[event-reminders] failed for event");

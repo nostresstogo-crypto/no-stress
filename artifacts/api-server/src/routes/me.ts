@@ -192,7 +192,7 @@ router.post("/partners/me/change-password", requireAuth, async (req: any, res) =
   res.json({ message: "Mot de passe modifié. Reconnectez-vous." });
 });
 
-// ── Favorites (user-only) ───────────────────────────────────────────────────
+// ── Favorites (users + partners) ────────────────────────────────────────────
 function parseItem(body: any): { itemType: "event" | "venue"; itemId: number } | null {
   const itemType = String(body?.itemType || "");
   const itemId = parseInt(String(body?.itemId), 10);
@@ -216,7 +216,6 @@ router.post("/me/favorites", requireAuth, async (req: any, res) => {
   if (id == null) return res.status(403).json({ error: "Réservé aux utilisateurs." });
   const item = parseItem(req.body);
   if (!item) return res.status(400).json({ error: "Type ou identifiant invalide." });
-  // Verify the target exists and is publicly visible (approved).
   if (item.itemType === "event") {
     const [e] = await db.select({ id: eventsTable.id, status: eventsTable.status }).from(eventsTable).where(eq(eventsTable.id, item.itemId));
     if (!e || e.status !== "approved") return res.status(404).json({ error: "Événement introuvable." });
@@ -224,7 +223,6 @@ router.post("/me/favorites", requireAuth, async (req: any, res) => {
     const [v] = await db.select({ id: venuesTable.id, status: venuesTable.status }).from(venuesTable).where(eq(venuesTable.id, item.itemId));
     if (!v || v.status !== "approved") return res.status(404).json({ error: "Lieu introuvable." });
   }
-  // Idempotent thanks to unique index on (user_id,item_type,item_id).
   await db
     .insert(favoritesTable)
     .values({ userId: id, itemType: item.itemType, itemId: item.itemId })
@@ -244,6 +242,55 @@ router.delete("/me/favorites", requireAuth, async (req: any, res) => {
     .delete(favoritesTable)
     .where(and(
       eq(favoritesTable.userId, id),
+      eq(favoritesTable.itemType, itemType),
+      eq(favoritesTable.itemId, itemId),
+    ));
+  res.json({ ok: true });
+});
+
+// ── Favorites partenaires ────────────────────────────────────────────────────
+router.get("/partners/me/favorites", requireAuth, async (req: any, res) => {
+  const id = partnerIdFromAuth(req.auth);
+  if (id == null) return res.status(403).json({ error: "Réservé aux partenaires." });
+  const rows = await db.select().from(favoritesTable).where(eq(favoritesTable.partnerId, id));
+  const events = rows.filter((r) => r.itemType === "event").map((r) => String(r.itemId));
+  const venues = rows.filter((r) => r.itemType === "venue").map((r) => String(r.itemId));
+  res.json({ events, venues });
+});
+
+router.post("/partners/me/favorites", requireAuth, async (req: any, res) => {
+  const id = partnerIdFromAuth(req.auth);
+  if (id == null) return res.status(403).json({ error: "Réservé aux partenaires." });
+  const item = parseItem(req.body);
+  if (!item) return res.status(400).json({ error: "Type ou identifiant invalide." });
+  if (item.itemType === "event") {
+    const [e] = await db.select({ id: eventsTable.id, status: eventsTable.status, partnerId: eventsTable.partnerId }).from(eventsTable).where(eq(eventsTable.id, item.itemId));
+    if (!e || e.status !== "approved") return res.status(404).json({ error: "Événement introuvable." });
+    if (e.partnerId === id) return res.status(400).json({ error: "Vous ne pouvez pas mettre en favori votre propre événement." });
+  } else {
+    const [v] = await db.select({ id: venuesTable.id, status: venuesTable.status, partnerId: venuesTable.partnerId }).from(venuesTable).where(eq(venuesTable.id, item.itemId));
+    if (!v || v.status !== "approved") return res.status(404).json({ error: "Lieu introuvable." });
+    if (v.partnerId === id) return res.status(400).json({ error: "Vous ne pouvez pas mettre en favori votre propre lieu." });
+  }
+  await db
+    .insert(favoritesTable)
+    .values({ partnerId: id, itemType: item.itemType, itemId: item.itemId })
+    .onConflictDoNothing();
+  res.json({ ok: true });
+});
+
+router.delete("/partners/me/favorites", requireAuth, async (req: any, res) => {
+  const id = partnerIdFromAuth(req.auth);
+  if (id == null) return res.status(403).json({ error: "Réservé aux partenaires." });
+  const itemType = String(req.query.itemType || req.body?.itemType || "");
+  const itemId = parseInt(String(req.query.itemId ?? req.body?.itemId), 10);
+  if ((itemType !== "event" && itemType !== "venue") || !Number.isFinite(itemId)) {
+    return res.status(400).json({ error: "Type ou identifiant invalide." });
+  }
+  await db
+    .delete(favoritesTable)
+    .where(and(
+      eq(favoritesTable.partnerId, id),
       eq(favoritesTable.itemType, itemType),
       eq(favoritesTable.itemId, itemId),
     ));

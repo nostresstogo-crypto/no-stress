@@ -377,29 +377,43 @@ export async function notifyEventReminderUser(input: {
   }
 }
 
-/* ─── 7. Rappel avant événement → partenaire (son propre event) ──────── */
+/* ─── 7. Rappel avant événement → partenaires ayant mis en favori ────── */
 
-export async function notifyEventReminderPartner(input: {
-  event: { id: number; title: string | null; titleFr: string | null; date: string; time: string | null; partnerId: number | null };
+export async function notifyEventReminderPartners(input: {
+  event: { id: number; title: string | null; titleFr: string | null; date: string; time: string | null };
   type: "24h" | "2h";
+  partnerIds: number[];
 }): Promise<void> {
-  if (!input.event.partnerId) return;
+  if (input.partnerIds.length === 0) return;
   try {
-    const recipients = await tokensForPartnerId(input.event.partnerId);
+    const recipients = await db
+      .select({ token: pushTokensTable.token, language: pushTokensTable.language })
+      .from(pushTokensTable)
+      .where(inArray(pushTokensTable.partnerId, input.partnerIds));
     if (recipients.length === 0) return;
 
     const { event, type } = input;
     const timeLabel = event.time ? ` à ${event.time}` : "";
-    const messages = buildMessages(recipients, () => ({
-      title: type === "24h" ? "🎉 Votre événement est dans 24h" : "⏰ Votre événement est dans 2h",
-      body: `${event.titleFr || event.title} — ${event.date}${timeLabel}. Tout est prêt ?`,
+    const messages = buildMessages(recipients, (lang) => ({
+      title:
+        lang === "fr"
+          ? type === "24h"
+            ? "🎉 Événement dans 24h"
+            : "⏰ Événement dans 2h"
+          : type === "24h"
+            ? "🎉 Event in 24 hours"
+            : "⏰ Event in 2 hours",
+      body:
+        lang === "fr"
+          ? `${event.titleFr || event.title} — ${event.date}${timeLabel}.`
+          : `${event.title || event.titleFr} — ${event.date}${timeLabel}.`,
       channelId: "event_reminders",
-      data: { type: `partner_event_reminder_${type}`, eventId: String(event.id) },
+      data: { type: `event_reminder_${type}`, eventId: String(event.id) },
     }));
     await sendExpoPush(messages);
-    logger.info({ eventId: event.id, type, partnerId: event.partnerId }, "[push] event reminder partner sent");
+    logger.info({ eventId: event.id, type, count: messages.length }, "[push] event reminder partners sent");
   } catch (err) {
-    logger.warn({ err, eventId: input.event.id }, "[push] notifyEventReminderPartner failed");
+    logger.warn({ err, eventId: input.event.id }, "[push] notifyEventReminderPartners failed");
   }
 }
 

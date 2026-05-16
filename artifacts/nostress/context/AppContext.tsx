@@ -452,16 +452,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     itemId: string,
     nextHasIt: boolean,
   ) => {
-    if (!user || user.role !== "user" || !tokenRef.current) return;
+    if (!user || !tokenRef.current) return;
+    const isPartner = user.role === "structure";
+    const base = isPartner ? `${API_BASE}/partners/me/favorites` : `${API_BASE}/me/favorites`;
     try {
       if (nextHasIt) {
-        await authFetch(`${API_BASE}/me/favorites`, {
+        await authFetch(base, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ itemType: type, itemId }),
         });
       } else {
-        await authFetch(`${API_BASE}/me/favorites?itemType=${type}&itemId=${encodeURIComponent(itemId)}`, {
+        await authFetch(`${base}?itemType=${type}&itemId=${encodeURIComponent(itemId)}`, {
           method: "DELETE",
         });
       }
@@ -507,9 +509,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const syncFavoritesFromBackend = useCallback(async () => {
-    if (!user || user.role !== "user" || !tokenRef.current) return;
+    if (!user || !tokenRef.current) return;
+    const isPartner = user.role === "structure";
+    const endpoint = isPartner ? `${API_BASE}/partners/me/favorites` : `${API_BASE}/me/favorites`;
     try {
-      const r = await authFetch(`${API_BASE}/me/favorites`);
+      const r = await authFetch(endpoint);
       if (!r.ok) return;
       const data = await r.json();
       const events: string[] = Array.isArray(data?.events) ? data.events.map(String) : [];
@@ -523,7 +527,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!appReady) return;
-    if (user?.role === "user" && tokenRef.current) {
+    if ((user?.role === "user" || user?.role === "structure") && tokenRef.current) {
       syncFavoritesFromBackend();
     }
   }, [appReady, user?.id, user?.role, syncFavoritesFromBackend]);
@@ -535,7 +539,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const online = state.isConnected === true && state.isInternetReachable !== false;
       if (wasOfflineRef.current && online) {
         refreshApiEvents();
-        if (user?.role === "user" && tokenRef.current) {
+        if ((user?.role === "user" || user?.role === "structure") && tokenRef.current) {
           syncFavoritesFromBackend();
         }
       }
