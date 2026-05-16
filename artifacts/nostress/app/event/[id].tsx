@@ -1,6 +1,7 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   FlatList,
   Image,
@@ -538,10 +539,25 @@ export default function EventDetailScreen() {
               </View>
             ))
           )}
-          {!!apiEvent && !!user && (
+          {!!apiEvent && (
             <>
               <TouchableOpacity
-                onPress={() => setReviewModalOpen(true)}
+                onPress={() => {
+                  if (!user) {
+                    Alert.alert(
+                      lang === "fr" ? "Connexion requise" : "Sign in required",
+                      lang === "fr"
+                        ? "Connectez-vous pour laisser un avis."
+                        : "Please sign in to leave a review.",
+                      [
+                        { text: lang === "fr" ? "Annuler" : "Cancel", style: "cancel" },
+                        { text: lang === "fr" ? "Se connecter" : "Sign in", onPress: () => router.push("/auth") },
+                      ],
+                    );
+                  } else {
+                    setReviewModalOpen(true);
+                  }
+                }}
                 style={{
                   marginTop: 14,
                   flexDirection: "row",
