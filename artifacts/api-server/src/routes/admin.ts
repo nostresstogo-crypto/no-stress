@@ -20,6 +20,9 @@ import {
   sendPartnerSuspendedEmail,
   sendPartnerBannedEmail,
   sendPartnerReactivatedEmail,
+  sendReviewApprovedToAuthorEmail,
+  sendReviewRejectedToAuthorEmail,
+  sendReviewApprovedToPartnerEmail,
 } from "../email.js";
 import { notifyReviewModerationUser, notifyPartnerReviewApproved } from "../lib/pushNotifications.js";
 
@@ -659,7 +662,7 @@ router.put("/admin/reviews/:id/approve", requireAdmin, async (req: any, res) => 
   if (!updated) return res.status(404).json({ error: "Avis introuvable." });
   res.json({ review: { ...updated, id: String(updated.id) } });
 
-  // Notifier l'auteur de l'avis — fire-and-forget
+  // Push + email notifications — fire-and-forget
   notifyReviewModerationUser({
     userId: updated.userId,
     partnerId: updated.partnerId,
@@ -668,36 +671,84 @@ router.put("/admin/reviews/:id/approve", requireAdmin, async (req: any, res) => 
     itemId: updated.itemId,
   }).catch(() => {});
 
-  // Notifier le partenaire propriétaire de l'item — fire-and-forget
-  if (updated.itemType === "event") {
-    db.select({ partnerId: eventsTable.partnerId }).from(eventsTable)
-      .where(eq(eventsTable.id, updated.itemId))
-      .then(([ev]) => {
-        if (ev?.partnerId) {
+  (async () => {
+    try {
+      // Fetch author info
+      let authorEmail: string | null = null;
+      let authorName = "Utilisateur";
+      if (updated.userId) {
+        const [u] = await db
+          .select({ email: usersTable.email, name: usersTable.name, firstName: usersTable.firstName, lastName: usersTable.lastName })
+          .from(usersTable).where(eq(usersTable.id, updated.userId));
+        if (u) { authorEmail = u.email; authorName = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.name || "Utilisateur"; }
+      } else if (updated.partnerId) {
+        const [p] = await db
+          .select({ email: partnersTable.email, contactName: partnersTable.contactName })
+          .from(partnersTable).where(eq(partnersTable.id, updated.partnerId));
+        if (p) { authorEmail = p.email; authorName = p.contactName; }
+      }
+
+      // Fetch item info + item partner
+      let itemTitle = `#${updated.itemId}`;
+      let itemPartnerId: number | null = null;
+      if (updated.itemType === "event") {
+        const [e] = await db
+          .select({ title: eventsTable.title, titleFr: eventsTable.titleFr, partnerId: eventsTable.partnerId })
+          .from(eventsTable).where(eq(eventsTable.id, updated.itemId));
+        if (e) { itemTitle = e.titleFr || e.title; itemPartnerId = e.partnerId ?? null; }
+      } else if (updated.itemType === "venue") {
+        const [v] = await db
+          .select({ name: venuesTable.name, partnerId: venuesTable.partnerId })
+          .from(venuesTable).where(eq(venuesTable.id, updated.itemId));
+        if (v) { itemTitle = v.name; itemPartnerId = v.partnerId ?? null; }
+      }
+
+      // Email to author
+      if (authorEmail) {
+        sendReviewApprovedToAuthorEmail(authorEmail, {
+          name: authorName,
+          itemType: updated.itemType as "event" | "venue",
+          itemTitle,
+          rating: updated.rating,
+          comment: updated.comment ?? null,
+        }).catch((e) => console.error("[review-email] author approve failed:", e));
+      }
+
+      // Push + email to item partner (skip if the author IS the item partner)
+      if (itemPartnerId && itemPartnerId !== updated.partnerId) {
+        const [partner] = await db
+          .select({ email: partnersTable.email, contactName: partnersTable.contactName })
+          .from(partnersTable).where(eq(partnersTable.id, itemPartnerId));
+        if (partner) {
           notifyPartnerReviewApproved({
-            partnerId: ev.partnerId,
-            itemType: "event",
+            partnerId: itemPartnerId,
+            itemType: updated.itemType as "event" | "venue",
             itemId: updated.itemId,
             rating: updated.rating,
             comment: updated.comment ?? null,
           }).catch(() => {});
-        }
-      }).catch(() => {});
-  } else if (updated.itemType === "venue") {
-    db.select({ partnerId: venuesTable.partnerId }).from(venuesTable)
-      .where(eq(venuesTable.id, updated.itemId))
-      .then(([v]) => {
-        if (v?.partnerId) {
-          notifyPartnerReviewApproved({
-            partnerId: v.partnerId,
-            itemType: "venue",
-            itemId: updated.itemId,
+          sendReviewApprovedToPartnerEmail(partner.email, {
+            partnerName: partner.contactName,
+            itemType: updated.itemType as "event" | "venue",
+            itemTitle,
             rating: updated.rating,
             comment: updated.comment ?? null,
-          }).catch(() => {});
+          }).catch((e) => console.error("[review-email] partner approve failed:", e));
         }
-      }).catch(() => {});
-  }
+      } else if (itemPartnerId && itemPartnerId === updated.partnerId) {
+        // Author is the item partner — only push, no separate email
+        notifyPartnerReviewApproved({
+          partnerId: itemPartnerId,
+          itemType: updated.itemType as "event" | "venue",
+          itemId: updated.itemId,
+          rating: updated.rating,
+          comment: updated.comment ?? null,
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.error("[review-email] approve enrichment failed:", err);
+    }
+  })();
 });
 
 router.put("/admin/reviews/:id/reject", requireAdmin, async (req: any, res) => {
@@ -712,7 +763,7 @@ router.put("/admin/reviews/:id/reject", requireAdmin, async (req: any, res) => {
   if (!updated) return res.status(404).json({ error: "Avis introuvable." });
   res.json({ review: { ...updated, id: String(updated.id) } });
 
-  // Notifier l'auteur que l'avis n'a pas été publié — fire-and-forget
+  // Push notification — fire-and-forget
   notifyReviewModerationUser({
     userId: updated.userId,
     partnerId: updated.partnerId,
@@ -720,6 +771,48 @@ router.put("/admin/reviews/:id/reject", requireAdmin, async (req: any, res) => {
     itemType: updated.itemType as "event" | "venue",
     itemId: updated.itemId,
   }).catch(() => {});
+
+  // Email to author only — fire-and-forget
+  (async () => {
+    try {
+      let authorEmail: string | null = null;
+      let authorName = "Utilisateur";
+      if (updated.userId) {
+        const [u] = await db
+          .select({ email: usersTable.email, name: usersTable.name, firstName: usersTable.firstName, lastName: usersTable.lastName })
+          .from(usersTable).where(eq(usersTable.id, updated.userId));
+        if (u) { authorEmail = u.email; authorName = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.name || "Utilisateur"; }
+      } else if (updated.partnerId) {
+        const [p] = await db
+          .select({ email: partnersTable.email, contactName: partnersTable.contactName })
+          .from(partnersTable).where(eq(partnersTable.id, updated.partnerId));
+        if (p) { authorEmail = p.email; authorName = p.contactName; }
+      }
+
+      let itemTitle = `#${updated.itemId}`;
+      if (updated.itemType === "event") {
+        const [e] = await db
+          .select({ title: eventsTable.title, titleFr: eventsTable.titleFr })
+          .from(eventsTable).where(eq(eventsTable.id, updated.itemId));
+        if (e) itemTitle = e.titleFr || e.title;
+      } else if (updated.itemType === "venue") {
+        const [v] = await db.select({ name: venuesTable.name }).from(venuesTable).where(eq(venuesTable.id, updated.itemId));
+        if (v) itemTitle = v.name;
+      }
+
+      if (authorEmail) {
+        sendReviewRejectedToAuthorEmail(authorEmail, {
+          name: authorName,
+          itemType: updated.itemType as "event" | "venue",
+          itemTitle,
+          rating: updated.rating,
+          comment: updated.comment ?? null,
+        }).catch((e) => console.error("[review-email] author reject failed:", e));
+      }
+    } catch (err) {
+      console.error("[review-email] reject enrichment failed:", err);
+    }
+  })();
 });
 
 router.delete("/admin/reviews/:id", requireAdmin, async (req, res) => {

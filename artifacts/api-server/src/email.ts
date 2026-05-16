@@ -1047,6 +1047,100 @@ export async function sendUserReactivatedEmail(to: string, name: string) {
   });
 }
 
+export async function sendReviewApprovedToAuthorEmail(
+  to: string,
+  opts: { name: string; itemType: "event" | "venue"; itemTitle: string; rating: number; comment: string | null }
+): Promise<void> {
+  const stars = "★".repeat(opts.rating) + "☆".repeat(5 - opts.rating);
+  const itemLabel = opts.itemType === "event" ? "événement" : "lieu";
+  await sendMail({
+    to,
+    subject: `✅ Votre avis a été approuvé – NoStress`,
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml("✅ Votre avis a été approuvé")}
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 0 0 16px;">
+          Bonjour <strong style="color: #e8e8f0;">${escapeHtml(opts.name)}</strong>,<br>
+          Votre avis sur l'${escapeHtml(itemLabel)} <strong style="color: #e8e8f0;">${escapeHtml(opts.itemTitle)}</strong> a été approuvé et est maintenant visible par tous les utilisateurs de NoStress.
+        </p>
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #22c55e;">
+          <p style="margin: 0 0 8px; color: #b0b2cc;"><strong style="color: #e8e8f0;">Note :</strong> <span style="color: #f59e0b;">${escapeHtml(stars)}</span> (${opts.rating}/5)</p>
+          ${opts.comment
+            ? `<p style="margin: 0; color: #b0b2cc;"><strong style="color: #e8e8f0;">Commentaire :</strong> ${escapeHtml(opts.comment)}</p>`
+            : `<p style="margin: 0; color: #b0b2cc; font-style: italic;">Aucun commentaire.</p>`}
+        </div>
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 16px 0 0;">
+          Merci pour votre contribution à la communauté NoStress !<br>
+          <strong style="color: #e8e8f0;">L'équipe NoStress</strong>
+        </p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}
+
+export async function sendReviewRejectedToAuthorEmail(
+  to: string,
+  opts: { name: string; itemType: "event" | "venue"; itemTitle: string; rating: number; comment: string | null }
+): Promise<void> {
+  const itemLabel = opts.itemType === "event" ? "événement" : "lieu";
+  await sendMail({
+    to,
+    subject: `Votre avis n'a pas été publié – NoStress`,
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml("Votre avis n'a pas été publié")}
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 0 0 16px;">
+          Bonjour <strong style="color: #e8e8f0;">${escapeHtml(opts.name)}</strong>,<br>
+          Votre avis sur l'${escapeHtml(itemLabel)} <strong style="color: #e8e8f0;">${escapeHtml(opts.itemTitle)}</strong> n'a pas été approuvé par notre équipe de modération et ne sera pas publié.
+        </p>
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+          <p style="margin: 0; color: #b0b2cc; font-size: 14px; line-height: 1.6;">
+            Nos modérateurs examinent chaque avis afin de garantir une expérience de qualité à tous les utilisateurs. Si vous pensez que cette décision est une erreur, contactez-nous.
+          </p>
+        </div>
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 16px 0 0;">
+          Pour toute question : <a href="mailto:nostresstogo@gmail.com" style="color: #7c6af7;">nostresstogo@gmail.com</a><br><br>
+          <strong style="color: #e8e8f0;">L'équipe NoStress</strong>
+        </p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}
+
+export async function sendReviewApprovedToPartnerEmail(
+  to: string,
+  opts: { partnerName: string; itemType: "event" | "venue"; itemTitle: string; rating: number; comment: string | null }
+): Promise<void> {
+  const stars = "★".repeat(opts.rating) + "☆".repeat(5 - opts.rating);
+  const itemLabel = opts.itemType === "event" ? "événement" : "lieu";
+  await sendMail({
+    to,
+    subject: `⭐ Nouvel avis approuvé sur votre ${itemLabel} – NoStress`,
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml(`⭐ Nouvel avis sur votre ${itemLabel}`)}
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 0 0 16px;">
+          Bonjour <strong style="color: #e8e8f0;">${escapeHtml(opts.partnerName)}</strong>,<br>
+          Un avis vient d'être approuvé et publié sur votre ${escapeHtml(itemLabel)} <strong style="color: #e8e8f0;">${escapeHtml(opts.itemTitle)}</strong>.
+        </p>
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #7c6af7;">
+          <p style="margin: 0 0 8px; color: #b0b2cc;"><strong style="color: #e8e8f0;">Note :</strong> <span style="color: #f59e0b;">${escapeHtml(stars)}</span> (${opts.rating}/5)</p>
+          ${opts.comment
+            ? `<p style="margin: 0; color: #b0b2cc;"><strong style="color: #e8e8f0;">Commentaire :</strong> ${escapeHtml(opts.comment)}</p>`
+            : `<p style="margin: 0; color: #b0b2cc; font-style: italic;">Aucun commentaire laissé.</p>`}
+        </div>
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 16px 0 0;">
+          Continuez à offrir une excellente expérience à vos clients !<br>
+          <strong style="color: #e8e8f0;">L'équipe NoStress</strong>
+        </p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}
+
 export async function sendAdminNewReviewEmail(to: string, review: {
   id: number;
   itemType: string;
