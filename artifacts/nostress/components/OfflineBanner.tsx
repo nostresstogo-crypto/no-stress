@@ -6,28 +6,44 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export function OfflineBanner() {
   const [isOffline, setIsOffline] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   const translateY = useRef(new Animated.Value(-80)).current;
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
     NetInfo.fetch().then((state) => {
-      const offline = state.isConnected === false || state.isInternetReachable === false;
+      const offline =
+        state.isConnected === false || state.isInternetReachable === false;
       setIsOffline(offline);
     });
     const unsubscribe = NetInfo.addEventListener((state) => {
-      const offline = state.isConnected === false || state.isInternetReachable === false;
+      const offline =
+        state.isConnected === false || state.isInternetReachable === false;
       setIsOffline(offline);
     });
     return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    Animated.timing(translateY, {
-      toValue: isOffline ? 0 : -80,
-      duration: 300,
-      useNativeDriver: true,
-    }).start();
+    if (isOffline) {
+      setIsVisible(true);
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    } else {
+      Animated.timing(translateY, {
+        toValue: -80,
+        duration: 300,
+        useNativeDriver: true,
+      }).start(({ finished }) => {
+        if (finished) setIsVisible(false);
+      });
+    }
   }, [isOffline, translateY]);
+
+  if (!isVisible) return null;
 
   return (
     <Animated.View
