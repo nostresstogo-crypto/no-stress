@@ -29,7 +29,9 @@
         "NSCameraUsageDescription": "$(PRODUCT_NAME) needs camera access to take photos for your events or profile.",
         "NSPhotoLibraryUsageDescription": "$(PRODUCT_NAME) needs photo library access to choose a logo or profile picture.",
         "NSPhotoLibraryAddUsageDescription": "$(PRODUCT_NAME) needs permission to save your tickets to your photo library.",
-        "NSUserNotificationUsageDescription": "$(PRODUCT_NAME) sends notifications about new nearby events, your favorites, and booking updates."
+        "NSUserNotificationUsageDescription": "$(PRODUCT_NAME) sends notifications about new nearby events, your favorites, and booking updates.",
+        "NSMicrophoneUsageDescription": "$(PRODUCT_NAME) utilise le microphone pour vous permettre de parler à l'assistant IA.",
+        "NSSpeechRecognitionUsageDescription": "$(PRODUCT_NAME) utilise la reconnaissance vocale pour transcrire vos questions à l'assistant IA."
       }
     },
     "android": {
@@ -40,12 +42,12 @@
         "backgroundColor": "#0E1120"
       },
       "permissions": [
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECORD_AUDIO"
       ],
       "blockedPermissions": [
         "android.permission.SYSTEM_ALERT_WINDOW",
-        "android.permission.READ_PHONE_STATE",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.READ_PHONE_STATE"
       ]
     },
     "web": {
@@ -87,6 +89,13 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "$(PRODUCT_NAME) uses your location to show you nearby events and venues."
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "$(PRODUCT_NAME) utilise le microphone pour vous permettre de parler à l'assistant IA.",
+          "speechRecognitionPermission": "$(PRODUCT_NAME) utilise la reconnaissance vocale pour transcrire vos questions à l'assistant IA."
         }
       ],
       "@react-native-community/datetimepicker",
