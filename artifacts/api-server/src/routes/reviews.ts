@@ -147,21 +147,24 @@ router.post("/reviews", requireAuth, async (req: any, res) => {
   // Notifier tous les admins — fire-and-forget
   const authorType = userId != null ? "user" : "partner";
   const authorId = (userId ?? partnerId)!;
+  const masterEmail = process.env.ADMIN_EMAIL || "nostresstogo@gmail.com";
+  const reviewPayload = {
+    id: review.id,
+    itemType: review.itemType,
+    itemId: review.itemId,
+    rating: review.rating,
+    comment: review.comment ?? null,
+    authorType,
+    authorId,
+  };
   db.select({ email: adminsTable.email }).from(adminsTable)
-    .then((admins) =>
-      Promise.all(admins.map((a) =>
-        sendAdminNewReviewEmail(a.email, {
-          id: review.id,
-          itemType: review.itemType,
-          itemId: review.itemId,
-          rating: review.rating,
-          comment: review.comment ?? null,
-          authorType,
-          authorId,
-        }),
-      )),
-    )
-    .catch(() => {});
+    .then(async (admins) => {
+      // Déduplique les destinataires : admins DB + email master de la config
+      const emails = new Set([masterEmail, ...admins.map((a) => a.email)]);
+      console.info(`[review-notify] sending admin emails to: ${[...emails].join(", ")} for review #${review.id}`);
+      await Promise.all([...emails].map((email) => sendAdminNewReviewEmail(email, reviewPayload)));
+    })
+    .catch((err) => console.error("[review-notify] admin email failed:", err));
 });
 
 export default router;
