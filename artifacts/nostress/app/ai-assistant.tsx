@@ -29,6 +29,7 @@ const QUICK_QUESTIONS = [
   "Quels événements sont près de moi ?",
   "Quels lieux me recommandes-tu ?",
   "Comment créer un événement ?",
+  "Comment rendre visible mon Local (Bars, Restaurants, Boite de nuit, etc...) sur NoStress ?",
 ];
 
 function makeStyles(C: ColorPalette) {
