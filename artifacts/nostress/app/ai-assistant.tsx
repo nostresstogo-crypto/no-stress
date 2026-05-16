@@ -28,7 +28,6 @@ type Message = {
 const QUICK_QUESTIONS = [
   "Quels événements sont près de moi ?",
   "Quels lieux me recommandes-tu ?",
-  "Comment acheter un billet ?",
   "Comment créer un événement ?",
 ];
 
