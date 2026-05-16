@@ -150,7 +150,7 @@ router.get("/events/popular", async (req, res) => {
     if (cb !== ca) return cb - ca;
     return a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
   });
-  res.json({ events: sorted.slice(0, 5).map(serialize) });
+  res.json({ events: sorted.slice(0, 10).map(serialize) });
 });
 
 router.get("/events/:id", async (req, res) => {

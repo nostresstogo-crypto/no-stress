@@ -124,7 +124,7 @@ router.get("/venues/popular", async (req, res) => {
     .groupBy(favoritesTable.itemId);
   const countMap = new Map(favCounts.map((r) => [r.itemId, r.count]));
   const sorted = [...allVenues].sort((a, b) => (countMap.get(b.id) || 0) - (countMap.get(a.id) || 0));
-  res.json({ venues: sorted.slice(0, 5).map(serialize) });
+  res.json({ venues: sorted.slice(0, 10).map(serialize) });
 });
 
 router.get("/venues/:id", async (req, res) => {
