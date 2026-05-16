@@ -26,6 +26,7 @@ type Message = {
 };
 
 const QUICK_QUESTIONS = [
+  "Quel est l'utilité de NoStress ?",
   "Quels événements sont près de moi ?",
   "Quels lieux me recommandes-tu ?",
   "Comment créer un événement ?",
