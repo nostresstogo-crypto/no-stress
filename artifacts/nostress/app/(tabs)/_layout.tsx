@@ -5,6 +5,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import React, { useEffect, useRef } from "react";
 import {
   Animated,
+  Image,
   Platform,
   StyleSheet,
   Text,
@@ -193,12 +194,16 @@ function AIFloatingButton() {
         pointerEvents="none"
       />
       <LinearGradient
-        colors={["#6A5AC8", "#B5A8F0"]}
+        colors={["#1A1040", "#2D1F6E"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={fabStyles.circle}
       >
-        <Text style={fabStyles.emoji}>🤖</Text>
+        <Image
+          source={require("@/assets/images/ai-mascot.png")}
+          style={fabStyles.mascot}
+          resizeMode="contain"
+        />
       </LinearGradient>
     </TouchableOpacity>
   );
@@ -213,25 +218,27 @@ const fabStyles = StyleSheet.create({
   },
   glow: {
     position: "absolute",
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
   },
   circle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 62,
+    height: 62,
+    borderRadius: 31,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#7A6BD8",
-    shadowOpacity: 0.65,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 12,
+    shadowColor: "#5A46C0",
+    shadowOpacity: 0.7,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 5 },
+    elevation: 14,
+    overflow: "hidden",
   },
-  emoji: {
-    fontSize: 26,
-    lineHeight: 30,
+  mascot: {
+    width: 54,
+    height: 54,
+    marginBottom: -4,
   },
 });
 
