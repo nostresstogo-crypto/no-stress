@@ -1216,9 +1216,11 @@ export default function DashboardScreen() {
                   <Text style={styles.planName}>{name}</Text>
                   <View style={styles.planPriceRow}>
                     <Text style={styles.planPrice}>
-                      {plan.monthlyPriceFCFA === 0 ? t("free") : `${plan.monthlyPriceFCFA.toLocaleString()} FCFA`}
+                      {plan.comingSoon
+                        ? (lang === "fr" ? "Gratuit (bêta)" : "Free (beta)")
+                        : plan.monthlyPriceFCFA === 0 ? t("free") : `${plan.monthlyPriceFCFA.toLocaleString()} FCFA`}
                     </Text>
-                    {plan.monthlyPriceFCFA > 0 && (
+                    {!plan.comingSoon && plan.monthlyPriceFCFA > 0 && (
                       <Text style={styles.planPeriod}>{t("perMonth")}</Text>
                     )}
                   </View>
@@ -1229,8 +1231,13 @@ export default function DashboardScreen() {
                     </View>
                   ))}
                   {!isCurrent && (
-                    <TouchableOpacity style={styles.upgradeBtn}>
-                      <Text style={styles.upgradeBtnText}>{t("upgrade")} {name}</Text>
+                    <TouchableOpacity
+                      style={[styles.upgradeBtn, plan.comingSoon && { opacity: 0.45 }]}
+                      disabled={!!plan.comingSoon}
+                    >
+                      <Text style={styles.upgradeBtnText}>
+                        {plan.comingSoon ? t("comingSoon") : `${t("upgrade")} ${name}`}
+                      </Text>
                     </TouchableOpacity>
                   )}
                   {isCurrent && (
