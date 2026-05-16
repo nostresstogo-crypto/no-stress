@@ -476,16 +476,6 @@ function SlideView({
                 label: lang === "fr" ? "Réservation instantanée" : "Instant booking",
                 color: CYAN,
               },
-              {
-                icon: "qr-code" as const,
-                label: lang === "fr" ? "QR code sécurisé" : "Secure QR code",
-                color: LAVENDER,
-              },
-              {
-                icon: "shield-checkmark" as const,
-                label: lang === "fr" ? "Paiement sécurisé" : "Secure payment",
-                color: GOLD,
-              },
             ].map((f) => (
               <View key={f.label} style={styles.featureItem}>
                 <View style={[styles.featureIcon, { backgroundColor: f.color + "20" }]}>
