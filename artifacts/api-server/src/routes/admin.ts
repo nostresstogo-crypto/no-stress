@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { db, adminsTable, partnersTable, eventsTable, deletionRequestsTable, usersTable, venuesTable } from "@workspace/db";
 import {
   hashPassword,
@@ -9,7 +9,9 @@ import {
   verifyToken,
   issueRefreshToken,
   revokeRefreshToken,
+  generateRandomPassword,
 } from "../lib/auth-utils.js";
+import { sendManagerCredentialsEmail, sendManagerPasswordResetEmail } from "../email.js";
 
 const router: IRouter = Router();
 
@@ -37,6 +39,7 @@ async function ensureSeedAdmin(): Promise<void> {
         email: DEFAULT_ADMIN_EMAIL,
         passwordHash,
         name: DEFAULT_ADMIN_NAME,
+        role: "superadmin",
       });
       console.log(`[admin] Seeded initial admin account: ${DEFAULT_ADMIN_EMAIL}`);
     } else if (process.env.RESET_ADMIN_PASSWORD === "1") {
@@ -78,8 +81,21 @@ function requireAdmin(req: any, res: any, next: any) {
   if (!payload || payload.role !== "admin" || !payload.sub.startsWith("a_")) {
     return res.status(401).json({ error: "Session expirée ou invalide." });
   }
-  req.admin = { adminId: payload.sub.slice(2), email: payload.email };
+  req.admin = {
+    adminId: payload.sub.slice(2),
+    email: payload.email,
+    adminRole: (payload as any).adminRole ?? "superadmin",
+  };
   next();
+}
+
+function requireSuperAdmin(req: any, res: any, next: any) {
+  requireAdmin(req, res, () => {
+    if (req.admin?.adminRole !== "superadmin") {
+      return res.status(403).json({ error: "Action réservée au Super Administrateur." });
+    }
+    next();
+  });
 }
 
 const adminLoginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: "admin-login" });
@@ -104,9 +120,9 @@ router.post("/admin/login", adminLoginLimiter, async (req, res) => {
     return res.status(401).json({ error: "Identifiants incorrects." });
   }
   const sub = `a_${admin.id}`;
-  const token = signToken({ sub, email: admin.email, role: "admin" });
+  const token = signToken({ sub, email: admin.email, role: "admin", adminRole: admin.role } as any);
   const refreshToken = await issueRefreshToken(sub, req.headers["user-agent"] as string | undefined);
-  res.json({ token, refreshToken, admin: { id: String(admin.id), name: admin.name, email: admin.email } });
+  res.json({ token, refreshToken, admin: { id: String(admin.id), name: admin.name, firstName: admin.firstName, email: admin.email, role: admin.role } });
 });
 
 router.post("/admin/logout", async (req, res) => {
@@ -123,13 +139,13 @@ router.get("/admin/me", requireAdmin, async (req: any, res) => {
     return res.status(400).json({ error: "Identifiant admin invalide." });
   }
   const [row] = await db
-    .select({ id: adminsTable.id, name: adminsTable.name, email: adminsTable.email })
+    .select({ id: adminsTable.id, name: adminsTable.name, firstName: adminsTable.firstName, email: adminsTable.email, role: adminsTable.role })
     .from(adminsTable)
     .where(eq(adminsTable.id, id));
   if (!row) {
     return res.status(404).json({ error: "Admin introuvable." });
   }
-  res.json({ admin: { adminId: String(row.id), name: row.name, email: row.email } });
+  res.json({ admin: { adminId: String(row.id), name: row.name, firstName: row.firstName, email: row.email, role: row.role } });
 });
 
 router.post("/admin/change-password", requireAdmin, async (req: any, res) => {
@@ -204,5 +220,75 @@ router.get("/admin/stats", requireAdmin, async (_req, res) => {
   });
 });
 
-export { requireAdmin };
+router.get("/admin/managers", requireSuperAdmin, async (_req, res) => {
+  const managers = await db
+    .select({ id: adminsTable.id, name: adminsTable.name, firstName: adminsTable.firstName, email: adminsTable.email, createdAt: adminsTable.createdAt })
+    .from(adminsTable)
+    .where(eq(adminsTable.role, "gestionnaire"));
+  res.json({ managers: managers.map((m) => ({ ...m, id: String(m.id) })) });
+});
+
+router.post("/admin/managers", requireSuperAdmin, async (req, res) => {
+  const { name, firstName, email } = req.body || {};
+  if (!name || !firstName || !email) {
+    return res.status(400).json({ error: "Nom, prénom et email sont requis." });
+  }
+  const cleanEmail = String(email).trim().toLowerCase();
+  const [existing] = await db
+    .select({ id: adminsTable.id })
+    .from(adminsTable)
+    .where(sql`lower(${adminsTable.email}) = ${cleanEmail}`);
+  if (existing) {
+    return res.status(409).json({ error: "Cet email est déjà utilisé." });
+  }
+  const password = generateRandomPassword();
+  const passwordHash = await hashPassword(password);
+  const [created] = await db
+    .insert(adminsTable)
+    .values({ email: cleanEmail, passwordHash, name: String(name).trim(), firstName: String(firstName).trim(), role: "gestionnaire" })
+    .returning({ id: adminsTable.id, name: adminsTable.name, firstName: adminsTable.firstName, email: adminsTable.email });
+  const adminUrl = (process.env.ADMIN_BASE_URL || "https://admin.no-stress.net").replace(/\/+$/, "");
+  sendManagerCredentialsEmail({
+    to: cleanEmail,
+    name: String(name).trim(),
+    firstName: String(firstName).trim(),
+    email: cleanEmail,
+    password,
+    adminUrl,
+  }).catch((e) => console.error("[admin] Failed to send manager credentials email:", e));
+  res.status(201).json({ manager: { ...created, id: String(created.id) } });
+});
+
+router.post("/admin/managers/:id/reset-password", requireSuperAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(404).json({ error: "Gestionnaire introuvable." });
+  const [manager] = await db
+    .select()
+    .from(adminsTable)
+    .where(and(eq(adminsTable.id, id), eq(adminsTable.role, "gestionnaire")));
+  if (!manager) return res.status(404).json({ error: "Gestionnaire introuvable." });
+  const password = generateRandomPassword();
+  const passwordHash = await hashPassword(password);
+  await db.update(adminsTable).set({ passwordHash }).where(eq(adminsTable.id, id));
+  sendManagerPasswordResetEmail({
+    to: manager.email,
+    name: manager.name,
+    firstName: manager.firstName ?? "",
+    password,
+  }).catch((e) => console.error("[admin] Failed to send manager password reset email:", e));
+  res.json({ message: "Mot de passe réinitialisé et envoyé par email au gestionnaire." });
+});
+
+router.delete("/admin/managers/:id", requireSuperAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(404).json({ error: "Gestionnaire introuvable." });
+  const [deleted] = await db
+    .delete(adminsTable)
+    .where(and(eq(adminsTable.id, id), eq(adminsTable.role, "gestionnaire")))
+    .returning({ id: adminsTable.id, email: adminsTable.email });
+  if (!deleted) return res.status(404).json({ error: "Gestionnaire introuvable." });
+  res.json({ message: "Compte gestionnaire supprimé.", deleted: { id: String(deleted.id), email: deleted.email } });
+});
+
+export { requireAdmin, requireSuperAdmin };
 export default router;

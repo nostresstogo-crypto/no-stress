@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { api, type Partner } from "@/lib/api";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
@@ -108,6 +109,8 @@ function SubscriptionBadge({ partner }: { partner: Partner }) {
 }
 
 export default function Partners() {
+  const { admin } = useAuth();
+  const isSuperAdmin = admin?.role === "superadmin";
   const [location] = useLocation();
   const urlStatus = new URLSearchParams(location.split("?")[1] || "").get("status") || "";
 
@@ -337,15 +340,17 @@ export default function Partners() {
                             </Button>
                           </>
                         )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-destructive border-destructive/30 hover:bg-destructive/10 h-7 text-xs gap-1"
-                          onClick={() => { setSelected(partner); setDeletePartnerOpen(true); }}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                          Supprimer
-                        </Button>
+                        {isSuperAdmin && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive border-destructive/30 hover:bg-destructive/10 h-7 text-xs gap-1"
+                            onClick={() => { setSelected(partner); setDeletePartnerOpen(true); }}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            Supprimer
+                          </Button>
+                        )}
                         <Button
                           size="sm"
                           variant="ghost"

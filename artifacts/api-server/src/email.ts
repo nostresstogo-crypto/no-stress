@@ -815,3 +815,65 @@ export async function sendReportToAdmin(opts: {
     `,
   });
 }
+
+export async function sendManagerCredentialsEmail({
+  to, name, firstName, email, password, adminUrl,
+}: { to: string; name: string; firstName: string; email: string; password: string; adminUrl: string }) {
+  const safeName = escapeHtml(`${firstName} ${name}`);
+  const safeEmail = escapeHtml(email);
+  const safePassword = escapeHtml(password);
+  await sendMail({
+    to,
+    subject: "Vos accès au panneau d'administration NoStress",
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml("Bienvenue sur l'administration NoStress")}
+        <p style="color:#c8c8d8;line-height:1.6;margin:0 0 16px;">
+          Bonjour <strong style="color:#fff;">${safeName}</strong>,<br><br>
+          Un compte <strong style="color:#7c6af7;">Gestionnaire</strong> a été créé pour vous sur le panneau d'administration NoStress. Voici vos identifiants de connexion.
+        </p>
+        <div style="background:#1a1c2e;border-radius:12px;padding:20px;margin:16px 0;">
+          <div style="margin-bottom:14px;">
+            <p style="margin:0 0 4px;font-size:12px;color:#7c6af7;text-transform:uppercase;letter-spacing:0.05em;">Email</p>
+            <p style="margin:0;font-size:15px;color:#e8e8f0;">${safeEmail}</p>
+          </div>
+          <div>
+            <p style="margin:0 0 4px;font-size:12px;color:#7c6af7;text-transform:uppercase;letter-spacing:0.05em;">Mot de passe temporaire</p>
+            <p style="margin:0;font-family:monospace;font-size:16px;color:#fff;background:#0d0f1a;padding:8px 12px;border-radius:8px;display:inline-block;letter-spacing:0.05em;">${safePassword}</p>
+          </div>
+        </div>
+        <p style="color:#c8c8d8;font-size:13px;margin:0 0 20px;">Nous vous recommandons de changer votre mot de passe dès votre première connexion depuis votre profil.</p>
+        <a href="${adminUrl}" style="display:inline-block;background:#7c6af7;color:#fff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">
+          Accéder à l'administration
+        </a>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}
+
+export async function sendManagerPasswordResetEmail({
+  to, name, firstName, password,
+}: { to: string; name: string; firstName: string; password: string }) {
+  const safeName = escapeHtml(`${firstName} ${name}`.trim());
+  const safePassword = escapeHtml(password);
+  await sendMail({
+    to,
+    subject: "Réinitialisation de votre mot de passe — NoStress Admin",
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml("Réinitialisation de mot de passe")}
+        <p style="color:#c8c8d8;line-height:1.6;margin:0 0 16px;">
+          Bonjour <strong style="color:#fff;">${safeName}</strong>,<br><br>
+          Un nouveau mot de passe a été généré pour votre compte gestionnaire NoStress.
+        </p>
+        <div style="background:#1a1c2e;border-radius:12px;padding:20px;margin:16px 0;">
+          <p style="margin:0 0 4px;font-size:12px;color:#7c6af7;text-transform:uppercase;letter-spacing:0.05em;">Nouveau mot de passe</p>
+          <p style="margin:0;font-family:monospace;font-size:16px;color:#fff;background:#0d0f1a;padding:8px 12px;border-radius:8px;display:inline-block;letter-spacing:0.05em;">${safePassword}</p>
+        </div>
+        <p style="color:#c8c8d8;font-size:13px;margin:0 0 20px;">Connectez-vous et changez ce mot de passe immédiatement depuis votre profil.</p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}

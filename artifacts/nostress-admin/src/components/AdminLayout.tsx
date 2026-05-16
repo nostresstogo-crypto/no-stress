@@ -16,16 +16,26 @@ import {
   MapPin,
   UserCog,
   Settings,
+  UsersRound,
 } from "lucide-react";
 
-const navItems = [
+const superadminNavItems = [
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { href: "/partenaires", label: "Partenaires", icon: Users },
   { href: "/lieux", label: "Lieux", icon: MapPin },
   { href: "/publications", label: "Publications", icon: FileText },
   { href: "/suppressions", label: "Suppressions de compte", icon: Trash2 },
   { href: "/statistiques", label: "Statistiques", icon: BarChart2 },
+  { href: "/gestionnaires", label: "Gestionnaires", icon: UsersRound },
   { href: "/parametres", label: "Paramètres", icon: Settings },
+  { href: "/profil", label: "Mon profil", icon: UserCog },
+];
+
+const gestionnaireNavItems = [
+  { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
+  { href: "/partenaires", label: "Partenaires", icon: Users },
+  { href: "/lieux", label: "Lieux", icon: MapPin },
+  { href: "/publications", label: "Publications", icon: FileText },
   { href: "/profil", label: "Mon profil", icon: UserCog },
 ];
 
@@ -35,12 +45,15 @@ interface AdminLayoutProps {
 
 interface SidebarContentProps {
   location: string;
-  admin: { name?: string; email?: string } | null;
+  admin: { name?: string; email?: string; role?: string } | null;
   logout: () => void;
   onNavigate?: () => void;
 }
 
 function SidebarContent({ location, admin, logout, onNavigate }: SidebarContentProps) {
+  const isSuperAdmin = admin?.role === "superadmin";
+  const navItems = isSuperAdmin ? superadminNavItems : gestionnaireNavItems;
+
   return (
     <div className="h-full flex flex-col bg-[hsl(var(--sidebar))]">
       <div className="p-6 border-b border-[hsl(var(--sidebar-border))]">
@@ -49,7 +62,7 @@ function SidebarContent({ location, admin, logout, onNavigate }: SidebarContentP
           <span className="text-lg font-bold text-foreground">NoStress</span>
         </div>
         <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-          Panneau Administrateur
+          {isSuperAdmin ? "Super Administrateur" : "Gestionnaire"}
         </span>
       </div>
 

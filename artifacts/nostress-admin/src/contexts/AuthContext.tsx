@@ -4,7 +4,9 @@ import { api, getAdminToken, setAdminSession, setLogoutCallback } from "@/lib/ap
 interface Admin {
   id: string;
   name: string;
+  firstName?: string | null;
   email: string;
+  role: "superadmin" | "gestionnaire";
 }
 
 interface AuthContextType {
@@ -31,7 +33,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAdmin({
           id: res.admin.adminId,
           name: res.admin.name,
+          firstName: res.admin.firstName,
           email: res.admin.email,
+          role: (res.admin.role as "superadmin" | "gestionnaire") ?? "superadmin",
         });
       })
       .catch(() => {
@@ -43,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, password: string) => {
     const res = await api.admin.login(email, password);
     setAdminSession(res.token, res.refreshToken);
-    setAdmin(res.admin);
+    setAdmin({ ...res.admin, role: (res.admin.role as "superadmin" | "gestionnaire") ?? "superadmin" });
   };
 
   const logout = async () => {

@@ -111,6 +111,8 @@ export const adminsTable = pgTable("admins", {
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   name: text("name").notNull(),
+  firstName: text("first_name"),
+  role: text("role").notNull().default("superadmin"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

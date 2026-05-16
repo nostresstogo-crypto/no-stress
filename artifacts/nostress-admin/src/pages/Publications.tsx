@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { api, type PartnerEvent } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +64,8 @@ function formatDateTime(iso: string) {
 }
 
 export default function Publications() {
+  const { admin } = useAuth();
+  const isSuperAdmin = admin?.role === "superadmin";
   const [events, setEvents] = useState<PartnerEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -320,15 +323,17 @@ export default function Publications() {
                               Rejeter
                             </Button>
                           )}
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-destructive border-destructive/30 hover:bg-destructive/10 h-7 text-xs gap-1"
-                            onClick={() => { setSelected(ev); setDeleteOpen(true); }}
-                          >
-                            <Trash2 className="w-3 h-3" />
-                            Supprimer
-                          </Button>
+                          {isSuperAdmin && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-destructive border-destructive/30 hover:bg-destructive/10 h-7 text-xs gap-1"
+                              onClick={() => { setSelected(ev); setDeleteOpen(true); }}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              Supprimer
+                            </Button>
+                          )}
                         </div>
                       </td>
                     </tr>

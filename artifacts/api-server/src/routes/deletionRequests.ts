@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and, sql } from "drizzle-orm";
 import { db, deletionRequestsTable, usersTable, partnersTable, refreshTokensTable } from "@workspace/db";
-import { requireAdmin } from "./admin.js";
+import { requireAdmin, requireSuperAdmin } from "./admin.js";
 import {
   sendDeletionRequestAdminNotification,
   sendDeletionConfirmedEmail,
@@ -84,7 +84,7 @@ router.get("/admin/deletion-requests", requireAdmin, async (req, res) => {
   res.json(rows.map(serialize));
 });
 
-router.post("/admin/deletion-requests/:id/process", requireAdmin, async (req, res) => {
+router.post("/admin/deletion-requests/:id/process", requireSuperAdmin, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Demande introuvable." });
   const [request] = await db
@@ -105,7 +105,7 @@ router.post("/admin/deletion-requests/:id/process", requireAdmin, async (req, re
  *  - Révocation explicite des refresh_tokens (pas de FK).
  *  - Email de confirmation au demandeur (best-effort, hors transaction).
  */
-router.post("/admin/deletion-requests/:id/delete-account", requireAdmin, async (req, res) => {
+router.post("/admin/deletion-requests/:id/delete-account", requireSuperAdmin, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Demande introuvable." });
 

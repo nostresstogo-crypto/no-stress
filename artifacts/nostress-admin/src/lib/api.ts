@@ -89,7 +89,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const api = {
   admin: {
     login: (email: string, password: string) =>
-      request<{ token: string; refreshToken: string; admin: { id: string; name: string; email: string } }>("/admin/login", {
+      request<{ token: string; refreshToken: string; admin: { id: string; name: string; firstName?: string | null; email: string; role: string } }>("/admin/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       }),
@@ -100,7 +100,7 @@ export const api = {
         body: JSON.stringify({ refreshToken }),
       });
     },
-    me: () => request<{ admin: { adminId: string; name: string; email: string } }>("/admin/me"),
+    me: () => request<{ admin: { adminId: string; name: string; firstName?: string | null; email: string; role: string } }>("/admin/me"),
     changePassword: (currentPassword: string, newPassword: string) =>
       request<{ message: string }>("/admin/change-password", {
         method: "POST",
@@ -172,6 +172,15 @@ export const api = {
         { method: "POST" },
       ),
   },
+  managers: {
+    list: () => request<{ managers: Manager[] }>("/admin/managers"),
+    create: (data: { name: string; firstName: string; email: string }) =>
+      request<{ manager: Manager }>("/admin/managers", { method: "POST", body: JSON.stringify(data) }),
+    resetPassword: (id: string) =>
+      request<{ message: string }>(`/admin/managers/${id}/reset-password`, { method: "POST" }),
+    delete: (id: string) =>
+      request<{ message: string }>(`/admin/managers/${id}`, { method: "DELETE" }),
+  },
   config: {
     // Countries
     listCountries: () => request<{ countries: ConfigCountry[] }>("/config/countries"),
@@ -208,6 +217,14 @@ export const api = {
       request<{ deleted: ConfigVenueType }>(`/admin/config/venue-types/${id}`, { method: "DELETE" }),
   },
 };
+
+export interface Manager {
+  id: string;
+  name: string;
+  firstName: string | null;
+  email: string;
+  createdAt: string;
+}
 
 export interface Partner {
   id: string;

@@ -69,7 +69,7 @@ async function handlePartnerForgotPassword(req: any, res: any) {
   }
   return res.status(200).json(generic);
 }
-import { requireAdmin } from "./admin.js";
+import { requireAdmin, requireSuperAdmin } from "./admin.js";
 import { computeNewSubscriptionUntil, subscriptionInfo } from "../lib/subscriptions.js";
 
 const router: IRouter = Router();
@@ -549,7 +549,7 @@ router.get("/admin/events", requireAdmin, async (_req: any, res) => {
   );
 });
 
-router.delete("/admin/events/:id", requireAdmin, async (req: any, res) => {
+router.delete("/admin/events/:id", requireSuperAdmin, async (req: any, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Publication introuvable." });
   const [deleted] = await db
@@ -571,7 +571,7 @@ router.delete("/admin/events/:id", requireAdmin, async (req: any, res) => {
   res.json({ message: "Publication supprimée et avertissement envoyé au partenaire.", notification: autoMessage, deleted: { ...deleted, id: String(deleted.id) } });
 });
 
-router.delete("/admin/partners/:id", requireAdmin, async (req: any, res) => {
+router.delete("/admin/partners/:id", requireSuperAdmin, async (req: any, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Partenaire introuvable." });
   const eventsRemoved = await db.select({ count: sql<number>`count(*)::int` }).from(eventsTable).where(eq(eventsTable.partnerId, id));

@@ -13,10 +13,11 @@ import Venues from "@/pages/Venues";
 import Statistics from "@/pages/Statistics";
 import Profile from "@/pages/Profile";
 import Settings from "@/pages/Settings";
+import Managers from "@/pages/Managers";
 
 const queryClient = new QueryClient();
 
-function ProtectedRoute({ component: Component }: { component: React.ComponentType }) {
+function ProtectedRoute({ component: Component, superAdminOnly = false }: { component: React.ComponentType; superAdminOnly?: boolean }) {
   const { admin, isLoading } = useAuth();
 
   if (isLoading) {
@@ -29,6 +30,10 @@ function ProtectedRoute({ component: Component }: { component: React.ComponentTy
 
   if (!admin) {
     return <Redirect to="/login" />;
+  }
+
+  if (superAdminOnly && admin.role !== "superadmin") {
+    return <Redirect to="/dashboard" />;
   }
 
   return <Component />;
@@ -55,13 +60,16 @@ function Router() {
         <ProtectedRoute component={Venues} />
       </Route>
       <Route path="/suppressions">
-        <ProtectedRoute component={DeletionRequests} />
+        <ProtectedRoute component={DeletionRequests} superAdminOnly />
       </Route>
       <Route path="/statistiques">
-        <ProtectedRoute component={Statistics} />
+        <ProtectedRoute component={Statistics} superAdminOnly />
+      </Route>
+      <Route path="/gestionnaires">
+        <ProtectedRoute component={Managers} superAdminOnly />
       </Route>
       <Route path="/parametres">
-        <ProtectedRoute component={Settings} />
+        <ProtectedRoute component={Settings} superAdminOnly />
       </Route>
       <Route path="/profil">
         <ProtectedRoute component={Profile} />

@@ -107,6 +107,20 @@ export default function Profile() {
                   {admin?.email || "—"}
                 </div>
               </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Rôle</Label>
+                <div className="mt-1">
+                  {admin?.role === "superadmin" ? (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary/15 text-primary border border-primary/30">
+                      <Shield className="w-3 h-3" /> Super Administrateur
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30">
+                      <UserIcon className="w-3 h-3" /> Gestionnaire
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
