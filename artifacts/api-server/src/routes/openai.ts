@@ -134,7 +134,17 @@ router.post("/openai/chat", async (req, res) => {
       }
     }
 
-    res.write(`data: ${JSON.stringify({ content: "\n\nVous avez d'autres questions ? N'hésitez pas, posez toutes vos questions, je suis là pour vous aider 😊" })}\n\n`);
+    const closingPhrases = [
+      "Vous avez d'autres questions ? N'hésitez pas, posez toutes vos questions, je suis là pour vous aider 😊",
+      "Une autre question ? Je suis tout à votre disposition, n'hésitez pas à me solliciter ! 😊",
+      "N'hésitez pas à me poser d'autres questions, je suis là pour vous accompagner 😊",
+      "Vous souhaitez en savoir plus ? Posez-moi toutes vos questions, c'est avec plaisir que je vous réponds ! 😊",
+      "D'autres questions en tête ? Je suis là, n'hésitez surtout pas ! 😊",
+      "Je reste disponible pour toutes vos questions, n'hésitez pas à continuer notre échange 😊",
+      "Curieux d'en savoir plus ? Posez toutes vos questions, je suis là pour vous guider 😊",
+    ];
+    const phrase = closingPhrases[Math.floor(Math.random() * closingPhrases.length)];
+    res.write(`data: ${JSON.stringify({ content: `\n\n${phrase}` })}\n\n`);
     res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
     res.end();
   } catch (err: any) {
