@@ -343,13 +343,6 @@ export default function HomeScreen() {
               </View>
             )}
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => safePush("/ai-assistant")}
-            style={styles.filterBtn}
-            accessibilityLabel="Assistant IA"
-          >
-            <Ionicons name="sparkles" size={20} color={C.gold} />
-          </TouchableOpacity>
         </View>
 
         {/* Categories */}

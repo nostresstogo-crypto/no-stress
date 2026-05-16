@@ -1,17 +1,21 @@
 import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import React from "react";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useEffect, useRef } from "react";
 import {
+  Animated,
   Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SymbolView } from "expo-symbols";
 import type { ColorPalette } from "@/constants/colors";
 import { useApp, useT, useColors } from "@/context/AppContext";
+import { safePush } from "@/lib/navigation";
 
 /* ── Tab icon with active glow indicator ──────────────────────────────── */
 function TabIcon({
@@ -157,6 +161,80 @@ const makeCenterBtnStyles = (C: ColorPalette) =>
     },
   });
 
+/* ── AI Floating Button ──────────────────────────────────────────────── */
+function AIFloatingButton() {
+  const C = useColors();
+  const insets = useSafeAreaInsets();
+  const pulse = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const anim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.18, duration: 1200, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 1200, useNativeDriver: true }),
+      ])
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [pulse]);
+
+  const TAB_H = Platform.OS === "ios" ? 82 : 64;
+  const bottom = insets.bottom + TAB_H + 12;
+
+  return (
+    <TouchableOpacity
+      onPress={() => safePush("/ai-assistant")}
+      activeOpacity={0.82}
+      accessibilityLabel="Assistant IA"
+      style={[fabStyles.wrap, { bottom, right: 18 }]}
+    >
+      <Animated.View
+        style={[fabStyles.glow, { backgroundColor: C.lavender + "28", transform: [{ scale: pulse }] }]}
+        pointerEvents="none"
+      />
+      <LinearGradient
+        colors={["#6A5AC8", "#B5A8F0"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={fabStyles.circle}
+      >
+        <Text style={fabStyles.emoji}>🤖</Text>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+}
+
+const fabStyles = StyleSheet.create({
+  wrap: {
+    position: "absolute",
+    zIndex: 9000,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  glow: {
+    position: "absolute",
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+  },
+  circle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#7A6BD8",
+    shadowOpacity: 0.65,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 12,
+  },
+  emoji: {
+    fontSize: 26,
+    lineHeight: 30,
+  },
+});
+
 /* ── Tab layout ─────────────────────────────────────────────────────────── */
 function ClassicTabLayout() {
   const t = useT();
@@ -166,6 +244,7 @@ function ClassicTabLayout() {
   const isWeb = Platform.OS === "web";
 
   return (
+    <View style={{ flex: 1 }}>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -277,6 +356,8 @@ function ClassicTabLayout() {
       />
 
     </Tabs>
+    <AIFloatingButton />
+    </View>
   );
 }
 
