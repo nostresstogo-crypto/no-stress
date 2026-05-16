@@ -197,7 +197,7 @@ const baseTranslations = {
     onboarding2Title: "Vivez l'ambiance",
     onboarding2Sub: "Plongez dans les meilleurs concerts, festivals et soirées. L'énergie de la scène à portée de main.",
     onboarding3Title: "Propulsé par l'IA",
-    onboarding3Sub: "NoStress analyse vos goûts et votre ville pour vous recommander les événements qui vous correspondent vraiment.",
+    onboarding3Sub: "Retrouvez-les plus facilement — vous n'avez qu'à demander à l'IA.",
 
     // Account deletion
     deleteAccount: "Supprimer mon compte",
@@ -422,7 +422,7 @@ const baseTranslations = {
     onboarding2Title: "Feel the vibe",
     onboarding2Sub: "Dive into the best concerts, festivals and parties. The stage energy at your fingertips.",
     onboarding3Title: "Powered by AI",
-    onboarding3Sub: "NoStress analyses your tastes and city to recommend events that truly match you.",
+    onboarding3Sub: "Find them more easily — just ask the AI.",
 
     // Account deletion
     deleteAccount: "Delete my account",
