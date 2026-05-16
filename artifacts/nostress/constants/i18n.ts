@@ -195,8 +195,8 @@ const baseTranslations = {
     onboarding1Sub: "L'application des événements pan-africains — concerts, festivals, soirées et bien plus.",
     onboarding2Title: "Vivez l'ambiance",
     onboarding2Sub: "Plongez dans les meilleurs concerts, festivals et soirées. L'énergie de la scène à portée de main.",
-    onboarding3Title: "Billets en un clic",
-    onboarding3Sub: "Réservez vos places instantanément, recevez votre QR code et entrez sans stress.",
+    onboarding3Title: "Propulsé par l'IA",
+    onboarding3Sub: "NoStress analyse vos goûts et votre ville pour vous recommander les événements qui vous correspondent vraiment.",
 
     // Account deletion
     deleteAccount: "Supprimer mon compte",
@@ -419,8 +419,8 @@ const baseTranslations = {
     onboarding1Sub: "The pan-African events app — concerts, festivals, nightlife and so much more.",
     onboarding2Title: "Feel the vibe",
     onboarding2Sub: "Dive into the best concerts, festivals and parties. The stage energy at your fingertips.",
-    onboarding3Title: "Tickets in one tap",
-    onboarding3Sub: "Book your spots instantly, get your QR code and enter stress-free.",
+    onboarding3Title: "Powered by AI",
+    onboarding3Sub: "NoStress analyses your tastes and city to recommend events that truly match you.",
 
     // Account deletion
     deleteAccount: "Delete my account",
