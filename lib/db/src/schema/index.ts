@@ -141,6 +141,8 @@ export const eventsTable = pgTable("events", {
   ticketTypes: jsonb("ticket_types"),
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
+  partnerReminder24hSentAt: timestamp("partner_reminder_24h_sent_at"),
+  partnerReminder2hSentAt: timestamp("partner_reminder_2h_sent_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -194,6 +196,8 @@ export const favoritesTable = pgTable("favorites", {
   userId: integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
   itemType: text("item_type").notNull(),
   itemId: integer("item_id").notNull(),
+  reminder24hSentAt: timestamp("reminder_24h_sent_at"),
+  reminder2hSentAt: timestamp("reminder_2h_sent_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (t) => ({
   uniqUserItem: uniqueIndex("favorites_user_item_unique").on(t.userId, t.itemType, t.itemId),

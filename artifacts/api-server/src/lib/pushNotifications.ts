@@ -340,7 +340,70 @@ export async function notifyPartnerSubscriptionExpiring(input: {
   logger.info({ partnerId: input.partnerId, daysRemaining }, "[push] subscription expiry warning sent");
 }
 
-/* ─── 6. Validation/rejet pour un partenaire ─────────────────────────── */
+/* ─── 6. Rappel avant événement → users ayant mis en favori ─────────── */
+
+export async function notifyEventReminderUser(input: {
+  event: { id: number; title: string | null; titleFr: string | null; date: string; time: string | null; city: string | null };
+  type: "24h" | "2h";
+  userIds: number[];
+}): Promise<void> {
+  if (input.userIds.length === 0) return;
+  try {
+    const recipients = await tokensForUserIds(input.userIds);
+    if (recipients.length === 0) return;
+
+    const { event, type } = input;
+    const timeLabel = event.time ? ` à ${event.time}` : "";
+    const messages = buildMessages(recipients, (lang) => ({
+      title:
+        lang === "fr"
+          ? type === "24h"
+            ? "🎉 Événement dans 24h"
+            : "⏰ Événement dans 2h"
+          : type === "24h"
+            ? "🎉 Event in 24 hours"
+            : "⏰ Event in 2 hours",
+      body:
+        lang === "fr"
+          ? `${event.titleFr || event.title} — ${event.date}${timeLabel}.`
+          : `${event.title || event.titleFr} — ${event.date}${timeLabel}.`,
+      channelId: "event_reminders",
+      data: { type: `event_reminder_${type}`, eventId: String(event.id) },
+    }));
+    await sendExpoPush(messages);
+    logger.info({ eventId: event.id, type, count: messages.length }, "[push] event reminder user sent");
+  } catch (err) {
+    logger.warn({ err, eventId: input.event.id }, "[push] notifyEventReminderUser failed");
+  }
+}
+
+/* ─── 7. Rappel avant événement → partenaire (son propre event) ──────── */
+
+export async function notifyEventReminderPartner(input: {
+  event: { id: number; title: string | null; titleFr: string | null; date: string; time: string | null; partnerId: number | null };
+  type: "24h" | "2h";
+}): Promise<void> {
+  if (!input.event.partnerId) return;
+  try {
+    const recipients = await tokensForPartnerId(input.event.partnerId);
+    if (recipients.length === 0) return;
+
+    const { event, type } = input;
+    const timeLabel = event.time ? ` à ${event.time}` : "";
+    const messages = buildMessages(recipients, () => ({
+      title: type === "24h" ? "🎉 Votre événement est dans 24h" : "⏰ Votre événement est dans 2h",
+      body: `${event.titleFr || event.title} — ${event.date}${timeLabel}. Tout est prêt ?`,
+      channelId: "event_reminders",
+      data: { type: `partner_event_reminder_${type}`, eventId: String(event.id) },
+    }));
+    await sendExpoPush(messages);
+    logger.info({ eventId: event.id, type, partnerId: event.partnerId }, "[push] event reminder partner sent");
+  } catch (err) {
+    logger.warn({ err, eventId: input.event.id }, "[push] notifyEventReminderPartner failed");
+  }
+}
+
+/* ─── 8. Validation/rejet pour un partenaire ─────────────────────────── */
 
 export async function notifyPartnerStatus(input: {
   partnerId: number;
