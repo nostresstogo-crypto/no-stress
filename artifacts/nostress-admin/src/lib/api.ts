@@ -442,4 +442,17 @@ export interface AdminReview {
   status: "pending" | "approved" | "rejected";
   adminId: number | null;
   createdAt: string;
+  authorName: string | null;
+  authorEmail: string | null;
+  authorPhone: string | null;
+  authorStatus: string | null;
+  authorCreatedAt: string | null;
+  authorBusinessName: string | null;
+  itemTitle: string | null;
+  itemCity: string | null;
+  itemDate: string | null;
+  itemStatus: string | null;
+  itemPartnerId: number | null;
+  itemImageUrl: string | null;
+  itemVenueType: string | null;
 }

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, sql, and, desc, ilike, or } from "drizzle-orm";
+import { eq, sql, and, desc, ilike, or, inArray } from "drizzle-orm";
 import { db, adminsTable, partnersTable, eventsTable, deletionRequestsTable, usersTable, venuesTable, reviewsTable } from "@workspace/db";
 import {
   hashPassword,
@@ -539,7 +539,112 @@ router.get("/admin/reviews", requireAdmin, async (req, res) => {
     .orderBy(desc(reviewsTable.createdAt))
     .limit(limit)
     .offset(offset);
-  res.json({ reviews: rows.map((r) => ({ ...r, id: String(r.id) })), total, page, limit });
+
+  // Collect IDs for batch enrichment
+  const userIds = [...new Set(rows.filter((r) => r.userId).map((r) => r.userId!))];
+  const partnerIds = [...new Set(rows.filter((r) => r.partnerId && !r.userId).map((r) => r.partnerId!))];
+  const eventIds = [...new Set(rows.filter((r) => r.itemType === "event").map((r) => r.itemId))];
+  const venueIds = [...new Set(rows.filter((r) => r.itemType === "venue").map((r) => r.itemId))];
+
+  const [users, partners, events, venues] = await Promise.all([
+    userIds.length
+      ? db.select({ id: usersTable.id, name: usersTable.name, firstName: usersTable.firstName, lastName: usersTable.lastName, email: usersTable.email, phone: usersTable.phone, status: usersTable.status, createdAt: usersTable.createdAt }).from(usersTable).where(inArray(usersTable.id, userIds))
+      : [],
+    partnerIds.length
+      ? db.select({ id: partnersTable.id, contactName: partnersTable.contactName, businessName: partnersTable.businessName, email: partnersTable.email, phone: partnersTable.phone, status: partnersTable.status, createdAt: partnersTable.createdAt }).from(partnersTable).where(inArray(partnersTable.id, partnerIds))
+      : [],
+    eventIds.length
+      ? db.select({ id: eventsTable.id, title: eventsTable.title, titleFr: eventsTable.titleFr, city: eventsTable.city, date: eventsTable.date, status: eventsTable.status, partnerId: eventsTable.partnerId, imageUrl: eventsTable.imageUrl }).from(eventsTable).where(inArray(eventsTable.id, eventIds))
+      : [],
+    venueIds.length
+      ? db.select({ id: venuesTable.id, name: venuesTable.name, city: venuesTable.city, type: venuesTable.type, status: venuesTable.status, partnerId: venuesTable.partnerId, imageUrl: venuesTable.imageUrl }).from(venuesTable).where(inArray(venuesTable.id, venueIds))
+      : [],
+  ]);
+
+  const userMap = new Map(users.map((u) => [u.id, u]));
+  const partnerMap = new Map(partners.map((p) => [p.id, p]));
+  const eventMap = new Map(events.map((e) => [e.id, e]));
+  const venueMap = new Map(venues.map((v) => [v.id, v]));
+
+  const enriched = rows.map((r) => {
+    let authorName: string | null = null;
+    let authorEmail: string | null = null;
+    let authorPhone: string | null = null;
+    let authorStatus: string | null = null;
+    let authorCreatedAt: Date | null = null;
+    let authorBusinessName: string | null = null;
+
+    if (r.userId) {
+      const u = userMap.get(r.userId);
+      if (u) {
+        authorName = [u.firstName, u.lastName].filter(Boolean).join(" ") || u.name || null;
+        authorEmail = u.email;
+        authorPhone = u.phone ?? null;
+        authorStatus = u.status;
+        authorCreatedAt = u.createdAt;
+      }
+    } else if (r.partnerId) {
+      const p = partnerMap.get(r.partnerId);
+      if (p) {
+        authorName = p.contactName;
+        authorBusinessName = p.businessName;
+        authorEmail = p.email;
+        authorPhone = p.phone ?? null;
+        authorStatus = p.status;
+        authorCreatedAt = p.createdAt;
+      }
+    }
+
+    let itemTitle: string | null = null;
+    let itemCity: string | null = null;
+    let itemDate: string | null = null;
+    let itemStatus: string | null = null;
+    let itemPartnerId: number | null = null;
+    let itemImageUrl: string | null = null;
+    let itemVenueType: string | null = null;
+
+    if (r.itemType === "event") {
+      const e = eventMap.get(r.itemId);
+      if (e) {
+        itemTitle = e.titleFr || e.title;
+        itemCity = e.city ?? null;
+        itemDate = e.date;
+        itemStatus = e.status;
+        itemPartnerId = e.partnerId ?? null;
+        itemImageUrl = e.imageUrl ?? null;
+      }
+    } else if (r.itemType === "venue") {
+      const v = venueMap.get(r.itemId);
+      if (v) {
+        itemTitle = v.name;
+        itemCity = v.city;
+        itemStatus = v.status;
+        itemPartnerId = v.partnerId ?? null;
+        itemImageUrl = v.imageUrl ?? null;
+        itemVenueType = v.type ?? null;
+      }
+    }
+
+    return {
+      ...r,
+      id: String(r.id),
+      authorName,
+      authorEmail,
+      authorPhone,
+      authorStatus,
+      authorCreatedAt,
+      authorBusinessName,
+      itemTitle,
+      itemCity,
+      itemDate,
+      itemStatus,
+      itemPartnerId,
+      itemImageUrl,
+      itemVenueType,
+    };
+  });
+
+  res.json({ reviews: enriched, total, page, limit });
 });
 
 router.put("/admin/reviews/:id/approve", requireAdmin, async (req: any, res) => {
