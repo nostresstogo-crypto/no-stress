@@ -667,7 +667,7 @@ export default function Partners() {
             </div>
             <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
               <p className="text-xs text-primary/80">
-                L'abonnement sera prolongé de <strong>{extendMonths} mois</strong> à compter de{" "}
+                L'abonnement sera prolongé de <strong>{extendMonths} mois</strong> jusqu'au{" "}
                 <strong>
                   {(() => {
                     const until = selected?.subscription?.subscriptionUntil || selected?.subscriptionUntil || null;
