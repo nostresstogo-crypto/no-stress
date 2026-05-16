@@ -497,7 +497,7 @@ export default function EventDetailScreen() {
         </View>
 
         {/* ── Avis & Notes ──────────────────────────────────── */}
-        {!!user && <View style={s.section}>
+        <View style={s.section}>
           <View style={s.sectionHeader}>
             <Text style={[s.sectionTitle, { color: C.text }]}>
               {lang === "fr" ? "Avis & Notes" : "Reviews"}
@@ -583,7 +583,7 @@ export default function EventDetailScreen() {
               )}
             </>
           )}
-        </View>}
+        </View>
 
         {/* Ticket types section hidden by product decision (ticketing disabled). */}
         {false && event.ticketTypes && event.ticketTypes.length > 0 && (

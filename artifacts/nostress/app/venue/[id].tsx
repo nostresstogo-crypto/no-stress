@@ -540,7 +540,7 @@ export default function VenueDetailScreen() {
           ) : null}
 
           {/* ── Avis & Notes ─────────────────────────────── */}
-          {isApi && !!user && (
+          {isApi && (
             <View style={styles.section}>
               <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <Text style={styles.sectionTitle}>
