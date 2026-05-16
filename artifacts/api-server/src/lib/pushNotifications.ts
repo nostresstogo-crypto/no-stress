@@ -417,6 +417,80 @@ export async function notifyEventReminderPartners(input: {
   }
 }
 
+/* ─── 8b. Avis modéré → auteur de l'avis ───────────────────────────── */
+
+export async function notifyReviewModerationUser(input: {
+  userId: number | null;
+  partnerId: number | null;
+  status: "approved" | "rejected";
+  itemType: "event" | "venue";
+  itemId: number;
+}): Promise<void> {
+  try {
+    let recipients: Recipient[] = [];
+    if (input.userId != null) {
+      recipients = await tokensForUserIds([input.userId]);
+    } else if (input.partnerId != null) {
+      recipients = await tokensForPartnerId(input.partnerId);
+    }
+    if (recipients.length === 0) return;
+
+    const { status, itemType } = input;
+    const messages = buildMessages(recipients, (lang) => {
+      const item = lang === "fr"
+        ? (itemType === "event" ? "événement" : "lieu")
+        : (itemType === "event" ? "event" : "venue");
+      return {
+        title: status === "approved"
+          ? (lang === "fr" ? "✅ Avis publié" : "✅ Review published")
+          : (lang === "fr" ? "Avis non publié" : "Review not published"),
+        body: status === "approved"
+          ? (lang === "fr" ? `Votre avis sur cet ${item} a été approuvé et est maintenant visible.` : `Your review on this ${item} has been approved and is now visible.`)
+          : (lang === "fr" ? `Votre avis sur cet ${item} n'a pas été publié par notre équipe.` : `Your review on this ${item} was not published by our team.`),
+        channelId: "default",
+        data: { type: "review_moderated", status, itemType, itemId: String(input.itemId) },
+      };
+    });
+    await sendExpoPush(messages);
+    logger.info({ userId: input.userId, partnerId: input.partnerId, status }, "[push] review moderation sent");
+  } catch (err) {
+    logger.warn({ err }, "[push] notifyReviewModerationUser failed");
+  }
+}
+
+/* ─── 8c. Avis approuvé → partenaire propriétaire de l'item ────────── */
+
+export async function notifyPartnerReviewApproved(input: {
+  partnerId: number;
+  itemType: "event" | "venue";
+  itemId: number;
+  rating: number;
+  comment: string | null;
+}): Promise<void> {
+  try {
+    const recipients = await tokensForPartnerId(input.partnerId);
+    if (recipients.length === 0) return;
+
+    const { itemType, rating, comment } = input;
+    const messages = buildMessages(recipients, (lang) => {
+      const item = lang === "fr" ? (itemType === "event" ? "événement" : "lieu") : (itemType === "event" ? "event" : "venue");
+      const snippet = comment ? ` "${comment.slice(0, 60)}${comment.length > 60 ? "…" : ""}"` : "";
+      return {
+        title: lang === "fr" ? `⭐ Nouvel avis sur votre ${item}` : `⭐ New review on your ${item}`,
+        body: lang === "fr"
+          ? `Note ${rating}/5.${snippet}`
+          : `Rating ${rating}/5.${snippet}`,
+        channelId: "default",
+        data: { type: "review_approved", itemType, itemId: String(input.itemId) },
+      };
+    });
+    await sendExpoPush(messages);
+    logger.info({ partnerId: input.partnerId, itemType }, "[push] partner review approved sent");
+  } catch (err) {
+    logger.warn({ err }, "[push] notifyPartnerReviewApproved failed");
+  }
+}
+
 /* ─── 8. Validation/rejet pour un partenaire ─────────────────────────── */
 
 export async function notifyPartnerStatus(input: {

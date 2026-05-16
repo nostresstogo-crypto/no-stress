@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -25,6 +25,7 @@ import { MOCK_VENUES, MOCK_EVENTS } from "@/constants/data";
 import { API_BASE } from "@/lib/apiBase";
 import ReportButton from "@/components/ReportButton";
 import MapPreview from "@/components/MapPreview";
+import ReviewModal from "@/components/ReviewModal";
 
 type Specialty = {
   id: string;
@@ -56,7 +57,7 @@ export default function VenueDetailScreen() {
   const t = useT();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
-  const { lang, user, toggleFavoriteVenue, isFavoriteVenue } = useApp();
+  const { lang, user, authFetch, toggleFavoriteVenue, isFavoriteVenue } = useApp();
   const insets = useSafeAreaInsets();
 
   const [apiVenue, setApiVenue] = useState<Venue | null>(null);
@@ -67,6 +68,8 @@ export default function VenueDetailScreen() {
   const [reviews, setReviews] = useState<any[]>([]);
   const [avgRating, setAvgRating] = useState<number | null>(null);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewSuccess, setReviewSuccess] = useState(false);
 
   const isApi = typeof id === "string" && id.startsWith("api_");
   const apiNumId = isApi ? id.slice(4) : null;
@@ -136,6 +139,17 @@ export default function VenueDetailScreen() {
       .finally(() => { if (!cancelled) setReviewsLoading(false); });
     return () => { cancelled = true; };
   }, [isApi, apiNumId]);
+
+  const refreshReviews = useCallback(() => {
+    if (!apiNumId) return;
+    fetch(`${API_BASE}/reviews?itemType=venue&itemId=${apiNumId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        setReviews(Array.isArray(data?.reviews) ? data.reviews : []);
+        setAvgRating(typeof data?.avgRating === "number" ? data.avgRating : null);
+      })
+      .catch(() => {});
+  }, [apiNumId]);
 
   const { upcomingEvents, pastEvents } = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -566,10 +580,54 @@ export default function VenueDetailScreen() {
                   </View>
                 ))
               )}
+              {!!apiNumId && !!user && (
+                <>
+                  <TouchableOpacity
+                    onPress={() => setReviewModalOpen(true)}
+                    style={{
+                      marginTop: 14,
+                      flexDirection: "row",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 8,
+                      backgroundColor: C.lavender,
+                      borderRadius: 12,
+                      paddingVertical: 12,
+                    }}
+                  >
+                    <Ionicons name="star-outline" size={16} color="#fff" />
+                    <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+                      {lang === "fr" ? "Laisser un avis" : "Leave a review"}
+                    </Text>
+                  </TouchableOpacity>
+                  {reviewSuccess && (
+                    <Text style={{ color: "#22c55e", fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center", marginTop: 8 }}>
+                      {lang === "fr"
+                        ? "Avis envoyé — il sera examiné par notre équipe."
+                        : "Review submitted — it will be reviewed by our team."}
+                    </Text>
+                  )}
+                </>
+              )}
             </View>
           )}
         </View>
       </ScrollView>
+
+      <ReviewModal
+        visible={reviewModalOpen}
+        onClose={() => setReviewModalOpen(false)}
+        itemType="venue"
+        itemId={parseInt(apiNumId!, 10)}
+        lang={lang}
+        authFetch={authFetch}
+        onSuccess={() => {
+          setReviewSuccess(true);
+          refreshReviews();
+          setTimeout(() => setReviewSuccess(false), 5000);
+        }}
+        bottomInset={insets.bottom}
+      />
 
       {/* Modal de zoom plein écran sur les images de spécialités. */}
       <Modal

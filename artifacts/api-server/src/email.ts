@@ -1046,3 +1046,40 @@ export async function sendUserReactivatedEmail(to: string, name: string) {
     `,
   });
 }
+
+export async function sendAdminNewReviewEmail(to: string, review: {
+  id: number;
+  itemType: string;
+  itemId: number;
+  rating: number;
+  comment: string | null;
+  authorType: "user" | "partner";
+  authorId: number;
+}): Promise<void> {
+  const stars = "★".repeat(review.rating) + "☆".repeat(5 - review.rating);
+  const itemLabel = review.itemType === "event" ? "un événement" : "un lieu";
+  await sendMail({
+    to,
+    subject: `[NoStress] Nouvel avis #${review.id} en attente de modération`,
+    html: `
+      <div style="font-family:Arial,sans-serif;background:#1a1b2e;color:#e8e8f0;padding:32px;max-width:600px;margin:0 auto;border-radius:12px;">
+        <h2 style="color:#a78bfa;margin:0 0 20px;">Nouvel avis en attente</h2>
+        <p style="color:#b0b2cc;line-height:1.7;margin:0 0 12px;">
+          Un nouvel avis a été posté sur <strong style="color:#e8e8f0;">${escapeHtml(itemLabel)}</strong> (#${review.itemId}) et attend votre modération.
+        </p>
+        <div style="background:#12132a;border-radius:8px;padding:16px;margin:16px 0;">
+          <p style="margin:0 0 8px;color:#b0b2cc;"><strong style="color:#e8e8f0;">Auteur :</strong> ${review.authorType === "user" ? "Utilisateur" : "Partenaire"} #${review.authorId}</p>
+          <p style="margin:0 0 8px;color:#b0b2cc;"><strong style="color:#e8e8f0;">Note :</strong> <span style="color:#f59e0b;">${escapeHtml(stars)}</span> (${review.rating}/5)</p>
+          ${review.comment
+            ? `<p style="margin:0;color:#b0b2cc;"><strong style="color:#e8e8f0;">Commentaire :</strong> ${escapeHtml(review.comment)}</p>`
+            : `<p style="margin:0;color:#b0b2cc;font-style:italic;">Aucun commentaire.</p>`
+          }
+        </div>
+        <a href="${ADMIN_BASE_URL}/reviews" style="display:inline-block;background:#a78bfa;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;margin-top:8px;">
+          Modérer cet avis →
+        </a>
+        <p style="color:#6b7280;font-size:12px;margin-top:24px;">NoStress Togo · Administration</p>
+      </div>
+    `,
+  });
+}

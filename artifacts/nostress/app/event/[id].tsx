@@ -25,6 +25,7 @@ import { MOCK_EVENTS } from "@/constants/data";
 import { formatDateLocalized } from "@/lib/formatDate";
 import { API_BASE } from "@/lib/apiBase";
 import ReportButton from "@/components/ReportButton";
+import ReviewModal from "@/components/ReviewModal";
 
 const { width: SW, height: SH } = Dimensions.get("window");
 const HERO_H = SH * 0.38;
@@ -34,7 +35,7 @@ export default function EventDetailScreen() {
   const t = useT();
   const C = useColors();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { lang, isFavorite, toggleFavorite, myEvents } = useApp();
+  const { lang, isFavorite, toggleFavorite, myEvents, user, authFetch } = useApp();
   const insets = useSafeAreaInsets();
 
   const [activeIdx, setActiveIdx] = useState(0);
@@ -46,6 +47,8 @@ export default function EventDetailScreen() {
   const [reviews, setReviews] = useState<any[]>([]);
   const [avgRating, setAvgRating] = useState<number | null>(null);
   const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewSuccess, setReviewSuccess] = useState(false);
 
   const carouselRef = useRef<FlatList>(null);
   const lightboxRef = useRef<FlatList>(null);
@@ -85,6 +88,17 @@ export default function EventDetailScreen() {
     },
     []
   );
+
+  const refreshReviews = useCallback(() => {
+    if (!id) return;
+    fetch(`${API_BASE}/reviews?itemType=event&itemId=${id}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        setReviews(Array.isArray(data?.reviews) ? data.reviews : []);
+        setAvgRating(typeof data?.avgRating === "number" ? data.avgRating : null);
+      })
+      .catch(() => {});
+  }, [id]);
 
   const lookupVenueName: string | undefined = apiEvent?.venue || undefined;
   const lookupVenueCity: string | undefined = apiEvent?.city || undefined;
@@ -524,6 +538,35 @@ export default function EventDetailScreen() {
               </View>
             ))
           )}
+          {!!apiEvent && !!user && (
+            <>
+              <TouchableOpacity
+                onPress={() => setReviewModalOpen(true)}
+                style={{
+                  marginTop: 14,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  backgroundColor: C.lavender,
+                  borderRadius: 12,
+                  paddingVertical: 12,
+                }}
+              >
+                <Ionicons name="star-outline" size={16} color="#fff" />
+                <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+                  {lang === "fr" ? "Laisser un avis" : "Leave a review"}
+                </Text>
+              </TouchableOpacity>
+              {reviewSuccess && (
+                <Text style={{ color: "#22c55e", fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center", marginTop: 8 }}>
+                  {lang === "fr"
+                    ? "Avis envoyé — il sera examiné par notre équipe."
+                    : "Review submitted — it will be reviewed by our team."}
+                </Text>
+              )}
+            </>
+          )}
         </View>
 
         {/* Ticket types section hidden by product decision (ticketing disabled). */}
@@ -558,6 +601,21 @@ export default function EventDetailScreen() {
       </ScrollView>
 
       {/* Ticket purchase bar hidden by product decision (ticketing disabled). */}
+
+      <ReviewModal
+        visible={reviewModalOpen}
+        onClose={() => setReviewModalOpen(false)}
+        itemType="event"
+        itemId={parseInt(id, 10)}
+        lang={lang}
+        authFetch={authFetch}
+        onSuccess={() => {
+          setReviewSuccess(true);
+          refreshReviews();
+          setTimeout(() => setReviewSuccess(false), 5000);
+        }}
+        bottomInset={insets.bottom}
+      />
 
       {/* ── Fullscreen Lightbox Modal ─────────────────────── */}
       <Modal

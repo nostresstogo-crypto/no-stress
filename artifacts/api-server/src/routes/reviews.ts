@@ -1,7 +1,8 @@
 import { Router, type IRouter } from "express";
 import { eq, and, desc } from "drizzle-orm";
-import { db, reviewsTable, eventsTable, venuesTable } from "@workspace/db";
+import { db, reviewsTable, eventsTable, venuesTable, adminsTable } from "@workspace/db";
 import { requireAuth } from "../lib/auth-utils.js";
+import { sendAdminNewReviewEmail } from "../email.js";
 
 const router: IRouter = Router();
 
@@ -142,6 +143,25 @@ router.post("/reviews", requireAuth, async (req: any, res) => {
   }
 
   res.status(201).json({ review: serializeReview(review) });
+
+  // Notifier tous les admins — fire-and-forget
+  const authorType = userId != null ? "user" : "partner";
+  const authorId = (userId ?? partnerId)!;
+  db.select({ email: adminsTable.email }).from(adminsTable)
+    .then((admins) =>
+      Promise.all(admins.map((a) =>
+        sendAdminNewReviewEmail(a.email, {
+          id: review.id,
+          itemType: review.itemType,
+          itemId: review.itemId,
+          rating: review.rating,
+          comment: review.comment ?? null,
+          authorType,
+          authorId,
+        }),
+      )),
+    )
+    .catch(() => {});
 });
 
 export default router;

@@ -21,6 +21,7 @@ import {
   sendPartnerBannedEmail,
   sendPartnerReactivatedEmail,
 } from "../email.js";
+import { notifyReviewModerationUser, notifyPartnerReviewApproved } from "../lib/pushNotifications.js";
 
 const router: IRouter = Router();
 
@@ -552,6 +553,46 @@ router.put("/admin/reviews/:id/approve", requireAdmin, async (req: any, res) => 
     .returning();
   if (!updated) return res.status(404).json({ error: "Avis introuvable." });
   res.json({ review: { ...updated, id: String(updated.id) } });
+
+  // Notifier l'auteur de l'avis — fire-and-forget
+  notifyReviewModerationUser({
+    userId: updated.userId,
+    partnerId: updated.partnerId,
+    status: "approved",
+    itemType: updated.itemType as "event" | "venue",
+    itemId: updated.itemId,
+  }).catch(() => {});
+
+  // Notifier le partenaire propriétaire de l'item — fire-and-forget
+  if (updated.itemType === "event") {
+    db.select({ partnerId: eventsTable.partnerId }).from(eventsTable)
+      .where(eq(eventsTable.id, updated.itemId))
+      .then(([ev]) => {
+        if (ev?.partnerId) {
+          notifyPartnerReviewApproved({
+            partnerId: ev.partnerId,
+            itemType: "event",
+            itemId: updated.itemId,
+            rating: updated.rating,
+            comment: updated.comment ?? null,
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+  } else if (updated.itemType === "venue") {
+    db.select({ partnerId: venuesTable.partnerId }).from(venuesTable)
+      .where(eq(venuesTable.id, updated.itemId))
+      .then(([v]) => {
+        if (v?.partnerId) {
+          notifyPartnerReviewApproved({
+            partnerId: v.partnerId,
+            itemType: "venue",
+            itemId: updated.itemId,
+            rating: updated.rating,
+            comment: updated.comment ?? null,
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+  }
 });
 
 router.put("/admin/reviews/:id/reject", requireAdmin, async (req: any, res) => {
@@ -565,6 +606,15 @@ router.put("/admin/reviews/:id/reject", requireAdmin, async (req: any, res) => {
     .returning();
   if (!updated) return res.status(404).json({ error: "Avis introuvable." });
   res.json({ review: { ...updated, id: String(updated.id) } });
+
+  // Notifier l'auteur que l'avis n'a pas été publié — fire-and-forget
+  notifyReviewModerationUser({
+    userId: updated.userId,
+    partnerId: updated.partnerId,
+    status: "rejected",
+    itemType: updated.itemType as "event" | "venue",
+    itemId: updated.itemId,
+  }).catch(() => {});
 });
 
 router.delete("/admin/reviews/:id", requireAdmin, async (req, res) => {
