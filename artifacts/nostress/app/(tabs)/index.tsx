@@ -158,12 +158,16 @@ export default function HomeScreen() {
   const [venueModal, setVenueModal] = useState<any | null>(null);
   const [apiEvents, setApiEvents] = useState<ApiEvent[]>([]);
   const [apiVenues, setApiVenues] = useState<any[]>([]);
+  const [popularEvents, setPopularEvents] = useState<any[]>([]);
+  const [popularVenues, setPopularVenues] = useState<any[]>([]);
 
   const loadEvents = useCallback(async () => {
     try {
-      const [r, rv] = await Promise.all([
+      const [r, rv, rpe, rpv] = await Promise.all([
         fetch(`${API_BASE}/events`),
         fetch(`${API_BASE}/venues`),
+        fetch(`${API_BASE}/events/popular`),
+        fetch(`${API_BASE}/venues/popular`),
       ]);
       if (r.ok) {
         const data = await r.json();
@@ -173,6 +177,14 @@ export default function HomeScreen() {
         const data = await rv.json();
         setApiVenues(Array.isArray(data?.venues) ? data.venues : []);
       }
+      if (rpe.ok) {
+        const data = await rpe.json();
+        setPopularEvents(Array.isArray(data?.events) ? data.events : []);
+      }
+      if (rpv.ok) {
+        const data = await rpv.json();
+        setPopularVenues(Array.isArray(data?.venues) ? data.venues : []);
+      }
     } catch {}
   }, []);
 
@@ -180,6 +192,8 @@ export default function HomeScreen() {
   useFocusEffect(useCallback(() => {
     setApiEvents([]);
     setApiVenues([]);
+    setPopularEvents([]);
+    setPopularVenues([]);
     loadEvents();
   }, [loadEvents]));
 
@@ -384,6 +398,91 @@ export default function HomeScreen() {
           />
         }
       >
+        {/* Événements populaires */}
+        {popularEvents.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Ionicons name="flame" size={16} color={C.gold} />
+                <Text style={styles.sectionTitle}>
+                  {lang === "fr" ? "Événements populaires" : "Popular events"}
+                </Text>
+              </View>
+            </View>
+            <FlatList
+              horizontal
+              data={popularEvents.map((e: any) => ({
+                id: String(e.id),
+                title: e.title || e.titleFr || "",
+                titleFr: e.titleFr || e.title || "",
+                category: e.category || "",
+                city: e.city || "",
+                venue: e.venue || "",
+                date: e.date,
+                time: e.time || "",
+                description: e.description || "",
+                descriptionFr: e.descriptionFr || "",
+                priceFCFA: typeof e.price === "number" ? e.price : 0,
+                isFree: !e.price || e.price === 0,
+                imageUrl: e.imageUrl || undefined,
+                status: "approved" as const,
+              }))}
+              keyExtractor={(e) => "pop_" + e.id}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+              renderItem={({ item }) => (
+                <EventCard
+                  event={item}
+                  horizontal
+                  onPress={() => safePush(`/event/${item.id}`)}
+                />
+              )}
+            />
+          </View>
+        )}
+
+        {/* Lieux populaires */}
+        {popularVenues.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <Ionicons name="flame" size={16} color={C.gold} />
+                <Text style={styles.sectionTitle}>
+                  {lang === "fr" ? "Lieux populaires" : "Popular venues"}
+                </Text>
+              </View>
+            </View>
+            <FlatList
+              horizontal
+              data={popularVenues}
+              keyExtractor={(v) => "popv_" + String(v.id)}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalList}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => safePush(`/venue/api_${item.id}`)}
+                  style={{ width: 220, backgroundColor: C.card, borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: C.border }}
+                  activeOpacity={0.85}
+                >
+                  {item.imageUrl ? (
+                    <Image source={{ uri: item.imageUrl }} style={{ width: "100%", height: 110 }} resizeMode="cover" />
+                  ) : (
+                    <View style={{ width: "100%", height: 110, backgroundColor: C.border, alignItems: "center", justifyContent: "center" }}>
+                      <Ionicons name="business" size={28} color={C.textMuted} />
+                    </View>
+                  )}
+                  <View style={{ padding: 10 }}>
+                    <Text numberOfLines={1} style={{ color: C.text, fontFamily: "Inter_700Bold", fontSize: 14 }}>{item.name}</Text>
+                    <Text numberOfLines={1} style={{ color: C.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, marginTop: 2 }}>
+                      {item.type ? `${item.type} · ` : ""}{item.city}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        )}
+
         {/* 5 derniers événements créés */}
         {recentEvents.length > 0 && (
           <View style={styles.section}>

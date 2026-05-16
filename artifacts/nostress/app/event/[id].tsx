@@ -1,5 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   FlatList,
   Image,
@@ -42,6 +43,9 @@ export default function EventDetailScreen() {
   const [apiEvent, setApiEvent] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
   const [venueDetails, setVenueDetails] = useState<any | null>(null);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [avgRating, setAvgRating] = useState<number | null>(null);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
   const carouselRef = useRef<FlatList>(null);
   const lightboxRef = useRef<FlatList>(null);
@@ -54,6 +58,23 @@ export default function EventDetailScreen() {
       .then((data) => { if (!cancelled) setApiEvent(data || null); })
       .catch(() => {})
       .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    let cancelled = false;
+    setReviewsLoading(true);
+    fetch(`${API_BASE}/reviews?itemType=event&itemId=${id}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled) {
+          setReviews(Array.isArray(data?.reviews) ? data.reviews : []);
+          setAvgRating(typeof data?.avgRating === "number" ? data.avgRating : null);
+        }
+      })
+      .catch(() => { if (!cancelled) setReviews([]); })
+      .finally(() => { if (!cancelled) setReviewsLoading(false); });
     return () => { cancelled = true; };
   }, [id]);
 
@@ -458,6 +479,51 @@ export default function EventDetailScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+        </View>
+
+        {/* ── Avis & Notes ──────────────────────────────────── */}
+        <View style={s.section}>
+          <View style={s.sectionHeader}>
+            <Text style={[s.sectionTitle, { color: C.text }]}>
+              {lang === "fr" ? "Avis & Notes" : "Reviews"}
+            </Text>
+            {avgRating != null && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <Ionicons name="star" size={14} color="#F59E0B" />
+                <Text style={{ color: C.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+                  {avgRating.toFixed(1)}
+                </Text>
+                <Text style={{ color: C.textMuted, fontSize: 12 }}>
+                  ({reviews.length})
+                </Text>
+              </View>
+            )}
+          </View>
+          {reviewsLoading ? (
+            <ActivityIndicator color={C.lavender} style={{ marginVertical: 12 }} />
+          ) : reviews.length === 0 ? (
+            <Text style={{ color: C.textMuted, fontSize: 14, fontFamily: "Inter_400Regular" }}>
+              {lang === "fr" ? "Aucun avis pour le moment." : "No reviews yet."}
+            </Text>
+          ) : (
+            reviews.map((rev: any) => (
+              <View key={rev.id} style={[s.reviewCard, { backgroundColor: C.card, borderColor: C.border }]}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 5 }}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Ionicons key={n} name="star" size={12} color={n <= rev.rating ? "#F59E0B" : C.border} />
+                  ))}
+                  <Text style={{ color: C.textMuted, fontSize: 11, marginLeft: 6 }}>
+                    {new Date(rev.createdAt).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US")}
+                  </Text>
+                </View>
+                {rev.comment ? (
+                  <Text style={{ color: C.text, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
+                    {rev.comment}
+                  </Text>
+                ) : null}
+              </View>
+            ))
+          )}
         </View>
 
         {/* Ticket types section hidden by product decision (ticketing disabled). */}
@@ -868,5 +934,11 @@ const s = StyleSheet.create({
   lbDot: {
     height: 7,
     borderRadius: 4,
+  },
+  reviewCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 10,
   },
 });

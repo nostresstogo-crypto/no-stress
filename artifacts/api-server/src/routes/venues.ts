@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, and, ilike, gte, desc, inArray } from "drizzle-orm";
-import { db, venuesTable, venueSpecialtiesTable, eventsTable, partnersTable } from "@workspace/db";
+import { eq, and, ilike, gte, desc, inArray, sql } from "drizzle-orm";
+import { db, venuesTable, venueSpecialtiesTable, eventsTable, partnersTable, favoritesTable } from "@workspace/db";
 import { requireAuth } from "../lib/auth-utils.js";
 import { requireAdmin } from "./admin.js";
 import { ensurePartnerSubscriptionActive, getActivePartnerIds } from "../lib/subscriptions.js";
@@ -106,6 +106,25 @@ router.get("/venues", async (req, res) => {
   }
 
   res.json({ venues: rows.map(serialize), total: rows.length });
+});
+
+router.get("/venues/popular", async (req, res) => {
+  const activeIds = await getActivePartnerIds();
+  if (activeIds.length === 0) return res.json({ venues: [] });
+  const allVenues = await db
+    .select()
+    .from(venuesTable)
+    .where(and(eq(venuesTable.status, "approved"), inArray(venuesTable.partnerId, activeIds)));
+  if (allVenues.length === 0) return res.json({ venues: [] });
+  const venueIds = allVenues.map((v) => v.id);
+  const favCounts = await db
+    .select({ itemId: favoritesTable.itemId, count: sql<number>`count(*)::int` })
+    .from(favoritesTable)
+    .where(and(eq(favoritesTable.itemType, "venue"), inArray(favoritesTable.itemId, venueIds)))
+    .groupBy(favoritesTable.itemId);
+  const countMap = new Map(favCounts.map((r) => [r.itemId, r.count]));
+  const sorted = [...allVenues].sort((a, b) => (countMap.get(b.id) || 0) - (countMap.get(a.id) || 0));
+  res.json({ venues: sorted.slice(0, 5).map(serialize) });
 });
 
 router.get("/venues/:id", async (req, res) => {

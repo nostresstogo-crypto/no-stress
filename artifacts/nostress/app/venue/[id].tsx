@@ -64,6 +64,9 @@ export default function VenueDetailScreen() {
   const [loading, setLoading] = useState(true);
   // URI de l'image plein écran à afficher dans le viewer modal (null = fermé).
   const [zoomImage, setZoomImage] = useState<{ uri: string; name?: string } | null>(null);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [avgRating, setAvgRating] = useState<number | null>(null);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
 
   const isApi = typeof id === "string" && id.startsWith("api_");
   const apiNumId = isApi ? id.slice(4) : null;
@@ -117,6 +120,23 @@ export default function VenueDetailScreen() {
   // Sépare les événements à venir (date >= aujourd'hui) et passés.
   // - Côté API : on a fetché avec includeArchived=1 pour récupérer tout l'historique du lieu.
   // - Côté mock (MOCK_EVENTS) : on fait le même filtre par date.
+  useEffect(() => {
+    if (!isApi || !apiNumId) return;
+    let cancelled = false;
+    setReviewsLoading(true);
+    fetch(`${API_BASE}/reviews?itemType=venue&itemId=${apiNumId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled) {
+          setReviews(Array.isArray(data?.reviews) ? data.reviews : []);
+          setAvgRating(typeof data?.avgRating === "number" ? data.avgRating : null);
+        }
+      })
+      .catch(() => { if (!cancelled) setReviews([]); })
+      .finally(() => { if (!cancelled) setReviewsLoading(false); });
+    return () => { cancelled = true; };
+  }, [isApi, apiNumId]);
+
   const { upcomingEvents, pastEvents } = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
     let all: any[] = [];
@@ -503,6 +523,51 @@ export default function VenueDetailScreen() {
               })}
             </View>
           ) : null}
+
+          {/* ── Avis & Notes ─────────────────────────────── */}
+          {isApi && (
+            <View style={styles.section}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <Text style={styles.sectionTitle}>
+                  {lang === "fr" ? "Avis & Notes" : "Reviews"}
+                </Text>
+                {avgRating != null && (
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                    <Ionicons name="star" size={14} color="#F59E0B" />
+                    <Text style={{ color: C.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+                      {avgRating.toFixed(1)}
+                    </Text>
+                    <Text style={{ color: C.textMuted, fontSize: 12 }}>({reviews.length})</Text>
+                  </View>
+                )}
+              </View>
+              {reviewsLoading ? (
+                <ActivityIndicator color={C.lavender} style={{ marginVertical: 12 }} />
+              ) : reviews.length === 0 ? (
+                <Text style={{ color: C.textMuted, fontSize: 14, fontFamily: "Inter_400Regular" }}>
+                  {lang === "fr" ? "Aucun avis pour le moment." : "No reviews yet."}
+                </Text>
+              ) : (
+                reviews.map((rev: any) => (
+                  <View key={rev.id} style={[styles.reviewCard, { backgroundColor: C.card, borderColor: C.border }]}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 5 }}>
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <Ionicons key={n} name="star" size={12} color={n <= rev.rating ? "#F59E0B" : C.border} />
+                      ))}
+                      <Text style={{ color: C.textMuted, fontSize: 11, marginLeft: 6 }}>
+                        {new Date(rev.createdAt).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US")}
+                      </Text>
+                    </View>
+                    {rev.comment ? (
+                      <Text style={{ color: C.text, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
+                        {rev.comment}
+                      </Text>
+                    ) : null}
+                  </View>
+                ))
+              )}
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -939,5 +1004,11 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
     color: C.bg,
+  },
+  reviewCard: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 10,
   },
 });

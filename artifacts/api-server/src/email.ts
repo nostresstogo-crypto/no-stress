@@ -877,3 +877,87 @@ export async function sendManagerPasswordResetEmail({
     `,
   });
 }
+
+export async function sendUserSuspendedEmail(to: string, name: string, reason: string, until: Date | null) {
+  const safeName = escapeHtml(name);
+  const safeReason = escapeHtml(reason);
+  const untilStr = until
+    ? until.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+    : null;
+  await sendMail({
+    to,
+    subject: "⚠️ Votre compte NoStress a été suspendu",
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml("Compte suspendu")}
+        <p style="color:#b0b2cc;line-height:1.7;margin:0 0 16px;">
+          Bonjour <strong style="color:#e8e8f0;">${safeName}</strong>,
+        </p>
+        <p style="color:#b0b2cc;line-height:1.7;margin:0 0 16px;">
+          Votre compte NoStress a été <strong style="color:#f59e0b;">temporairement suspendu</strong>
+          ${untilStr ? `jusqu'au <strong style="color:#f59e0b;">${untilStr}</strong>` : ""}.
+        </p>
+        <div style="background:#1a1c2e;border-radius:12px;padding:20px;margin:20px 0;border-left:4px solid #f59e0b;">
+          <p style="margin:0 0 6px;font-size:12px;color:#7c6af7;text-transform:uppercase;letter-spacing:0.05em;">Motif</p>
+          <p style="margin:0;color:#e8e8f0;font-size:14px;">${safeReason}</p>
+        </div>
+        <p style="color:#b0b2cc;line-height:1.7;margin:16px 0 0;font-size:13px;">
+          Pour contacter le support : <a href="mailto:nostresstogo@gmail.com" style="color:#7c6af7;">nostresstogo@gmail.com</a>
+        </p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}
+
+export async function sendUserBannedEmail(to: string, name: string, reason: string) {
+  const safeName = escapeHtml(name);
+  const safeReason = escapeHtml(reason);
+  await sendMail({
+    to,
+    subject: "🚫 Votre compte NoStress a été banni",
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml("Compte banni")}
+        <p style="color:#b0b2cc;line-height:1.7;margin:0 0 16px;">
+          Bonjour <strong style="color:#e8e8f0;">${safeName}</strong>,
+        </p>
+        <p style="color:#b0b2cc;line-height:1.7;margin:0 0 16px;">
+          Votre compte NoStress a été <strong style="color:#ef4444;">définitivement banni</strong> suite à une violation de nos conditions d'utilisation.
+        </p>
+        <div style="background:#1a1c2e;border-radius:12px;padding:20px;margin:20px 0;border-left:4px solid #ef4444;">
+          <p style="margin:0 0 6px;font-size:12px;color:#7c6af7;text-transform:uppercase;letter-spacing:0.05em;">Motif</p>
+          <p style="margin:0;color:#e8e8f0;font-size:14px;">${safeReason}</p>
+        </div>
+        <p style="color:#b0b2cc;line-height:1.7;margin:16px 0 0;font-size:13px;">
+          Si vous pensez qu'il s'agit d'une erreur, contactez-nous : <a href="mailto:nostresstogo@gmail.com" style="color:#7c6af7;">nostresstogo@gmail.com</a>
+        </p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}
+
+export async function sendUserReactivatedEmail(to: string, name: string) {
+  const safeName = escapeHtml(name);
+  await sendMail({
+    to,
+    subject: "✅ Votre compte NoStress a été réactivé",
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml("Compte réactivé")}
+        <p style="color:#b0b2cc;line-height:1.7;margin:0 0 16px;">
+          Bonjour <strong style="color:#e8e8f0;">${safeName}</strong>,
+        </p>
+        <p style="color:#b0b2cc;line-height:1.7;margin:0 0 16px;">
+          Bonne nouvelle ! Votre compte NoStress a été <strong style="color:#22c55e;">réactivé</strong>. Vous pouvez à nouveau vous connecter et profiter de l'application.
+        </p>
+        <p style="color:#b0b2cc;line-height:1.7;margin:16px 0 0;">
+          Bon divertissement ! 🎵<br>
+          <strong style="color:#e8e8f0;">L'équipe NoStress</strong>
+        </p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}

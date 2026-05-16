@@ -186,6 +186,36 @@ export const api = {
     delete: (id: string) =>
       request<{ message: string }>(`/admin/managers/${id}`, { method: "DELETE" }),
   },
+  users: {
+    list: (params?: Record<string, string>) =>
+      request<{ users: AdminUser[]; total: number; page: number; limit: number }>(
+        `/admin/users${params && Object.keys(params).length ? "?" + new URLSearchParams(params).toString() : ""}`,
+      ),
+    suspend: (id: string, reason: string, until?: string) =>
+      request<{ user: AdminUser }>(`/admin/users/${id}/suspend`, {
+        method: "PUT",
+        body: JSON.stringify({ reason, until: until || undefined }),
+      }),
+    ban: (id: string, reason: string) =>
+      request<{ user: AdminUser }>(`/admin/users/${id}/ban`, {
+        method: "PUT",
+        body: JSON.stringify({ reason }),
+      }),
+    reactivate: (id: string) =>
+      request<{ user: AdminUser }>(`/admin/users/${id}/reactivate`, { method: "PUT" }),
+  },
+  reviews: {
+    list: (params?: Record<string, string>) =>
+      request<{ reviews: AdminReview[]; total: number; page: number; limit: number }>(
+        `/admin/reviews${params && Object.keys(params).length ? "?" + new URLSearchParams(params).toString() : ""}`,
+      ),
+    approve: (id: string) =>
+      request<{ review: AdminReview }>(`/admin/reviews/${id}/approve`, { method: "PUT" }),
+    reject: (id: string) =>
+      request<{ review: AdminReview }>(`/admin/reviews/${id}/reject`, { method: "PUT" }),
+    delete: (id: string) =>
+      request<{ message: string; deleted: AdminReview }>(`/admin/reviews/${id}`, { method: "DELETE" }),
+  },
   config: {
     // Countries
     listCountries: () => request<{ countries: ConfigCountry[] }>("/config/countries"),
@@ -348,5 +378,32 @@ export interface ConfigVenueType {
   labelEn: string;
   icon: string;
   sortOrder: number;
+  createdAt: string;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  name: string | null;
+  firstName: string | null;
+  phone: string | null;
+  country: string | null;
+  status: "active" | "suspended" | "banned";
+  statusReason: string | null;
+  statusUntil: string | null;
+  role: string;
+  createdAt: string;
+}
+
+export interface AdminReview {
+  id: string;
+  userId: string | null;
+  partnerId: string | null;
+  itemType: string;
+  itemId: string;
+  rating: number;
+  comment: string | null;
+  status: "pending" | "approved" | "rejected";
+  adminId: number | null;
   createdAt: string;
 }

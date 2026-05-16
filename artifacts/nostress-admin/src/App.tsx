@@ -14,6 +14,8 @@ import Statistics from "@/pages/Statistics";
 import Profile from "@/pages/Profile";
 import Settings from "@/pages/Settings";
 import Managers from "@/pages/Managers";
+import Users from "@/pages/Users";
+import Reviews from "@/pages/Reviews";
 
 const queryClient = new QueryClient();
 
@@ -70,6 +72,12 @@ function Router() {
       </Route>
       <Route path="/parametres">
         <ProtectedRoute component={Settings} superAdminOnly />
+      </Route>
+      <Route path="/utilisateurs">
+        <ProtectedRoute component={Users} />
+      </Route>
+      <Route path="/avis">
+        <ProtectedRoute component={Reviews} />
       </Route>
       <Route path="/profil">
         <ProtectedRoute component={Profile} />

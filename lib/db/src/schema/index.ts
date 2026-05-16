@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, doublePrecision, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, doublePrecision, jsonb, uniqueIndex, smallint } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -15,6 +15,8 @@ export const usersTable = pgTable("users", {
   country: text("country"),
   role: text("role").notNull().default("user"),
   status: text("status").notNull().default("active"),
+  statusReason: text("status_reason"),
+  statusUntil: timestamp("status_until"),
   profileImage: text("profile_image"),
   emailVerified: timestamp("email_verified"),
   verificationCode: text("verification_code"),
@@ -291,6 +293,29 @@ export const venueTypesTable = pgTable("venue_types", {
 
 export type VenueType = typeof venueTypesTable.$inferSelect;
 export type InsertVenueType = typeof venueTypesTable.$inferInsert;
+
+export const reviewsTable = pgTable("reviews", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => usersTable.id, { onDelete: "cascade" }),
+  partnerId: integer("partner_id").references(() => partnersTable.id, { onDelete: "cascade" }),
+  itemType: text("item_type").notNull(),
+  itemId: integer("item_id").notNull(),
+  rating: smallint("rating").notNull(),
+  comment: text("comment"),
+  status: text("status").notNull().default("pending"),
+  adminId: integer("admin_id").references(() => adminsTable.id, { onDelete: "set null" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (t) => [
+  uniqueIndex("reviews_user_item_unique")
+    .on(t.itemType, t.itemId, t.userId)
+    .where(sql`user_id IS NOT NULL`),
+  uniqueIndex("reviews_partner_item_unique")
+    .on(t.itemType, t.itemId, t.partnerId)
+    .where(sql`partner_id IS NOT NULL`),
+]);
+
+export type Review = typeof reviewsTable.$inferSelect;
+export type InsertReview = typeof reviewsTable.$inferInsert;
 
 export * from "./conversations";
 export * from "./messages";

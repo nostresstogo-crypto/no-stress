@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, sql, and } from "drizzle-orm";
-import { db, adminsTable, partnersTable, eventsTable, deletionRequestsTable, usersTable, venuesTable } from "@workspace/db";
+import { eq, sql, and, desc, ilike, or } from "drizzle-orm";
+import { db, adminsTable, partnersTable, eventsTable, deletionRequestsTable, usersTable, venuesTable, reviewsTable } from "@workspace/db";
 import {
   hashPassword,
   verifyPassword,
@@ -11,7 +11,13 @@ import {
   revokeRefreshToken,
   generateRandomPassword,
 } from "../lib/auth-utils.js";
-import { sendManagerCredentialsEmail, sendManagerPasswordResetEmail } from "../email.js";
+import {
+  sendManagerCredentialsEmail,
+  sendManagerPasswordResetEmail,
+  sendUserSuspendedEmail,
+  sendUserBannedEmail,
+  sendUserReactivatedEmail,
+} from "../email.js";
 
 const router: IRouter = Router();
 
@@ -288,6 +294,171 @@ router.delete("/admin/managers/:id", requireSuperAdmin, async (req, res) => {
     .returning({ id: adminsTable.id, email: adminsTable.email });
   if (!deleted) return res.status(404).json({ error: "Gestionnaire introuvable." });
   res.json({ message: "Compte gestionnaire supprimé.", deleted: { id: String(deleted.id), email: deleted.email } });
+});
+
+// ── User management ──────────────────────────────────────────────────────────
+router.get("/admin/users", requireAdmin, async (req, res) => {
+  const page = Math.max(1, parseInt(String(req.query.page || "1"), 10));
+  const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || "50"), 10)));
+  const offset = (page - 1) * limit;
+  const search = String(req.query.search || "").trim();
+  const status = req.query.status ? String(req.query.status) : undefined;
+
+  const conds: any[] = [];
+  if (search) {
+    conds.push(or(ilike(usersTable.email, `%${search}%`), ilike(usersTable.name, `%${search}%`)));
+  }
+  if (status) conds.push(eq(usersTable.status, status));
+  const whereClause = conds.length ? and(...conds) : undefined;
+
+  const [{ total }] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(usersTable)
+    .where(whereClause);
+  const users = await db
+    .select({
+      id: usersTable.id,
+      email: usersTable.email,
+      name: usersTable.name,
+      firstName: usersTable.firstName,
+      phone: usersTable.phone,
+      country: usersTable.country,
+      status: usersTable.status,
+      statusReason: usersTable.statusReason,
+      statusUntil: usersTable.statusUntil,
+      role: usersTable.role,
+      createdAt: usersTable.createdAt,
+    })
+    .from(usersTable)
+    .where(whereClause)
+    .orderBy(desc(usersTable.createdAt))
+    .limit(limit)
+    .offset(offset);
+  res.json({ users: users.map((u) => ({ ...u, id: String(u.id) })), total, page, limit });
+});
+
+router.put("/admin/users/:id/suspend", requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(404).json({ error: "Utilisateur introuvable." });
+  const { reason, until } = req.body || {};
+  if (!reason || typeof reason !== "string" || !reason.trim()) {
+    return res.status(400).json({ error: "Le motif est requis." });
+  }
+  let untilDate: Date | null = null;
+  if (until) {
+    untilDate = new Date(String(until));
+    if (isNaN(untilDate.getTime())) return res.status(400).json({ error: "Date de fin invalide." });
+  }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  if (!user) return res.status(404).json({ error: "Utilisateur introuvable." });
+  const [updated] = await db
+    .update(usersTable)
+    .set({ status: "suspended", statusReason: reason.trim(), statusUntil: untilDate })
+    .where(eq(usersTable.id, id))
+    .returning();
+  sendUserSuspendedEmail(user.email, user.name || "Utilisateur", reason.trim(), untilDate).catch(
+    (e) => console.error("[admin] Suspension email failed:", e),
+  );
+  res.json({ user: { ...updated, id: String(updated.id) } });
+});
+
+router.put("/admin/users/:id/ban", requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(404).json({ error: "Utilisateur introuvable." });
+  const { reason } = req.body || {};
+  if (!reason || typeof reason !== "string" || !reason.trim()) {
+    return res.status(400).json({ error: "Le motif est requis." });
+  }
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  if (!user) return res.status(404).json({ error: "Utilisateur introuvable." });
+  const [updated] = await db
+    .update(usersTable)
+    .set({ status: "banned", statusReason: reason.trim(), statusUntil: null })
+    .where(eq(usersTable.id, id))
+    .returning();
+  sendUserBannedEmail(user.email, user.name || "Utilisateur", reason.trim()).catch(
+    (e) => console.error("[admin] Ban email failed:", e),
+  );
+  res.json({ user: { ...updated, id: String(updated.id) } });
+});
+
+router.put("/admin/users/:id/reactivate", requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(404).json({ error: "Utilisateur introuvable." });
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
+  if (!user) return res.status(404).json({ error: "Utilisateur introuvable." });
+  const [updated] = await db
+    .update(usersTable)
+    .set({ status: "active", statusReason: null, statusUntil: null })
+    .where(eq(usersTable.id, id))
+    .returning();
+  if (user.status !== "active") {
+    sendUserReactivatedEmail(user.email, user.name || "Utilisateur").catch(
+      (e) => console.error("[admin] Reactivation email failed:", e),
+    );
+  }
+  res.json({ user: { ...updated, id: String(updated.id) } });
+});
+
+// ── Reviews moderation ────────────────────────────────────────────────────────
+router.get("/admin/reviews", requireAdmin, async (req, res) => {
+  const page = Math.max(1, parseInt(String(req.query.page || "1"), 10));
+  const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || "50"), 10)));
+  const offset = (page - 1) * limit;
+  const status = req.query.status ? String(req.query.status) : undefined;
+  const itemType = req.query.itemType ? String(req.query.itemType) : undefined;
+
+  const conds: any[] = [];
+  if (status) conds.push(eq(reviewsTable.status, status));
+  if (itemType) conds.push(eq(reviewsTable.itemType, itemType));
+  const whereClause = conds.length ? and(...conds) : undefined;
+
+  const [{ total }] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(reviewsTable)
+    .where(whereClause);
+  const rows = await db
+    .select()
+    .from(reviewsTable)
+    .where(whereClause)
+    .orderBy(desc(reviewsTable.createdAt))
+    .limit(limit)
+    .offset(offset);
+  res.json({ reviews: rows.map((r) => ({ ...r, id: String(r.id) })), total, page, limit });
+});
+
+router.put("/admin/reviews/:id/approve", requireAdmin, async (req: any, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(404).json({ error: "Avis introuvable." });
+  const adminId = parseInt(req.admin.adminId, 10);
+  const [updated] = await db
+    .update(reviewsTable)
+    .set({ status: "approved", adminId: Number.isFinite(adminId) ? adminId : null })
+    .where(eq(reviewsTable.id, id))
+    .returning();
+  if (!updated) return res.status(404).json({ error: "Avis introuvable." });
+  res.json({ review: { ...updated, id: String(updated.id) } });
+});
+
+router.put("/admin/reviews/:id/reject", requireAdmin, async (req: any, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(404).json({ error: "Avis introuvable." });
+  const adminId = parseInt(req.admin.adminId, 10);
+  const [updated] = await db
+    .update(reviewsTable)
+    .set({ status: "rejected", adminId: Number.isFinite(adminId) ? adminId : null })
+    .where(eq(reviewsTable.id, id))
+    .returning();
+  if (!updated) return res.status(404).json({ error: "Avis introuvable." });
+  res.json({ review: { ...updated, id: String(updated.id) } });
+});
+
+router.delete("/admin/reviews/:id", requireAdmin, async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(404).json({ error: "Avis introuvable." });
+  const [deleted] = await db.delete(reviewsTable).where(eq(reviewsTable.id, id)).returning();
+  if (!deleted) return res.status(404).json({ error: "Avis introuvable." });
+  res.json({ message: "Avis supprimé.", deleted: { ...deleted, id: String(deleted.id) } });
 });
 
 export { requireAdmin, requireSuperAdmin };

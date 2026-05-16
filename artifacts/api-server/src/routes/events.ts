@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, and, ilike, gte, lt, desc, inArray } from "drizzle-orm";
-import { db, eventsTable, venuesTable, partnersTable } from "@workspace/db";
+import { eq, and, ilike, gte, lt, desc, inArray, sql } from "drizzle-orm";
+import { db, eventsTable, venuesTable, partnersTable, favoritesTable } from "@workspace/db";
 import { sendNewEventAdminNotification } from "../email.js";
 import { requireAuth } from "../lib/auth-utils.js";
 import { requireAdmin } from "./admin.js";
@@ -126,6 +126,31 @@ router.get("/events", async (req, res) => {
   }
 
   res.json({ events: rows.map(serialize), total: rows.length, page: Number(page), limit: Number(limit) });
+});
+
+router.get("/events/popular", async (req, res) => {
+  const activeIds = await getActivePartnerIds();
+  if (activeIds.length === 0) return res.json({ events: [] });
+  const today = todayISO();
+  const allEvents = await db
+    .select()
+    .from(eventsTable)
+    .where(and(eq(eventsTable.status, "approved"), inArray(eventsTable.partnerId, activeIds), gte(eventsTable.date, today)));
+  if (allEvents.length === 0) return res.json({ events: [] });
+  const eventIds = allEvents.map((e) => e.id);
+  const favCounts = await db
+    .select({ itemId: favoritesTable.itemId, count: sql<number>`count(*)::int` })
+    .from(favoritesTable)
+    .where(and(eq(favoritesTable.itemType, "event"), inArray(favoritesTable.itemId, eventIds)))
+    .groupBy(favoritesTable.itemId);
+  const countMap = new Map(favCounts.map((r) => [r.itemId, r.count]));
+  const sorted = [...allEvents].sort((a, b) => {
+    const ca = countMap.get(a.id) || 0;
+    const cb = countMap.get(b.id) || 0;
+    if (cb !== ca) return cb - ca;
+    return a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
+  });
+  res.json({ events: sorted.slice(0, 5).map(serialize) });
 });
 
 router.get("/events/:id", async (req, res) => {
