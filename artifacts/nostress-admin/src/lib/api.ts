@@ -137,6 +137,11 @@ export const api = {
         method: "DELETE",
         body: JSON.stringify({ reason }),
       }),
+    extendSubscription: (id: string, months: 1 | 2 | 3 | 6) =>
+      request<{ message: string; partner: Partner }>(`/admin/partners/${id}/extend-subscription`, {
+        method: "POST",
+        body: JSON.stringify({ months }),
+      }),
   },
   publications: {
     list: () => request<PartnerEvent[]>("/admin/events"),

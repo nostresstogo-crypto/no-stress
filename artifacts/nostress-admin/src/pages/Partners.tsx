@@ -30,6 +30,7 @@ import {
   Trash2,
   KeyRound,
   CalendarClock,
+  CalendarPlus,
   RefreshCw,
 } from "lucide-react";
 
@@ -124,6 +125,8 @@ export default function Partners() {
   const [rejectReason, setRejectReason] = useState("");
   const [deletePartnerOpen, setDeletePartnerOpen] = useState(false);
   const [deletePartnerReason, setDeletePartnerReason] = useState("");
+  const [extendOpen, setExtendOpen] = useState(false);
+  const [extendMonths, setExtendMonths] = useState<1 | 2 | 3 | 6>(1);
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
@@ -193,6 +196,22 @@ export default function Partners() {
       setRejectOpen(false);
       setDetailOpen(false);
       setRejectReason("");
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleExtendSubscription = async () => {
+    if (!selected) return;
+    setActionLoading(true);
+    try {
+      const res = await api.partners.extendSubscription(selected.id, extendMonths);
+      showToast(res.message);
+      setExtendOpen(false);
+      setSelected(res.partner);
+      loadPartners();
     } catch (err: any) {
       showToast(err.message, "error");
     } finally {
@@ -491,7 +510,7 @@ export default function Partners() {
           )}
 
           {selected?.status === "approved" && (
-            <DialogFooter className="gap-2">
+            <DialogFooter className="gap-2 flex-wrap">
               <Button
                 variant="outline"
                 onClick={() => selected && handleResendCredentials(selected)}
@@ -500,6 +519,17 @@ export default function Partners() {
                 <KeyRound className="w-4 h-4 mr-1" />
                 Renvoyer les identifiants
               </Button>
+              {isSuperAdmin && (
+                <Button
+                  variant="outline"
+                  className="text-primary border-primary/30 hover:bg-primary/10"
+                  onClick={() => { setExtendMonths(1); setExtendOpen(true); }}
+                  disabled={actionLoading}
+                >
+                  <CalendarPlus className="w-4 h-4 mr-1" />
+                  Étendre l'abonnement
+                </Button>
+              )}
             </DialogFooter>
           )}
         </DialogContent>
@@ -588,6 +618,80 @@ export default function Partners() {
               disabled={actionLoading}
             >
               {actionLoading ? "Suppression..." : "Supprimer le compte"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={extendOpen} onOpenChange={(o) => { setExtendOpen(o); }}>
+        <DialogContent className="bg-card border-border max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-primary">
+              <CalendarPlus className="w-5 h-5" />
+              Étendre l'abonnement
+            </DialogTitle>
+            <DialogDescription>
+              Prolonger l'abonnement de <strong>{selected?.businessName}</strong>.
+              {(() => {
+                const until = selected?.subscription?.subscriptionUntil || selected?.subscriptionUntil || null;
+                if (!until) return null;
+                const active = new Date(until).getTime() > Date.now();
+                return (
+                  <span className="block mt-1">
+                    {active
+                      ? `L'abonnement actuel expire le ${formatDateShort(until)}. L'extension partira de cette date.`
+                      : `L'abonnement a expiré le ${formatDateShort(until)}. L'extension partira d'aujourd'hui.`}
+                  </span>
+                );
+              })()}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-foreground">Durée de l'extension</p>
+            <div className="grid grid-cols-4 gap-2">
+              {([1, 2, 3, 6] as const).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setExtendMonths(m)}
+                  className={`flex flex-col items-center justify-center py-3 px-2 rounded-xl border text-sm font-semibold transition-all ${
+                    extendMonths === m
+                      ? "bg-primary text-primary-foreground border-primary shadow-md shadow-primary/20"
+                      : "bg-background border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                  }`}
+                >
+                  <span className="text-lg font-bold">{m}</span>
+                  <span className="text-[10px] font-normal opacity-80 mt-0.5">mois</span>
+                </button>
+              ))}
+            </div>
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
+              <p className="text-xs text-primary/80">
+                L'abonnement sera prolongé de <strong>{extendMonths} mois</strong> à compter de{" "}
+                <strong>
+                  {(() => {
+                    const until = selected?.subscription?.subscriptionUntil || selected?.subscriptionUntil || null;
+                    const base = until && new Date(until).getTime() > Date.now() ? new Date(until) : new Date();
+                    const end = new Date(base);
+                    end.setMonth(end.getMonth() + extendMonths);
+                    return end.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+                  })()}
+                </strong>.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExtendOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              className="gap-2"
+              onClick={handleExtendSubscription}
+              disabled={actionLoading}
+            >
+              <CalendarPlus className="w-4 h-4" />
+              {actionLoading ? "Extension en cours..." : `Étendre de ${extendMonths} mois`}
             </Button>
           </DialogFooter>
         </DialogContent>

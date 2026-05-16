@@ -457,6 +457,34 @@ router.post("/admin/partners/:id/approve", requireAdmin, async (req: any, res) =
   }
 });
 
+router.post("/admin/partners/:id/extend-subscription", requireSuperAdmin, async (req: any, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(404).json({ error: "Partenaire introuvable." });
+  const months = Number(req.body?.months);
+  if (![1, 2, 3, 6].includes(months)) {
+    return res.status(400).json({ error: "Durée invalide. Choisissez 1, 2, 3 ou 6 mois." });
+  }
+  const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.id, id));
+  if (!partner) return res.status(404).json({ error: "Partenaire introuvable." });
+  if (partner.status !== "approved") {
+    return res.status(400).json({ error: "Le partenaire doit être approuvé pour étendre son abonnement." });
+  }
+  const base = partner.subscriptionUntil && new Date(partner.subscriptionUntil).getTime() > Date.now()
+    ? new Date(partner.subscriptionUntil)
+    : new Date();
+  const newUntil = new Date(base);
+  newUntil.setMonth(newUntil.getMonth() + months);
+  const [updated] = await db
+    .update(partnersTable)
+    .set({ subscriptionUntil: newUntil, updatedAt: new Date() })
+    .where(eq(partnersTable.id, id))
+    .returning();
+  res.json({
+    message: `Abonnement étendu de ${months} mois. Nouvelle date d'expiration : ${newUntil.toLocaleDateString("fr-FR")}.`,
+    partner: serializePartner(updated),
+  });
+});
+
 // Admin can regenerate + resend credentials if the original approval email failed
 // (e.g. SMTP outage) or the partner lost their password.
 router.post("/admin/partners/:id/resend-credentials", requireAdmin, async (req: any, res) => {
