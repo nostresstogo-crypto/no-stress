@@ -69,7 +69,7 @@ const SLIDES: Slide[] = [
 ];
 
 export default function OnboardingScreen() {
-  const { setHasOnboarded, setLang, lang } = useApp();
+  const { setHasOnboarded, setLang, lang, themeMode, setThemeMode } = useApp();
   const insets = useSafeAreaInsets();
   const [activeIdx, setActiveIdx] = useState(0);
   const flatRef = useRef<FlatList>(null);
@@ -174,6 +174,8 @@ export default function OnboardingScreen() {
             t={t}
             lang={lang}
             setLang={setLang}
+            themeMode={themeMode}
+            setThemeMode={setThemeMode}
           />
         )}
       />
@@ -281,6 +283,8 @@ function SlideBackdrop({
 }
 
 /* ─── Single slide ───────────────────────────────────────────────────── */
+type ThemeMode = "dark" | "light" | "system";
+
 function SlideView({
   slide,
   index,
@@ -288,6 +292,8 @@ function SlideView({
   t,
   lang,
   setLang,
+  themeMode,
+  setThemeMode,
 }: {
   slide: Slide;
   index: number;
@@ -295,6 +301,8 @@ function SlideView({
   t: (key: keyof typeof translations.fr) => string;
   lang: Lang;
   setLang: (l: Lang) => void;
+  themeMode: ThemeMode;
+  setThemeMode: (m: ThemeMode) => void;
 }) {
   const inputRange = [
     (index - 1) * SCREEN_W,
@@ -409,6 +417,35 @@ function SlideView({
           </View>
         )}
 
+        {index === 0 && (
+          <View style={styles.langRow}>
+            <Text style={styles.langLabel}>{t("onboardingChooseTheme")}</Text>
+            <View style={styles.langBtns}>
+              <ThemeChip
+                icon="moon"
+                label={t("themeDark")}
+                active={themeMode === "dark"}
+                color={LAVENDER}
+                onPress={() => setThemeMode("dark")}
+              />
+              <ThemeChip
+                icon="sunny"
+                label={t("themeLight")}
+                active={themeMode === "light"}
+                color={GOLD}
+                onPress={() => setThemeMode("light")}
+              />
+              <ThemeChip
+                icon="phone-portrait"
+                label={t("themeSystem")}
+                active={themeMode === "system"}
+                color={CYAN}
+                onPress={() => setThemeMode("system")}
+              />
+            </View>
+          </View>
+        )}
+
         {index === 1 && (
           <View style={styles.pillRow}>
             {[
@@ -487,6 +524,36 @@ function LangChip({
       ]}
     >
       <Text style={styles.langFlag}>{flag}</Text>
+      <Text style={[styles.langText, active && { color: "#F0EDF8", fontFamily: "Inter_600SemiBold" }]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+function ThemeChip({
+  icon,
+  label,
+  active,
+  color,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  active: boolean;
+  color: string;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.85}
+      style={[
+        styles.langBtn,
+        active && { borderColor: color, backgroundColor: color + "22" },
+      ]}
+    >
+      <Ionicons name={icon} size={16} color={active ? color : "#7E7AA0"} />
       <Text style={[styles.langText, active && { color: "#F0EDF8", fontFamily: "Inter_600SemiBold" }]}>
         {label}
       </Text>

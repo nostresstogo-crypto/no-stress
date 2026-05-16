@@ -69,6 +69,48 @@ function makeStyles(C: ColorPalette) {
       alignItems: "center" as const,
     },
     registerBtnText: { color: C.lavender, fontSize: 16, fontFamily: "Inter_600SemiBold" },
+    guestSettings: {
+      width: "100%" as any,
+      marginTop: 8,
+      paddingTop: 20,
+      borderTopWidth: 1,
+      borderTopColor: C.border,
+      gap: 8,
+    },
+    guestSettingRow: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 6,
+    },
+    guestSettingLabel: {
+      fontSize: 11,
+      fontFamily: "Inter_500Medium",
+      color: C.textMuted,
+      textTransform: "uppercase" as const,
+      letterSpacing: 0.5,
+    },
+    guestChipRow: {
+      flexDirection: "row" as const,
+      flexWrap: "wrap" as const,
+      gap: 8,
+    },
+    guestChip: {
+      flexDirection: "row" as const,
+      alignItems: "center" as const,
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 9,
+      borderRadius: 12,
+      borderWidth: 1.5,
+      borderColor: C.border,
+      backgroundColor: C.card,
+    },
+    guestChipFlag: { fontSize: 16 },
+    guestChipText: {
+      fontSize: 13,
+      fontFamily: "Inter_500Medium",
+      color: C.textMuted,
+    },
     profile: {
       flexDirection: "row",
       alignItems: "center",
@@ -323,19 +365,85 @@ export default function AccountScreen() {
 
   if (!user) {
     return (
-      <View style={[styles.root, { paddingTop: topInset }]}>
-        <View style={styles.authPrompt}>
-          <Ionicons name="person-circle-outline" size={80} color={C.border} />
-          <Text style={styles.authTitle}>{t("loginRequired")}</Text>
-          <Text style={styles.authSub}>{t("noAccount")}</Text>
-          <TouchableOpacity style={styles.loginBtn} onPress={() => safePush("/auth")}>
-            <Text style={styles.loginBtnText}>{t("login")}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.registerBtn} onPress={() => safePush("/auth")}>
-            <Text style={styles.registerBtnText}>{t("register")}</Text>
-          </TouchableOpacity>
+      <ScrollView
+        style={styles.root}
+        contentContainerStyle={[styles.authPrompt, { paddingTop: topInset + 20, paddingBottom: 60 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <Ionicons name="person-circle-outline" size={80} color={C.border} />
+        <Text style={styles.authTitle}>{t("loginRequired")}</Text>
+        <Text style={styles.authSub}>{t("noAccount")}</Text>
+        <TouchableOpacity style={styles.loginBtn} onPress={() => safePush("/auth")}>
+          <Text style={styles.loginBtnText}>{t("login")}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.registerBtn} onPress={() => safePush("/auth")}>
+          <Text style={styles.registerBtnText}>{t("register")}</Text>
+        </TouchableOpacity>
+
+        {/* Settings accessible sans connexion */}
+        <View style={styles.guestSettings}>
+          {/* Langue */}
+          <View style={styles.guestSettingRow}>
+            <Ionicons name="language-outline" size={16} color={C.textMuted} />
+            <Text style={styles.guestSettingLabel}>{t("language")}</Text>
+          </View>
+          <View style={styles.guestChipRow}>
+            <TouchableOpacity
+              style={[styles.guestChip, lang === "fr" && { borderColor: C.lavender, backgroundColor: C.lavender + "18" }]}
+              onPress={() => setLang("fr")}
+            >
+              <Text style={styles.guestChipFlag}>🇫🇷</Text>
+              <Text style={[styles.guestChipText, lang === "fr" && { color: C.text, fontFamily: "Inter_600SemiBold" }]}>
+                Français
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.guestChip, lang === "en" && { borderColor: "#5FD4F5", backgroundColor: "#5FD4F518" }]}
+              onPress={() => setLang("en")}
+            >
+              <Text style={styles.guestChipFlag}>🇬🇧</Text>
+              <Text style={[styles.guestChipText, lang === "en" && { color: C.text, fontFamily: "Inter_600SemiBold" }]}>
+                English
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Thème */}
+          <View style={[styles.guestSettingRow, { marginTop: 12 }]}>
+            <Ionicons name="color-palette-outline" size={16} color={C.textMuted} />
+            <Text style={styles.guestSettingLabel}>{lang === "fr" ? "Thème" : "Theme"}</Text>
+          </View>
+          <View style={styles.guestChipRow}>
+            <TouchableOpacity
+              style={[styles.guestChip, themeMode === "dark" && { borderColor: C.lavender, backgroundColor: C.lavender + "18" }]}
+              onPress={() => setThemeMode("dark")}
+            >
+              <Ionicons name="moon" size={14} color={themeMode === "dark" ? C.lavender : C.textMuted} />
+              <Text style={[styles.guestChipText, themeMode === "dark" && { color: C.text, fontFamily: "Inter_600SemiBold" }]}>
+                {lang === "fr" ? "Nuit" : "Night"}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.guestChip, themeMode === "light" && { borderColor: C.gold, backgroundColor: C.gold + "18" }]}
+              onPress={() => setThemeMode("light")}
+            >
+              <Ionicons name="sunny" size={14} color={themeMode === "light" ? C.gold : C.textMuted} />
+              <Text style={[styles.guestChipText, themeMode === "light" && { color: C.text, fontFamily: "Inter_600SemiBold" }]}>
+                {lang === "fr" ? "Jour" : "Day"}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.guestChip, themeMode === "system" && { borderColor: "#5FD4F5", backgroundColor: "#5FD4F518" }]}
+              onPress={() => setThemeMode("system")}
+            >
+              <Ionicons name="phone-portrait" size={14} color={themeMode === "system" ? "#5FD4F5" : C.textMuted} />
+              <Text style={[styles.guestChipText, themeMode === "system" && { color: C.text, fontFamily: "Inter_600SemiBold" }]}>
+                Auto
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      </ScrollView>
     );
   }
 
