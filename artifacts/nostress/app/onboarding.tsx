@@ -57,15 +57,6 @@ const SLIDES: Slide[] = [
     titleKey: "onboarding2Title",
     subKey: "onboarding2Sub",
   },
-  {
-    key: "tickets",
-    icon: "ticket",
-    accent: CYAN,
-    accentDeep: "#3BA6C2",
-    gradient: ["#0F2D3D", "#082026", "#03101A"],
-    titleKey: "onboarding3Title",
-    subKey: "onboarding3Sub",
-  },
 ];
 
 export default function OnboardingScreen() {

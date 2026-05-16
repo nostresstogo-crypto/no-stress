@@ -23,40 +23,6 @@ export default function Home() {
     t("home.app.li4"),
   ];
 
-  const plans = [
-    {
-      name: t("home.pricing.p1.name"),
-      price: "0 FCFA",
-      desc: t("home.pricing.p1.desc"),
-      features: [t("home.pricing.p1.f1"), t("home.pricing.p1.f2"), t("home.pricing.p1.f3")],
-    },
-    {
-      name: t("home.pricing.p2.name"),
-      price: "15 000 FCFA",
-      suffix: t("home.pricing.p2.suffix"),
-      desc: t("home.pricing.p2.desc"),
-      popular: true,
-      features: [
-        t("home.pricing.p2.f1"),
-        t("home.pricing.p2.f2"),
-        t("home.pricing.p2.f3"),
-        t("home.pricing.p2.f4"),
-      ],
-    },
-    {
-      name: t("home.pricing.p3.name"),
-      price: "45 000 FCFA",
-      suffix: t("home.pricing.p3.suffix"),
-      desc: t("home.pricing.p3.desc"),
-      features: [
-        t("home.pricing.p3.f1"),
-        t("home.pricing.p3.f2"),
-        t("home.pricing.p3.f3"),
-        t("home.pricing.p3.f4"),
-      ],
-    },
-  ];
-
   const testimonials = [
     { quote: t("home.testimonials.t1.quote"), name: "Komi A.", role: t("home.testimonials.t1.role"), initials: "KA" },
     { quote: t("home.testimonials.t2.quote"), name: "Afiwa D.", role: t("home.testimonials.t2.role"), initials: "AD" },
@@ -173,48 +139,6 @@ export default function Home() {
                   className="relative z-10 w-full max-w-md mx-auto rounded-3xl border-8 border-border shadow-2xl"
                 />
               </motion.div>
-            </div>
-          </div>
-        </section>
-
-        {/* Pricing */}
-        <section className="py-24 bg-background">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-5xl font-bold mb-4">{t("home.pricing.title")}</h2>
-              <p className="text-muted-foreground text-xl max-w-2xl mx-auto">{t("home.pricing.sub")}</p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-              {plans.map((plan, i) => (
-                <div key={i} className={`p-8 rounded-2xl border ${plan.popular ? "border-primary bg-card relative" : "border-border bg-card"}`}>
-                  {plan.popular && (
-                    <span className="absolute top-0 right-8 -translate-y-1/2 bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-bold shadow-lg">
-                      {t("home.pricing.popular")}
-                    </span>
-                  )}
-                  <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
-                  <p className="text-muted-foreground mb-6">{plan.desc}</p>
-                  <div className="mb-8">
-                    <span className="text-4xl font-bold">{plan.price}</span>
-                    {plan.suffix && <span className="text-muted-foreground">{plan.suffix}</span>}
-                  </div>
-                  <ul className="space-y-4 mb-8">
-                    {plan.features.map((f, j) => (
-                      <li key={j} className="flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-secondary" />
-                        <span>{f}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Button
-                    className={`w-full ${plan.popular ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-background hover:bg-muted text-foreground"}`}
-                    variant={plan.popular ? "default" : "outline"}
-                  >
-                    {t("home.pricing.cta")}
-                  </Button>
-                </div>
-              ))}
             </div>
           </div>
         </section>
