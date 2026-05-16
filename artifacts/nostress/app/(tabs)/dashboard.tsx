@@ -1168,88 +1168,24 @@ export default function DashboardScreen() {
 
         {/* ── Plan tab ── */}
         {tab === "plan" && (
-          <>
-            {subscription && (
-              <View style={{ marginBottom: 16, backgroundColor: subscription.active ? C.success + "18" : C.error + "18", borderRadius: 12, borderWidth: 1, borderColor: subscription.active ? C.success + "44" : C.error + "44", padding: 14 }}>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                  <Ionicons name={subscription.active ? "checkmark-circle" : "close-circle"} size={16} color={subscription.active ? C.success : C.error} />
-                  <Text style={{ color: subscription.active ? C.success : C.error, fontWeight: "700", fontSize: 13 }}>
-                    {lang === "fr"
-                      ? (subscription.active ? "Abonnement actif" : "Abonnement expiré")
-                      : (subscription.active ? "Active subscription" : "Expired subscription")}
-                  </Text>
-                </View>
-                {subscription.subscriptionStart && subscription.subscriptionUntil ? (
-                  <Text style={{ color: C.textMuted, fontSize: 12 }}>
-                    {lang === "fr" ? "Du " : "From "}
-                    {(parseDateLocal(subscription.subscriptionStart) ?? new Date(subscription.subscriptionStart)).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}
-                    {lang === "fr" ? " au " : " to "}
-                    {(parseDateLocal(subscription.subscriptionUntil) ?? new Date(subscription.subscriptionUntil)).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}
-                  </Text>
-                ) : subscription.subscriptionUntil ? (
-                  <Text style={{ color: C.textMuted, fontSize: 12 }}>
-                    {lang === "fr" ? "Expire le " : "Expires on "}
-                    {(parseDateLocal(subscription.subscriptionUntil) ?? new Date(subscription.subscriptionUntil)).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })}
-                  </Text>
-                ) : null}
-              </View>
-            )}
-            <Text style={styles.planTitle}>{t("choosePlan")}</Text>
-            {MOCK_SUBSCRIPTION_PLANS.map((plan) => {
-              const isCurrent = plan.id === activePlan.id;
-              const name = lang === "fr" ? plan.nameFr : plan.name;
-              const features = lang === "fr" ? plan.featuresFr : plan.features;
-              return (
-                <View
-                  key={plan.id}
-                  style={[
-                    styles.planCard,
-                    isCurrent && styles.planCardActive,
-                    plan.isPopular && styles.planCardPopular,
-                  ]}
-                >
-                  {plan.isPopular && (
-                    <View style={styles.popularBadge}>
-                      <Text style={styles.popularText}>Popular</Text>
-                    </View>
-                  )}
-                  <Text style={styles.planName}>{name}</Text>
-                  <View style={styles.planPriceRow}>
-                    <Text style={styles.planPrice}>
-                      {plan.comingSoon
-                        ? (lang === "fr" ? "Gratuit (bêta)" : "Free (beta)")
-                        : plan.monthlyPriceFCFA === 0 ? t("free") : `${plan.monthlyPriceFCFA.toLocaleString()} FCFA`}
-                    </Text>
-                    {!plan.comingSoon && plan.monthlyPriceFCFA > 0 && (
-                      <Text style={styles.planPeriod}>{t("perMonth")}</Text>
-                    )}
-                  </View>
-                  {features.map((feature, i) => (
-                    <View key={i} style={styles.featureRow}>
-                      <Ionicons name="checkmark-circle" size={16} color={isCurrent ? C.bg : C.success} />
-                      <Text style={[styles.featureText, isCurrent && { color: C.bg }]}>{feature}</Text>
-                    </View>
-                  ))}
-                  {!isCurrent && (
-                    <TouchableOpacity
-                      style={[styles.upgradeBtn, plan.comingSoon && { opacity: 0.45 }]}
-                      disabled={!!plan.comingSoon}
-                    >
-                      <Text style={styles.upgradeBtnText}>
-                        {plan.comingSoon ? t("comingSoon") : `${t("upgrade")} ${name}`}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                  {isCurrent && (
-                    <View style={styles.currentBadge}>
-                      <Ionicons name="checkmark" size={14} color={C.bg} />
-                      <Text style={styles.currentBadgeText}>{t("currentPlan")}</Text>
-                    </View>
-                  )}
-                </View>
-              );
-            })}
-          </>
+          <View style={styles.planComingSoonWrap}>
+            <View style={styles.planComingSoonIconWrap}>
+              <Ionicons name="construct" size={48} color={C.gold ?? "#FFD700"} />
+            </View>
+            <Text style={[styles.planComingSoonTitle, { color: C.text }]}>
+              {lang === "fr" ? "Abonnements" : "Subscriptions"}
+            </Text>
+            <Text style={[styles.planComingSoonSub, { color: C.textMuted }]}>
+              {lang === "fr"
+                ? "En construction — disponible bientôt"
+                : "Under construction — coming soon"}
+            </Text>
+            <Text style={[styles.planComingSoonDesc, { color: C.textMuted }]}>
+              {lang === "fr"
+                ? "Les offres partenaires sont actuellement gratuites pendant la phase bêta. Les plans payants seront bientôt disponibles."
+                : "Partner plans are currently free during the beta phase. Paid plans will be available soon."}
+            </Text>
+          </View>
         )}
       </ScrollView>
 
@@ -1808,6 +1744,40 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: C.text,
     marginBottom: 4,
+  },
+  planComingSoonWrap: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 60,
+    paddingHorizontal: 24,
+    gap: 12,
+  },
+  planComingSoonIconWrap: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: "#FFD70018",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  planComingSoonTitle: {
+    fontSize: 22,
+    fontFamily: "Inter_700Bold",
+    textAlign: "center",
+  },
+  planComingSoonSub: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    textAlign: "center",
+  },
+  planComingSoonDesc: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    lineHeight: 20,
+    marginTop: 4,
+    maxWidth: 300,
   },
   planCard: {
     backgroundColor: C.card,

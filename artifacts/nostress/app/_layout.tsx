@@ -336,7 +336,6 @@ function RootLayoutNav() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="event/[id]" options={{ headerShown: false, presentation: "card" }} />
-        <Stack.Screen name="ticket/[eventId]" options={{ headerShown: false, presentation: "modal" }} />
         <Stack.Screen name="auth" options={{ headerShown: false, presentation: "modal" }} />
         <Stack.Screen name="create-event" options={{ headerShown: false, presentation: "modal" }} />
         <Stack.Screen name="venue/[id]" options={{ headerShown: false, presentation: "card" }} />

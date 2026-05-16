@@ -28,7 +28,6 @@
         "NSLocationWhenInUseUsageDescription": "$(PRODUCT_NAME) uses your location to show you nearby events and venues.",
         "NSCameraUsageDescription": "$(PRODUCT_NAME) needs camera access to take photos for your events or profile.",
         "NSPhotoLibraryUsageDescription": "$(PRODUCT_NAME) needs photo library access to choose a logo or profile picture.",
-        "NSPhotoLibraryAddUsageDescription": "$(PRODUCT_NAME) needs permission to save images to your photo library.",
         "NSUserNotificationUsageDescription": "$(PRODUCT_NAME) sends notifications about new nearby events, your favorites, and booking updates.",
         "NSMicrophoneUsageDescription": "$(PRODUCT_NAME) uses the microphone so you can speak to the AI assistant.",
         "NSSpeechRecognitionUsageDescription": "$(PRODUCT_NAME) uses speech recognition to transcribe your questions to the AI assistant."
