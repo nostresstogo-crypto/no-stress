@@ -1,0 +1,32 @@
+
+root@vps117164:~# sudo journalctl -u nostress-api -n 30 --no-pager
+mai 16 03:51:12 vps117164 systemd[1]: nostress-api.service: Scheduled restart job, restart counter is at 85.
+mai 16 03:51:12 vps117164 systemd[1]: Starting nostress-api.service - NoStress API server...
+mai 16 03:51:13 vps117164 systemd[1]: Started nostress-api.service - NoStress API server.
+mai 16 03:51:14 vps117164 systemd[1]: nostress-api.service: Main process exited, code=exited, status=1/FAILURE
+mai 16 03:51:14 vps117164 systemd[1]: nostress-api.service: Failed with result 'exit-code'.
+mai 16 03:51:14 vps117164 systemd[1]: nostress-api.service: Consumed 2.265s CPU time.
+mai 16 03:51:17 vps117164 systemd[1]: nostress-api.service: Scheduled restart job, restart counter is at 86.
+mai 16 03:51:17 vps117164 systemd[1]: Starting nostress-api.service - NoStress API server...
+mai 16 03:51:18 vps117164 systemd[1]: Started nostress-api.service - NoStress API server.
+mai 16 03:51:19 vps117164 systemd[1]: nostress-api.service: Main process exited, code=exited, status=1/FAILURE
+mai 16 03:51:19 vps117164 systemd[1]: nostress-api.service: Failed with result 'exit-code'.
+mai 16 03:51:19 vps117164 systemd[1]: nostress-api.service: Consumed 2.498s CPU time.
+mai 16 03:51:22 vps117164 systemd[1]: nostress-api.service: Scheduled restart job, restart counter is at 87.
+mai 16 03:51:22 vps117164 systemd[1]: Starting nostress-api.service - NoStress API server...
+mai 16 03:51:23 vps117164 systemd[1]: Started nostress-api.service - NoStress API server.
+mai 16 03:51:24 vps117164 systemd[1]: nostress-api.service: Main process exited, code=exited, status=1/FAILURE
+mai 16 03:51:24 vps117164 systemd[1]: nostress-api.service: Failed with result 'exit-code'.
+mai 16 03:51:24 vps117164 systemd[1]: nostress-api.service: Consumed 2.039s CPU time.
+mai 16 03:51:27 vps117164 systemd[1]: nostress-api.service: Scheduled restart job, restart counter is at 88.
+mai 16 03:51:27 vps117164 systemd[1]: Starting nostress-api.service - NoStress API server...
+mai 16 03:51:28 vps117164 systemd[1]: Started nostress-api.service - NoStress API server.
+mai 16 03:51:29 vps117164 systemd[1]: nostress-api.service: Main process exited, code=exited, status=1/FAILURE
+mai 16 03:51:29 vps117164 systemd[1]: nostress-api.service: Failed with result 'exit-code'.
+mai 16 03:51:29 vps117164 systemd[1]: nostress-api.service: Consumed 2.016s CPU time.
+mai 16 03:51:32 vps117164 systemd[1]: nostress-api.service: Scheduled restart job, restart counter is at 89.
+mai 16 03:51:32 vps117164 systemd[1]: Starting nostress-api.service - NoStress API server...
+mai 16 03:51:33 vps117164 systemd[1]: Started nostress-api.service - NoStress API server.
+mai 16 03:51:35 vps117164 systemd[1]: nostress-api.service: Main process exited, code=exited, status=1/FAILURE
+mai 16 03:51:35 vps117164 systemd[1]: nostress-api.service: Failed with result 'exit-code'.
+mai 16 03:51:35 vps117164 systemd[1]: nostress-api.service: Consumed 2.257s CPU time.
