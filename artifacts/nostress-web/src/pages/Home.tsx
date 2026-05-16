@@ -37,8 +37,7 @@ export default function Home() {
     },
     {
       name: t("home.pricing.p2.name"),
-      price: "15 000 FCFA",
-      suffix: t("home.pricing.p2.suffix"),
+      price: t("home.pricing.soon"),
       desc: t("home.pricing.p2.desc"),
       popular: true,
       features: [
@@ -52,8 +51,7 @@ export default function Home() {
     },
     {
       name: t("home.pricing.p3.name"),
-      price: "25 000 FCFA",
-      suffix: t("home.pricing.p3.suffix"),
+      price: t("home.pricing.soon"),
       desc: t("home.pricing.p3.desc"),
       features: [
         t("home.pricing.p3.f1"),
@@ -219,8 +217,9 @@ export default function Home() {
                   <Button
                     className={`w-full ${plan.popular ? "bg-primary text-primary-foreground hover:bg-primary/90" : "bg-card hover:bg-muted text-foreground"}`}
                     variant={plan.popular ? "default" : "outline"}
+                    disabled={plan.price === t("home.pricing.soon")}
                   >
-                    {t("home.pricing.cta")}
+                    {plan.price === t("home.pricing.soon") ? t("home.pricing.soon_cta") : t("home.pricing.cta")}
                   </Button>
                 </div>
               ))}

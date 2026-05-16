@@ -60,6 +60,8 @@ const fr: Record<string, string> = {
   "home.pricing.sub":
     "Rejoignez NoStress et boostez la visibilité de vos événements et établissements auprès d'un large public africain.",
   "home.pricing.payment": "Paiements acceptés via Flooz et TMoney",
+  "home.pricing.soon": "Gratuit (beta)",
+  "home.pricing.soon_cta": "Bientôt disponible",
   "home.pricing.popular": "Populaire",
   "home.pricing.cta": "Commencer",
   "home.pricing.p1.name": "Gratuit",
@@ -241,6 +243,8 @@ const en: Record<string, string> = {
   "home.pricing.sub":
     "Join NoStress and boost the visibility of your events and venues to a wide African audience.",
   "home.pricing.payment": "Payments accepted via Flooz and TMoney",
+  "home.pricing.soon": "Free (beta)",
+  "home.pricing.soon_cta": "Coming soon",
   "home.pricing.popular": "Popular",
   "home.pricing.cta": "Get started",
   "home.pricing.p1.name": "Free",
