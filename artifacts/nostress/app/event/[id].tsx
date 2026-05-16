@@ -539,7 +539,7 @@ export default function EventDetailScreen() {
               </View>
             ))
           )}
-          {!!apiEvent && (
+          {!!apiEvent && !(user?.role === "structure" && apiEvent?.partnerId === user?.id) && (
             <>
               <TouchableOpacity
                 onPress={() => {
