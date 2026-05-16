@@ -3,7 +3,7 @@ import { Navbar } from "components/layout/Navbar";
 import { Footer } from "components/layout/Footer";
 import { motion } from "framer-motion";
 import { Button } from "components/ui/button";
-import { MapPin, Ticket, Calendar, Smartphone, Star, Quote } from "lucide-react";
+import { MapPin, Sparkles, Calendar, Smartphone, Star, Quote } from "lucide-react";
 import { useLanguage } from "lib/i18n";
 
 export default function Home() {
@@ -11,7 +11,7 @@ export default function Home() {
 
   const features = [
     { icon: Calendar, title: t("home.features.f1.title"), desc: t("home.features.f1.desc") },
-    { icon: Ticket, title: t("home.features.f2.title"), desc: t("home.features.f2.desc") },
+    { icon: Sparkles, title: t("home.features.f2.title"), desc: t("home.features.f2.desc") },
     { icon: MapPin, title: t("home.features.f3.title"), desc: t("home.features.f3.desc") },
     { icon: Smartphone, title: t("home.features.f4.title"), desc: t("home.features.f4.desc") },
   ];

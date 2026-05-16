@@ -32,13 +32,13 @@ const fr: Record<string, string> = {
   /* ── Home – Features ── */
   "home.features.title": "Tout ce qu'il vous faut pour sortir",
   "home.features.sub":
-    "NoStress simplifie votre vie sociale de la découverte à l'achat de billets.",
+    "NoStress simplifie votre vie sociale, de la découverte à la sortie.",
   "home.features.f1.title": "Découverte",
   "home.features.f1.desc":
     "Trouvez des événements exclusifs et des soirées secrètes.",
-  "home.features.f2.title": "Billetterie Mobile",
+  "home.features.f2.title": "Recommandations IA",
   "home.features.f2.desc":
-    "Achetez vos tickets en un clic et recevez votre QR code instantanément.",
+    "L'IA analyse vos goûts et votre ville pour vous suggérer les événements qui vous correspondent.",
   "home.features.f3.title": "Carte Interactive",
   "home.features.f3.desc":
     "Localisez les lieux les plus chauds autour de vous.",
@@ -49,45 +49,19 @@ const fr: Record<string, string> = {
   /* ── Home – App Mockup ── */
   "home.app.title": "L'expérience NoStress au bout des doigts",
   "home.app.sub":
-    "Une interface fluide, pensée pour la nuit. Feuilletez les événements à venir, sauvegardez vos favoris et achetez vos tickets en un clic, sans quitter l'application.",
-  "home.app.li1": "Scanner de QR code intégré pour un accès rapide",
+    "Une interface fluide, pensée pour la nuit. Feuilletez les événements à venir, sauvegardez vos favoris et restez connecté à la vie nocturne togolaise.",
+  "home.app.li1": "Recommandations personnalisées par l'IA",
   "home.app.li2": "Notifications en temps réel pour vos artistes préférés",
-  "home.app.li3": "Paiement sécurisé 100% togolais",
+  "home.app.li3": "Carte interactive des lieux et événements",
   "home.app.li4": "Mode sombre exclusif pour le confort visuel",
-
-  /* ── Home – Pricing ── */
-  "home.pricing.title": "Pour les Organisateurs",
-  "home.pricing.sub":
-    "Gérez vos événements, scannez les billets et suivez vos ventes en temps réel.",
-  "home.pricing.popular": "Populaire",
-  "home.pricing.cta": "Commencer",
-  "home.pricing.p1.name": "Gratuit",
-  "home.pricing.p1.desc": "Pour les petits événements",
-  "home.pricing.p1.f1": "1 événement actif",
-  "home.pricing.p1.f2": "Scan de billets basique",
-  "home.pricing.p1.f3": "Support par email",
-  "home.pricing.p2.name": "Pro",
-  "home.pricing.p2.suffix": "/mois",
-  "home.pricing.p2.desc": "Pour les clubs et promoteurs",
-  "home.pricing.p2.f1": "Événements illimités",
-  "home.pricing.p2.f2": "Paiements sécurisés",
-  "home.pricing.p2.f3": "Dashboard analytique",
-  "home.pricing.p2.f4": "Support prioritaire",
-  "home.pricing.p3.name": "Premium",
-  "home.pricing.p3.suffix": "/mois",
-  "home.pricing.p3.desc": "Pour les grands festivals",
-  "home.pricing.p3.f1": "Fonctions Pro",
-  "home.pricing.p3.f2": "Mise en avant sur l'app",
-  "home.pricing.p3.f3": "Accès API",
-  "home.pricing.p3.f4": "Account manager dédié",
 
   /* ── Home – Testimonials ── */
   "home.testimonials.title": "Ce qu'ils en disent",
   "home.testimonials.t1.quote":
-    "Enfin une appli qui comprend comment on fait la fête à Lomé ! Je n'ai plus besoin de faire la queue pour mes billets, tout se fait directement dans l'app.",
+    "Enfin une appli qui comprend comment on fait la fête à Lomé ! Je découvre des événements que je n'aurais jamais trouvés autrement.",
   "home.testimonials.t1.role": "Étudiant",
   "home.testimonials.t2.quote":
-    "En tant que gérante de club, NoStress m'a permis de doubler ma visibilité le week-end. Le scan des billets à l'entrée est ultra rapide, fini les embouteillages.",
+    "En tant que gérante de club, NoStress m'a permis de doubler ma visibilité le week-end. La gestion de mes événements n'a jamais été aussi simple.",
   "home.testimonials.t2.role": "Propriétaire de Club",
   "home.testimonials.t3.quote":
     "J'ai découvert des festivals incroyables à Kpalimé que je n'aurais jamais trouvés autrement. L'interface est magnifique et super fluide.",
@@ -210,12 +184,12 @@ const en: Record<string, string> = {
   /* ── Home – Features ── */
   "home.features.title": "Everything you need to go out",
   "home.features.sub":
-    "NoStress simplifies your social life from discovery to ticket purchase.",
+    "NoStress simplifies your social life, from discovery to the night out.",
   "home.features.f1.title": "Discovery",
   "home.features.f1.desc": "Find exclusive events and secret parties.",
-  "home.features.f2.title": "Mobile Ticketing",
+  "home.features.f2.title": "AI Recommendations",
   "home.features.f2.desc":
-    "Buy your tickets in one tap and receive your QR code instantly.",
+    "AI analyses your tastes and city to suggest events that truly match you.",
   "home.features.f3.title": "Interactive Map",
   "home.features.f3.desc": "Locate the hottest venues around you.",
   "home.features.f4.title": "Partner Space",
@@ -224,45 +198,19 @@ const en: Record<string, string> = {
   /* ── Home – App Mockup ── */
   "home.app.title": "The NoStress experience at your fingertips",
   "home.app.sub":
-    "A smooth interface built for the night. Browse upcoming events, save your favorites and buy tickets in one tap — without leaving the app.",
-  "home.app.li1": "Built-in QR code scanner for fast entry",
+    "A smooth interface built for the night. Browse upcoming events, save your favorites and stay connected to Togolese nightlife.",
+  "home.app.li1": "AI-powered personalised recommendations",
   "home.app.li2": "Real-time notifications for your favorite artists",
-  "home.app.li3": "100% local secure payment",
+  "home.app.li3": "Interactive map of venues and events",
   "home.app.li4": "Exclusive dark mode for visual comfort",
-
-  /* ── Home – Pricing ── */
-  "home.pricing.title": "For Organizers",
-  "home.pricing.sub":
-    "Manage your events, scan tickets and track your sales in real time.",
-  "home.pricing.popular": "Popular",
-  "home.pricing.cta": "Get started",
-  "home.pricing.p1.name": "Free",
-  "home.pricing.p1.desc": "For small events",
-  "home.pricing.p1.f1": "1 active event",
-  "home.pricing.p1.f2": "Basic ticket scanning",
-  "home.pricing.p1.f3": "Email support",
-  "home.pricing.p2.name": "Pro",
-  "home.pricing.p2.suffix": "/month",
-  "home.pricing.p2.desc": "For clubs and promoters",
-  "home.pricing.p2.f1": "Unlimited events",
-  "home.pricing.p2.f2": "Secure payments",
-  "home.pricing.p2.f3": "Analytics dashboard",
-  "home.pricing.p2.f4": "Priority support",
-  "home.pricing.p3.name": "Premium",
-  "home.pricing.p3.suffix": "/month",
-  "home.pricing.p3.desc": "For large festivals",
-  "home.pricing.p3.f1": "Pro features",
-  "home.pricing.p3.f2": "Featured in the app",
-  "home.pricing.p3.f3": "API access",
-  "home.pricing.p3.f4": "Dedicated account manager",
 
   /* ── Home – Testimonials ── */
   "home.testimonials.title": "What they say",
   "home.testimonials.t1.quote":
-    "Finally an app that gets how we party in Lomé! I no longer need to queue for tickets — everything happens right in the app.",
+    "Finally an app that gets how we party in Lomé! I discover events I would never have found otherwise.",
   "home.testimonials.t1.role": "Student",
   "home.testimonials.t2.quote":
-    "As a club manager, NoStress doubled my weekend visibility. Scanning tickets at the door is lightning fast — no more bottlenecks.",
+    "As a club manager, NoStress doubled my weekend visibility. Managing my events has never been this easy.",
   "home.testimonials.t2.role": "Club Owner",
   "home.testimonials.t3.quote":
     "I discovered incredible festivals in Kpalimé that I would never have found otherwise. The interface is beautiful and super smooth.",
