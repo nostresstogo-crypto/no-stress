@@ -9,7 +9,7 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "primaryColor": "#FFD700",
-    "description": "NoStress — Découvrez et réservez les meilleurs événements au Togo et au Bénin : concerts, soirées, festivals, ateliers. Billetterie mobile, favoris, et notifications près de chez vous.",
+    "description": "NoStress — Discover the best events, bars, restaurants, clubs and lounges across Africa. Concerts, festivals, parties and more — find what's happening near you and save your favourites.",
     "privacy": "public",
     "splash": {
       "image": "./assets/images/splash-icon.png",
@@ -28,10 +28,10 @@
         "NSLocationWhenInUseUsageDescription": "$(PRODUCT_NAME) uses your location to show you nearby events and venues.",
         "NSCameraUsageDescription": "$(PRODUCT_NAME) needs camera access to take photos for your events or profile.",
         "NSPhotoLibraryUsageDescription": "$(PRODUCT_NAME) needs photo library access to choose a logo or profile picture.",
-        "NSPhotoLibraryAddUsageDescription": "$(PRODUCT_NAME) needs permission to save your tickets to your photo library.",
+        "NSPhotoLibraryAddUsageDescription": "$(PRODUCT_NAME) needs permission to save images to your photo library.",
         "NSUserNotificationUsageDescription": "$(PRODUCT_NAME) sends notifications about new nearby events, your favorites, and booking updates.",
-        "NSMicrophoneUsageDescription": "$(PRODUCT_NAME) utilise le microphone pour vous permettre de parler à l'assistant IA.",
-        "NSSpeechRecognitionUsageDescription": "$(PRODUCT_NAME) utilise la reconnaissance vocale pour transcrire vos questions à l'assistant IA."
+        "NSMicrophoneUsageDescription": "$(PRODUCT_NAME) uses the microphone so you can speak to the AI assistant.",
+        "NSSpeechRecognitionUsageDescription": "$(PRODUCT_NAME) uses speech recognition to transcribe your questions to the AI assistant."
       }
     },
     "android": {
@@ -57,7 +57,7 @@
       [
         "expo-router",
         {
-          "origin": "https://replit.com/"
+          "origin": "https://no-stress.net"
         }
       ],
       [
@@ -94,8 +94,8 @@
       [
         "expo-speech-recognition",
         {
-          "microphonePermission": "$(PRODUCT_NAME) utilise le microphone pour vous permettre de parler à l'assistant IA.",
-          "speechRecognitionPermission": "$(PRODUCT_NAME) utilise la reconnaissance vocale pour transcrire vos questions à l'assistant IA."
+          "microphonePermission": "$(PRODUCT_NAME) uses the microphone so you can speak to the AI assistant.",
+          "speechRecognitionPermission": "$(PRODUCT_NAME) uses speech recognition to transcribe your questions to the AI assistant."
         }
       ],
       "@react-native-community/datetimepicker",
@@ -128,7 +128,7 @@
     },
     "extra": {
       "router": {
-        "origin": "https://replit.com/"
+        "origin": "https://no-stress.net"
       },
       "eas": {
         "projectId": "b372c0cb-009a-40b0-bd7c-720947a2a462"

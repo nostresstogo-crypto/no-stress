@@ -261,8 +261,8 @@ export default function AccountScreen() {
     const isFr = lang === "fr";
     const title = isFr ? "Supprimer mon compte" : "Delete my account";
     const message = isFr
-      ? "Votre demande sera traitée sous 30 jours. Toutes vos données, billets et favoris seront définitivement effacés.\n\nCette action est irréversible. Confirmer ?"
-      : "Your request will be processed within 30 days. All your data, tickets and favorites will be permanently erased.\n\nThis action cannot be undone. Confirm?";
+      ? "Votre demande sera traitée sous 30 jours. Toutes vos données et favoris seront définitivement effacés.\n\nCette action est irréversible. Confirmer ?"
+      : "Your request will be processed within 30 days. All your data and favorites will be permanently erased.\n\nThis action cannot be undone. Confirm?";
 
     const submit = async () => {
       setDeletionLoading(true);

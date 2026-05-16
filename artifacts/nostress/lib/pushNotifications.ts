@@ -57,9 +57,9 @@ async function ensureAndroidChannels(): Promise<void> {
       lightColor: "#E5C46B",
     });
     await Notifications.setNotificationChannelAsync("bookings", {
-      name: "Réservations & billets",
+      name: "Réservations & événements",
       description:
-        "Confirmations de réservation, rappels d'événement et mises à jour sur vos billets achetés.",
+        "Confirmations de réservation, rappels d'événement et mises à jour sur vos activités.",
       importance: Notifications.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: "#3FBE7A",
