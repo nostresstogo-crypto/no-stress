@@ -11,7 +11,7 @@ const fr: Record<string, string> = {
 
   /* ── Footer ── */
   "footer.desc":
-    "L'application de découverte d'événements et de vie nocturne au Togo. Trouvez les meilleurs concerts, festivals et soirées à Lomé et au-delà.",
+    "L'application de découverte d'événements et de vie nocturne en Afrique. Trouvez les meilleurs concerts, festivals, bars, clubs et restaurants partout sur le continent.",
   "footer.links": "Liens Rapides",
   "footer.terms": "Conditions d'utilisation",
   "footer.privacy": "Politique de confidentialité",
@@ -21,56 +21,88 @@ const fr: Record<string, string> = {
   "footer.proudly": "Fièrement Togolais",
 
   /* ── Home – Hero ── */
-  "home.hero.title": "Vivez l'énergie du",
-  "home.hero.country": "Togo",
+  "home.hero.title": "Vivez l'énergie de l'",
+  "home.hero.country": "Afrique",
   "home.hero.title2": ", sans stress.",
   "home.hero.sub":
-    "Découvrez les meilleurs concerts, festivals, et soirées. Le pouls de la vie nocturne togolaise dans votre poche.",
+    "Découvrez les meilleurs événements, bars, restaurants, clubs et lieux de divertissement partout en Afrique. La vie nocturne et festive à portée de main.",
   "home.hero.appstore": "App Store",
   "home.hero.googleplay": "Google Play",
 
   /* ── Home – Features ── */
   "home.features.title": "Tout ce qu'il vous faut pour sortir",
   "home.features.sub":
-    "NoStress simplifie votre vie sociale, de la découverte à la sortie.",
+    "NoStress vous connecte aux meilleurs événements et lieux de divertissement en Afrique, avec l'intelligence artificielle comme guide personnel.",
   "home.features.f1.title": "Découverte",
   "home.features.f1.desc":
-    "Trouvez des événements exclusifs et des soirées secrètes.",
+    "Explorez des événements exclusifs, concerts, festivals et soirées partout en Afrique.",
   "home.features.f2.title": "Recommandations IA",
   "home.features.f2.desc":
-    "L'IA analyse vos goûts et votre ville pour vous suggérer les événements qui vous correspondent.",
+    "L'IA analyse vos goûts et votre ville pour vous suggérer les événements et lieux qui vous correspondent vraiment.",
   "home.features.f3.title": "Carte Interactive",
   "home.features.f3.desc":
-    "Localisez les lieux les plus chauds autour de vous.",
+    "Localisez les bars, clubs, restaurants et lieux d'événements autour de vous.",
   "home.features.f4.title": "Espace Partenaire",
   "home.features.f4.desc":
-    "Gérez vos événements directement depuis l'application.",
+    "Créez et gérez vos événements, mettez en avant votre établissement et touchez une audience plus large.",
 
   /* ── Home – App Mockup ── */
   "home.app.title": "L'expérience NoStress au bout des doigts",
   "home.app.sub":
-    "Une interface fluide, pensée pour la nuit. Feuilletez les événements à venir, sauvegardez vos favoris et restez connecté à la vie nocturne togolaise.",
+    "Une interface fluide, pensée pour la nuit. Parcourez les événements à venir, explorez les bars, clubs, restaurants et lounges près de chez vous — et ne ratez plus aucune sortie.",
   "home.app.li1": "Recommandations personnalisées par l'IA",
-  "home.app.li2": "Notifications en temps réel pour vos artistes préférés",
-  "home.app.li3": "Carte interactive des lieux et événements",
+  "home.app.li2": "Notifications en temps réel pour vos événements et lieux favoris",
+  "home.app.li3": "Carte interactive des lieux et événements près de vous",
   "home.app.li4": "Mode sombre exclusif pour le confort visuel",
+
+  /* ── Home – Pricing ── */
+  "home.pricing.title": "Pour les Organisateurs & Établissements",
+  "home.pricing.sub":
+    "Rejoignez NoStress et boostez la visibilité de vos événements et établissements auprès d'un large public africain.",
+  "home.pricing.payment": "Paiements acceptés via Flooz et TMoney",
+  "home.pricing.popular": "Populaire",
+  "home.pricing.cta": "Commencer",
+  "home.pricing.p1.name": "Gratuit",
+  "home.pricing.p1.desc": "Pour démarrer sur la plateforme",
+  "home.pricing.p1.f1": "1 événement actif",
+  "home.pricing.p1.f2": "1 lieu référencé",
+  "home.pricing.p1.f3": "Visibilité standard",
+  "home.pricing.p1.f4": "Support par email",
+  "home.pricing.p2.name": "Standard",
+  "home.pricing.p2.suffix": "/mois",
+  "home.pricing.p2.desc": "Pour les clubs et promoteurs actifs",
+  "home.pricing.p2.f1": "Événements illimités",
+  "home.pricing.p2.f2": "Jusqu'à 3 lieux référencés",
+  "home.pricing.p2.f3": "Mise en avant dans l'application",
+  "home.pricing.p2.f4": "Notifications push à vos abonnés",
+  "home.pricing.p2.f5": "Statistiques de base",
+  "home.pricing.p2.f6": "Support prioritaire",
+  "home.pricing.p3.name": "Pro",
+  "home.pricing.p3.suffix": "/mois",
+  "home.pricing.p3.desc": "Pour les grands établissements et festivals",
+  "home.pricing.p3.f1": "Tout le Standard inclus",
+  "home.pricing.p3.f2": "Lieux illimités",
+  "home.pricing.p3.f3": "Badge partenaire vérifié",
+  "home.pricing.p3.f4": "Statistiques avancées",
+  "home.pricing.p3.f5": "Visibilité boostée à travers l'Afrique",
+  "home.pricing.p3.f6": "Account manager dédié",
 
   /* ── Home – Testimonials ── */
   "home.testimonials.title": "Ce qu'ils en disent",
   "home.testimonials.t1.quote":
-    "Enfin une appli qui comprend comment on fait la fête à Lomé ! Je découvre des événements que je n'aurais jamais trouvés autrement.",
-  "home.testimonials.t1.role": "Étudiant",
+    "Enfin une appli africaine qui rassemble tous les événements au même endroit ! Je découvre des concerts, des lounges et des soirées que je n'aurais jamais trouvés autrement.",
+  "home.testimonials.t1.role": "Étudiant, Lomé",
   "home.testimonials.t2.quote":
-    "En tant que gérante de club, NoStress m'a permis de doubler ma visibilité le week-end. La gestion de mes événements n'a jamais été aussi simple.",
+    "Depuis que mon club est sur NoStress, ma visibilité a doublé chaque week-end. La gestion de mes événements et la mise en avant de mon établissement n'ont jamais été aussi simples.",
   "home.testimonials.t2.role": "Propriétaire de Club",
   "home.testimonials.t3.quote":
-    "J'ai découvert des festivals incroyables à Kpalimé que je n'aurais jamais trouvés autrement. L'interface est magnifique et super fluide.",
+    "J'ai découvert des festivals incroyables que je n'aurais jamais trouvés autrement. L'interface est magnifique, fluide et vraiment pensée pour les sorties.",
   "home.testimonials.t3.role": "Designer",
 
   /* ── Home – CTA ── */
   "home.cta.title": "Prêt à sortir ?",
   "home.cta.sub":
-    "Rejoignez des milliers de togolais qui utilisent NoStress pour planifier leurs week-ends.",
+    "Rejoignez des milliers d'Africains qui utilisent NoStress pour découvrir les meilleurs événements et lieux de divertissement.",
   "home.cta.ios": "Télécharger pour iOS",
   "home.cta.android": "Télécharger pour Android",
 
@@ -163,7 +195,7 @@ const en: Record<string, string> = {
 
   /* ── Footer ── */
   "footer.desc":
-    "The event discovery and nightlife app for Togo. Find the best concerts, festivals and parties in Lomé and beyond.",
+    "The event discovery and nightlife app for Africa. Find the best concerts, festivals, bars, clubs and restaurants across the continent.",
   "footer.links": "Quick Links",
   "footer.terms": "Terms of Use",
   "footer.privacy": "Privacy Policy",
@@ -174,52 +206,84 @@ const en: Record<string, string> = {
 
   /* ── Home – Hero ── */
   "home.hero.title": "Feel the energy of",
-  "home.hero.country": "Togo",
+  "home.hero.country": "Africa",
   "home.hero.title2": ", stress-free.",
   "home.hero.sub":
-    "Discover the best concerts, festivals, and nightlife events. The pulse of Togolese nightlife, in your pocket.",
+    "Discover the best events, bars, restaurants, clubs and entertainment venues across Africa. Nightlife and festivities at your fingertips.",
   "home.hero.appstore": "App Store",
   "home.hero.googleplay": "Google Play",
 
   /* ── Home – Features ── */
   "home.features.title": "Everything you need to go out",
   "home.features.sub":
-    "NoStress simplifies your social life, from discovery to the night out.",
+    "NoStress connects you to the best events and entertainment venues across Africa, with AI as your personal guide.",
   "home.features.f1.title": "Discovery",
-  "home.features.f1.desc": "Find exclusive events and secret parties.",
+  "home.features.f1.desc": "Explore exclusive events, concerts, festivals and parties across Africa.",
   "home.features.f2.title": "AI Recommendations",
   "home.features.f2.desc":
-    "AI analyses your tastes and city to suggest events that truly match you.",
+    "AI analyses your tastes and city to suggest the events and venues that truly match you.",
   "home.features.f3.title": "Interactive Map",
-  "home.features.f3.desc": "Locate the hottest venues around you.",
+  "home.features.f3.desc": "Locate bars, clubs, restaurants and event venues around you.",
   "home.features.f4.title": "Partner Space",
-  "home.features.f4.desc": "Manage your events directly from the app.",
+  "home.features.f4.desc": "Create and manage your events, showcase your venue and reach a wider audience.",
 
   /* ── Home – App Mockup ── */
   "home.app.title": "The NoStress experience at your fingertips",
   "home.app.sub":
-    "A smooth interface built for the night. Browse upcoming events, save your favorites and stay connected to Togolese nightlife.",
+    "A smooth interface built for the night. Browse upcoming events, explore bars, clubs, restaurants and lounges near you — and never miss a night out.",
   "home.app.li1": "AI-powered personalised recommendations",
-  "home.app.li2": "Real-time notifications for your favorite artists",
-  "home.app.li3": "Interactive map of venues and events",
+  "home.app.li2": "Real-time notifications for your favourite events and venues",
+  "home.app.li3": "Interactive map of venues and events near you",
   "home.app.li4": "Exclusive dark mode for visual comfort",
+
+  /* ── Home – Pricing ── */
+  "home.pricing.title": "For Organizers & Venues",
+  "home.pricing.sub":
+    "Join NoStress and boost the visibility of your events and venues to a wide African audience.",
+  "home.pricing.payment": "Payments accepted via Flooz and TMoney",
+  "home.pricing.popular": "Popular",
+  "home.pricing.cta": "Get started",
+  "home.pricing.p1.name": "Free",
+  "home.pricing.p1.desc": "To get started on the platform",
+  "home.pricing.p1.f1": "1 active event",
+  "home.pricing.p1.f2": "1 listed venue",
+  "home.pricing.p1.f3": "Standard visibility",
+  "home.pricing.p1.f4": "Email support",
+  "home.pricing.p2.name": "Standard",
+  "home.pricing.p2.suffix": "/month",
+  "home.pricing.p2.desc": "For active clubs and promoters",
+  "home.pricing.p2.f1": "Unlimited events",
+  "home.pricing.p2.f2": "Up to 3 listed venues",
+  "home.pricing.p2.f3": "Featured in the app",
+  "home.pricing.p2.f4": "Push notifications to your followers",
+  "home.pricing.p2.f5": "Basic statistics",
+  "home.pricing.p2.f6": "Priority support",
+  "home.pricing.p3.name": "Pro",
+  "home.pricing.p3.suffix": "/month",
+  "home.pricing.p3.desc": "For large venues and festivals",
+  "home.pricing.p3.f1": "Everything in Standard",
+  "home.pricing.p3.f2": "Unlimited venues",
+  "home.pricing.p3.f3": "Verified partner badge",
+  "home.pricing.p3.f4": "Advanced statistics",
+  "home.pricing.p3.f5": "Boosted visibility across Africa",
+  "home.pricing.p3.f6": "Dedicated account manager",
 
   /* ── Home – Testimonials ── */
   "home.testimonials.title": "What they say",
   "home.testimonials.t1.quote":
-    "Finally an app that gets how we party in Lomé! I discover events I would never have found otherwise.",
-  "home.testimonials.t1.role": "Student",
+    "Finally an African app that brings all events together in one place! I discover concerts, lounges and parties I would never have found otherwise.",
+  "home.testimonials.t1.role": "Student, Lomé",
   "home.testimonials.t2.quote":
-    "As a club manager, NoStress doubled my weekend visibility. Managing my events has never been this easy.",
+    "Since my club joined NoStress, my visibility has doubled every weekend. Managing my events and showcasing my venue has never been this easy.",
   "home.testimonials.t2.role": "Club Owner",
   "home.testimonials.t3.quote":
-    "I discovered incredible festivals in Kpalimé that I would never have found otherwise. The interface is beautiful and super smooth.",
+    "I discovered incredible festivals I would never have found otherwise. The interface is beautiful, smooth and truly built for nights out.",
   "home.testimonials.t3.role": "Designer",
 
   /* ── Home – CTA ── */
   "home.cta.title": "Ready to go out?",
   "home.cta.sub":
-    "Join thousands of Togolese who use NoStress to plan their weekends.",
+    "Join thousands of Africans who use NoStress to discover the best events and entertainment venues.",
   "home.cta.ios": "Download for iOS",
   "home.cta.android": "Download for Android",
 
