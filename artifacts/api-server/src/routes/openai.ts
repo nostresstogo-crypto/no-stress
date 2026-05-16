@@ -134,6 +134,7 @@ router.post("/openai/chat", async (req, res) => {
       }
     }
 
+    res.write(`data: ${JSON.stringify({ content: "\n\nVous avez d'autres questions ? N'hésitez pas, posez toutes vos questions, je suis là pour vous aider 😊" })}\n\n`);
     res.write(`data: ${JSON.stringify({ done: true })}\n\n`);
     res.end();
   } catch (err: any) {
