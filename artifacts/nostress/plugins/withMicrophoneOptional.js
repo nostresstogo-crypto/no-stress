@@ -1,4 +1,33 @@
-const { withAndroidManifest } = require("@expo/config-plugins");
+const path = require("path");
+
+// In a pnpm monorepo, @expo/config-plugins is not directly resolvable
+// from the plugin file. We resolve it through the `expo` package which
+// always depends on it, walking up the directory tree as a fallback.
+function requireConfigPlugins() {
+  const searchRoots = [
+    path.join(__dirname, ".."),
+    path.join(__dirname, "..", ".."),
+    path.join(__dirname, "..", "..", ".."),
+  ];
+
+  for (const root of searchRoots) {
+    try {
+      const expoDir = path.dirname(
+        require.resolve("expo/package.json", { paths: [root] })
+      );
+      return require(
+        require.resolve("@expo/config-plugins", {
+          paths: [expoDir, path.join(expoDir, "node_modules"), root],
+        })
+      );
+    } catch (_) {}
+  }
+
+  // Last resort: standard require (works when hoisted or globally available)
+  return require("@expo/config-plugins");
+}
+
+const { withAndroidManifest } = requireConfigPlugins();
 
 module.exports = function withMicrophoneOptional(config) {
   return withAndroidManifest(config, (config) => {
