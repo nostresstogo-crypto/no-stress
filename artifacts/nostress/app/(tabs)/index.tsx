@@ -7,7 +7,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
   Platform,
@@ -153,7 +152,6 @@ export default function HomeScreen() {
   const C = useColors();
   const { lang, selectedCity, setSelectedCity, selectedCategory, setSelectedCategory, myEvents, configEventCategories } = useApp();
   const insets = useSafeAreaInsets();
-  const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [venueModal, setVenueModal] = useState<any | null>(null);
   const [apiEvents, setApiEvents] = useState<ApiEvent[]>([]);
@@ -261,13 +259,6 @@ export default function HomeScreen() {
       if ((e as any).status === "cancelled") return false;
       const matchCity = !selectedCity || (e.city || "").toLowerCase() === selectedCity.toLowerCase();
       const matchCat = !selectedCategory || e.category === selectedCategory;
-      const q = search.trim().toLowerCase();
-      const matchSearch = !q ||
-        e.title.toLowerCase().includes(q) ||
-        (e.titleFr && e.titleFr.toLowerCase().includes(q)) ||
-        (e.venue && e.venue.toLowerCase().includes(q)) ||
-        (e.description && e.description.toLowerCase().includes(q)) ||
-        (e.descriptionFr && e.descriptionFr.toLowerCase().includes(q));
 
       let matchDate = true;
       if (filters.dateRange !== "all") {
@@ -291,7 +282,7 @@ export default function HomeScreen() {
         matchPrice = (e.priceFCFA ?? 0) <= filters.maxPrice;
       }
 
-      return matchCity && matchCat && matchSearch && matchDate && matchPrice;
+      return matchCity && matchCat && matchDate && matchPrice;
     });
 
     out.sort((a, b) => {
@@ -302,7 +293,7 @@ export default function HomeScreen() {
       return filters.sort === "dateDesc" ? db - da : da - db;
     });
     return out;
-  }, [allEvents, selectedCity, selectedCategory, search, filters]);
+  }, [allEvents, selectedCity, selectedCategory, filters]);
 
   // Top section: 5 most-recently-created events (across system, ignoring filters except city/category lightweight context)
   const recentEvents = useMemo(() => {
@@ -334,21 +325,16 @@ export default function HomeScreen() {
 
         {/* Search + Filter */}
         <View style={styles.searchFilterRow}>
-          <View style={[styles.searchRow, { flex: 1 }]}>
+          <TouchableOpacity
+            activeOpacity={0.75}
+            style={[styles.searchRow, { flex: 1 }]}
+            onPress={() => router.push("/search")}
+          >
             <Ionicons name="search" size={18} color={C.textMuted} style={styles.searchIcon} />
-            <TextInput
-              value={search}
-              onChangeText={setSearch}
-              placeholder={t("searchPlaceholder")}
-              placeholderTextColor={C.textMuted}
-              style={styles.searchInput}
-            />
-            {search.length > 0 && (
-              <TouchableOpacity onPress={() => setSearch("")}>
-                <Ionicons name="close-circle" size={18} color={C.textMuted} />
-              </TouchableOpacity>
-            )}
-          </View>
+            <Text style={[styles.searchInput, { color: C.textMuted }]}>
+              {t("searchPlaceholder")}
+            </Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={openFilters} style={styles.filterBtn} accessibilityLabel={lang === "fr" ? "Filtres" : "Filters"}>
             <Ionicons name="options-outline" size={20} color={C.text} />
             {activeFilterCount > 0 && (
