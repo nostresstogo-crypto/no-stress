@@ -1,0 +1,59 @@
+λ eas build --platform ios --profile production
+(node:12472) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Found eas-cli in your monorepo dependencies.
+It's recommended to use the "cli.version" field in eas.json to enforce the eas-cli version for your project.
+Learn more: https://github.com/expo/eas-cli#enforcing-eas-cli-version-for-your-project
+
+
+⚠️ Detected that your app uses Expo Go for development, this is not recommended when building production apps.
+Learn more: https://expo.fyi/why-not-build-expo-go-for-production
+To suppress this warning, set EAS_BUILD_NO_EXPO_GO_WARNING=true.
+
+Resolved "production" environment for the build. Learn more: https://docs.expo.dev/eas/environment-variables/#setting-the-environment-for-your-builds
+No environment variables with visibility "Plain text" and "Sensitive" found for the "production" environment on EAS.
+Environment variables loaded from the "production" build profile "env" configuration: EXPO_PUBLIC_API_BASE.
+
+√ Incremented buildNumber from 26 to 27.
+
+You've used 93% of your included build credits for this month. ████████████████████████████░░
+Additional usage beyond your limit will be charged at pay-as-you-go rates. See usage in billing.: https://expo.dev/accounts/tksm/settings/billing
+
+The build profile "production" specifies the channel "production", but the "expo-updates" package is missing. To use channels in your builds, install the "expo-updates" package and run "eas update:configure".
+√ Would you like to install the "expo-updates" package and configure EAS Update now? ... yes
+> npx expo install expo-updates
+[expo-cli] › Installing 1 SDK 54.0.0 compatible native module using pnpm
+[expo-cli] > pnpm add expo-updates@~29.0.17
+[expo-cli] ../..                                    | Progress: resolved 1, reused 0, downloaded 0, added 0
+[expo-cli] [WARN] deprecated @ungap/structured-clone@1.3.0: Potential CWE-502 - Update to 1.3.1 or higher
+[expo-cli] ../api-server                            | [WARN] deprecated @types/bcryptjs@3.0.0
+[expo-cli] ../..                                    | Progress: resolved 196, reused 0, downloaded 0, added 0
+[expo-cli] ../..                                    | Progress: resolved 879, reused 0, downloaded 0, added 0
+[expo-cli] ../..                                    | Progress: resolved 1507, reused 0, downloaded 0, added 0
+[expo-cli] ../..                                    | Progress: resolved 2248, reused 0, downloaded 0, added 0
+[expo-cli] [WARN] 35 deprecated subdependencies found: @babel/plugin-proposal-class-properties@7.18.6, @babel/plugin-proposal-nullish-coalescing-operator@7.18.6, @babel/plugin-proposal-numeric-separator@7.18.6, @babel/plugin-proposal-optional-chaining@7.21.0, @babel/plugin-proposal-private-methods@7.18.6, @babel/plugin-proposal-private-property-in-object@7.21.11, @humanwhocodes/config-array@0.13.0, @humanwhocodes/object-schema@2.0.3, @xmldom/xmldom@0.8.12, abab@2.0.6, domexception@2.0.1, eslint@8.57.1, glob@10.5.0, glob@6.0.4, glob@7.2.3, inflight@1.0.6, lodash.get@4.4.2, node-domexception@1.0.0, q@1.5.1, rimraf@2.4.5, rimraf@3.0.2, rollup-plugin-terser@7.0.2, source-map@0.8.0-beta.0, sourcemap-codec@1.4.8, stable@0.1.8, svgo@1.3.2, tar@7.5.7, uuid@3.4.0, uuid@7.0.3, uuid@8.3.2, uuid@9.0.1, w3c-hr-time@1.0.2, whatwg-encoding@1.0.5, workbox-cacheable-response@6.6.0, workbox-google-analytics@6.6.0
+[expo-cli] ../..                                    | Progress: resolved 2251, reused 0, downloaded 0, added 0
+[expo-cli] ../..                                    | Progress: resolved 2251, reused 0, downloaded 0, added 0, done
+[expo-cli] dependencies:
+[expo-cli] + expo-updates ~29.0.17
+[expo-cli] ../..                                    |   +7 +
+[expo-cli] ../.. preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+[expo-cli] ../.. preinstall: Use pnpm instead
+[expo-cli] ../.. preinstall: Failed
+[expo-cli] [ELIFECYCLE] Command failed with exit code 1.
+[expo-cli] Error: pnpm add expo-updates@~29.0.17 exited with non-zero code: 1
+[expo-cli] Error: pnpm add expo-updates@~29.0.17 exited with non-zero code: 1
+[expo-cli]     at ChildProcess.completionListener (C:\Users\user\Documents\projects\no-stress\node_modules\.pnpm\@expo+spawn-async@1.7.2\node_modules\@expo\spawn-async\build\spawnAsync.js:42:23)
+[expo-cli]     at Object.onceWrapper (node:events:634:26)
+[expo-cli]     at ChildProcess.emit (node:events:519:28)
+[expo-cli]     at cp.emit (C:\Users\user\Documents\projects\no-stress\node_modules\.pnpm\cross-spawn@7.0.6\node_modules\cross-spawn\lib\enoent.js:34:29)
+[expo-cli]     at maybeClose (node:internal/child_process:1101:16)
+[expo-cli]     at ChildProcess._handle.onexit (node:internal/child_process:304:5)
+[expo-cli]     ...
+[expo-cli]     at spawnAsync (C:\Users\user\Documents\projects\no-stress\node_modules\.pnpm\@expo+spawn-async@1.7.2\node_modules\@expo\spawn-async\build\spawnAsync.js:7:23)
+[expo-cli]     at PnpmPackageManager.runAsync (C:\Users\user\Documents\projects\no-stress\node_modules\.pnpm\@expo+package-manager@1.10.3\node_modules\@expo\package-manager\build\node\BasePackageManager.js:41:42)
+[expo-cli]     at PnpmPackageManager.addAsync (C:\Users\user\Documents\projects\no-stress\node_modules\.pnpm\@expo+package-manager@1.10.3\node_modules\@expo\package-manager\build\node\PnpmPackageManager.js:36:21)
+[expo-cli]     at installPackagesAsync (C:\Users\user\Documents\projects\no-stress\node_modules\.pnpm\@expo+cli@54.0.23_expo-rout_57244e229f11998d079517b998b185cb\node_modules\@expo\cli\build\src\install\installAsync.js:189:30)
+[expo-cli]     at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+C:\Users\user\Documents\projects\no-stress\node_modules\.pnpm\expo@54.0.33_@babel+core@7._4cf39857bec3c399c30958466e4ba82a\node_modules\expo\bin\cli install expo-updates exited with non-zero code: 1
+    Error: build command failed.
