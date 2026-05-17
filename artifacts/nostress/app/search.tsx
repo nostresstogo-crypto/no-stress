@@ -260,12 +260,14 @@ export default function SearchScreen() {
   // Auto-switch to the tab that has results
   useEffect(() => {
     if (!search.trim()) return;
-    if (activeTab === "events" && filteredEvents.length === 0 && filteredVenues.length > 0) {
+    const evCount = filteredEvents.length;
+    const vCount = filteredVenues.length;
+    if (activeTab === "events" && evCount === 0 && vCount > 0) {
       setActiveTab("venues");
-    } else if (activeTab === "venues" && filteredVenues.length === 0 && filteredEvents.length > 0) {
+    } else if (activeTab === "venues" && vCount === 0 && evCount > 0) {
       setActiveTab("events");
     }
-  }, [filteredEvents.length, filteredVenues.length, search]);
+  }, [filteredEvents, filteredVenues, search, activeTab]);
 
   const goBack = useCallback(() => {
     Keyboard.dismiss();
