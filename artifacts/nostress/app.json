@@ -119,7 +119,8 @@
             "deploymentTarget": "15.1"
           }
         }
-      ]
+      ],
+      "./plugins/withMicrophoneOptional"
     ],
     "experiments": {
       "typedRoutes": true,
