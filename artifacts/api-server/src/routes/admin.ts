@@ -9,6 +9,7 @@ import {
   verifyToken,
   issueRefreshToken,
   revokeRefreshToken,
+  revokeAllForSubject,
   generateRandomPassword,
 } from "../lib/auth-utils.js";
 import {
@@ -85,7 +86,7 @@ async function ensureSeedAdmin(): Promise<void> {
 // Fire-and-forget on module load
 ensureSeedAdmin();
 
-function requireAdmin(req: any, res: any, next: any) {
+async function requireAdmin(req: any, res: any, next: any) {
   const auth = req.headers["authorization"];
   if (!auth?.startsWith("Bearer ")) {
     return res.status(401).json({ error: "Authentification requise." });
@@ -93,6 +94,17 @@ function requireAdmin(req: any, res: any, next: any) {
   const payload = verifyToken(auth.slice(7));
   if (!payload || payload.role !== "admin" || !payload.sub.startsWith("a_")) {
     return res.status(401).json({ error: "Session expirée ou invalide." });
+  }
+  const adminId = parseInt(payload.sub.slice(2), 10);
+  if (!Number.isFinite(adminId)) {
+    return res.status(401).json({ error: "Session invalide." });
+  }
+  const [row] = await db
+    .select({ id: adminsTable.id })
+    .from(adminsTable)
+    .where(eq(adminsTable.id, adminId));
+  if (!row) {
+    return res.status(401).json({ error: "Compte supprimé ou désactivé." });
   }
   req.admin = {
     adminId: payload.sub.slice(2),
@@ -300,6 +312,8 @@ router.delete("/admin/managers/:id", requireSuperAdmin, async (req, res) => {
     .where(and(eq(adminsTable.id, id), eq(adminsTable.role, "gestionnaire")))
     .returning({ id: adminsTable.id, email: adminsTable.email });
   if (!deleted) return res.status(404).json({ error: "Gestionnaire introuvable." });
+  // Révoquer immédiatement tous les refresh tokens du gestionnaire supprimé
+  await revokeAllForSubject(`a_${id}`);
   res.json({ message: "Compte gestionnaire supprimé.", deleted: { id: String(deleted.id), email: deleted.email } });
 });
 
