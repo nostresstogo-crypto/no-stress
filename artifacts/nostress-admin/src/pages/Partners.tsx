@@ -420,19 +420,21 @@ export default function Partners() {
                               <CheckCircle className="w-3 h-3 mr-1" />
                               Approuver
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-destructive border-destructive/30 hover:bg-destructive/10 h-7 text-xs"
-                              onClick={() => { setSelected(partner); setRejectOpen(true); }}
-                              disabled={actionLoading}
-                            >
-                              <XCircle className="w-3 h-3 mr-1" />
-                              Rejeter
-                            </Button>
+                            {isSuperAdmin && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-destructive border-destructive/30 hover:bg-destructive/10 h-7 text-xs"
+                                onClick={() => { setSelected(partner); setRejectOpen(true); }}
+                                disabled={actionLoading}
+                              >
+                                <XCircle className="w-3 h-3 mr-1" />
+                                Rejeter
+                              </Button>
+                            )}
                           </>
                         )}
-                        {partner.status === "approved" && (
+                        {partner.status === "approved" && isSuperAdmin && (
                           <>
                             <Button
                               size="sm"
@@ -456,7 +458,7 @@ export default function Partners() {
                             </Button>
                           </>
                         )}
-                        {(partner.status === "suspended" || partner.status === "banned") && (
+                        {(partner.status === "suspended" || partner.status === "banned") && isSuperAdmin && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -599,14 +601,16 @@ export default function Partners() {
 
           {selected?.status === "pending" && (
             <DialogFooter className="gap-2">
-              <Button
-                variant="outline"
-                className="text-destructive border-destructive/30 hover:bg-destructive/10"
-                onClick={() => { setDetailOpen(false); setRejectOpen(true); }}
-              >
-                <XCircle className="w-4 h-4 mr-1" />
-                Rejeter
-              </Button>
+              {isSuperAdmin && (
+                <Button
+                  variant="outline"
+                  className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                  onClick={() => { setDetailOpen(false); setRejectOpen(true); }}
+                >
+                  <XCircle className="w-4 h-4 mr-1" />
+                  Rejeter
+                </Button>
+              )}
               <Button
                 className="bg-green-500 hover:bg-green-600 text-white"
                 onClick={() => selected && handleApprove(selected)}
@@ -639,28 +643,32 @@ export default function Partners() {
                   Étendre l'abonnement
                 </Button>
               )}
-              <Button
-                variant="outline"
-                className="text-orange-400 border-orange-400/30 hover:bg-orange-400/10"
-                onClick={() => { setSuspendReason(""); setSuspendUntil(""); setSuspendOpen(true); }}
-                disabled={actionLoading}
-              >
-                <AlertTriangle className="w-4 h-4 mr-1" />
-                Suspendre
-              </Button>
-              <Button
-                variant="outline"
-                className="text-red-500 border-red-500/30 hover:bg-red-500/10"
-                onClick={() => { setBanReason(""); setBanOpen(true); }}
-                disabled={actionLoading}
-              >
-                <Ban className="w-4 h-4 mr-1" />
-                Bannir
-              </Button>
+              {isSuperAdmin && (
+                <Button
+                  variant="outline"
+                  className="text-orange-400 border-orange-400/30 hover:bg-orange-400/10"
+                  onClick={() => { setSuspendReason(""); setSuspendUntil(""); setSuspendOpen(true); }}
+                  disabled={actionLoading}
+                >
+                  <AlertTriangle className="w-4 h-4 mr-1" />
+                  Suspendre
+                </Button>
+              )}
+              {isSuperAdmin && (
+                <Button
+                  variant="outline"
+                  className="text-red-500 border-red-500/30 hover:bg-red-500/10"
+                  onClick={() => { setBanReason(""); setBanOpen(true); }}
+                  disabled={actionLoading}
+                >
+                  <Ban className="w-4 h-4 mr-1" />
+                  Bannir
+                </Button>
+              )}
             </DialogFooter>
           )}
 
-          {(selected?.status === "suspended" || selected?.status === "banned") && (
+          {(selected?.status === "suspended" || selected?.status === "banned") && isSuperAdmin && (
             <DialogFooter className="gap-2 flex-wrap">
               <Button
                 variant="outline"

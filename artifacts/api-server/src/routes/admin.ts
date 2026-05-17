@@ -358,7 +358,7 @@ router.get("/admin/users", requireAdmin, async (req, res) => {
   res.json({ users: users.map((u) => ({ ...u, id: String(u.id) })), total, page, limit });
 });
 
-router.put("/admin/users/:id/suspend", requireAdmin, async (req, res) => {
+router.put("/admin/users/:id/suspend", requireSuperAdmin, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Utilisateur introuvable." });
   const { reason, until } = req.body || {};
@@ -383,7 +383,7 @@ router.put("/admin/users/:id/suspend", requireAdmin, async (req, res) => {
   res.json({ user: { ...updated, id: String(updated.id) } });
 });
 
-router.put("/admin/users/:id/ban", requireAdmin, async (req, res) => {
+router.put("/admin/users/:id/ban", requireSuperAdmin, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Utilisateur introuvable." });
   const { reason } = req.body || {};
@@ -403,7 +403,7 @@ router.put("/admin/users/:id/ban", requireAdmin, async (req, res) => {
   res.json({ user: { ...updated, id: String(updated.id) } });
 });
 
-router.put("/admin/users/:id/reactivate", requireAdmin, async (req, res) => {
+router.put("/admin/users/:id/reactivate", requireSuperAdmin, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Utilisateur introuvable." });
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
@@ -468,7 +468,7 @@ router.get("/admin/partner-accounts", requireAdmin, async (req, res) => {
   res.json({ partners: rows.map((p) => ({ ...p, id: String(p.id) })), total, page, limit });
 });
 
-router.put("/admin/partners/:id/suspend", requireAdmin, async (req, res) => {
+router.put("/admin/partners/:id/suspend", requireSuperAdmin, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Partenaire introuvable." });
   const { reason, until } = req.body || {};
@@ -493,7 +493,7 @@ router.put("/admin/partners/:id/suspend", requireAdmin, async (req, res) => {
   res.json({ partner: { ...updated, id: String((updated as any).id) } });
 });
 
-router.put("/admin/partners/:id/ban", requireAdmin, async (req, res) => {
+router.put("/admin/partners/:id/ban", requireSuperAdmin, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Partenaire introuvable." });
   const { reason } = req.body || {};
@@ -513,7 +513,7 @@ router.put("/admin/partners/:id/ban", requireAdmin, async (req, res) => {
   res.json({ partner: { ...updated, id: String((updated as any).id) } });
 });
 
-router.put("/admin/partners/:id/reactivate", requireAdmin, async (req, res) => {
+router.put("/admin/partners/:id/reactivate", requireSuperAdmin, async (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Partenaire introuvable." });
   const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.id, id));

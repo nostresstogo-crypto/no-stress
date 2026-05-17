@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { AdminLayout } from "@/components/AdminLayout";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +39,8 @@ function StatusBadge({ status }: { status: string }) {
 export default function Users() {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const { admin } = useAuth();
+  const isSuperAdmin = admin?.role === "superadmin";
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -195,7 +198,7 @@ export default function Users() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-end gap-1">
-                          {user.status !== "active" && (
+                          {isSuperAdmin && user.status !== "active" && (
                             <Button
                               size="sm"
                               variant="outline"
@@ -206,7 +209,7 @@ export default function Users() {
                               Réactiver
                             </Button>
                           )}
-                          {user.status !== "suspended" && user.status !== "banned" && (
+                          {isSuperAdmin && user.status !== "suspended" && user.status !== "banned" && (
                             <Button
                               size="sm"
                               variant="outline"
@@ -217,7 +220,7 @@ export default function Users() {
                               Suspendre
                             </Button>
                           )}
-                          {user.status !== "banned" && (
+                          {isSuperAdmin && user.status !== "banned" && (
                             <Button
                               size="sm"
                               variant="outline"

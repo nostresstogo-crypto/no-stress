@@ -519,7 +519,7 @@ router.post("/admin/partners/:id/resend-credentials", requireAdmin, async (req: 
   }
 });
 
-router.post("/admin/partners/:id/reject", requireAdmin, async (req: any, res) => {
+router.post("/admin/partners/:id/reject", requireSuperAdmin, async (req: any, res) => {
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Partenaire introuvable." });
   const { reason } = req.body;
