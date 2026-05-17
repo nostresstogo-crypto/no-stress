@@ -220,9 +220,7 @@ export default function SearchScreen() {
   const styles = useMemo(() => makeStyles(C), [C]);
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
-  const initialQ = String(q || "");
-  const [search, setSearch] = useState(initialQ);
-  const [hasDirtied, setHasDirtied] = useState(initialQ.length > 0);
+  const [search, setSearch] = useState(String(q || ""));
   const [activeTab, setActiveTab] = useState<"events" | "venues">("events");
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -255,17 +253,9 @@ export default function SearchScreen() {
     return () => clearTimeout(t);
   }, []);
 
-  // Navigate back to home when search is cleared (only after user has typed)
-  useEffect(() => {
-    if (hasDirtied && search.trim() === "") {
-      router.replace("/" as any);
-    }
-  }, [search, hasDirtied]);
-
   const handleSearchChange = useCallback((text: string) => {
-    if (!hasDirtied && text.length > 0) setHasDirtied(true);
     setSearch(text);
-  }, [hasDirtied]);
+  }, []);
 
   const goBack = useCallback(() => {
     Keyboard.dismiss();
