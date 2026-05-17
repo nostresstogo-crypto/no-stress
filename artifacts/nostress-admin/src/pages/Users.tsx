@@ -74,10 +74,11 @@ export default function Users() {
 
   const mutate = useMutation({
     mutationFn: async () => {
-      if (!actionUser) return;
+      if (!actionUser) return undefined;
       if (actionType === "suspend") return api.users.suspend(actionUser.id, reason, untilDate || undefined);
       if (actionType === "ban") return api.users.ban(actionUser.id, reason);
       if (actionType === "reactivate") return api.users.reactivate(actionUser.id);
+      return undefined;
     },
     onSuccess: () => {
       const msgs: Record<string, string> = {
