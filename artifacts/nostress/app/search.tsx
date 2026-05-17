@@ -257,6 +257,16 @@ export default function SearchScreen() {
     setSearch(text);
   }, []);
 
+  // Auto-switch to the tab that has results
+  useEffect(() => {
+    if (!search.trim()) return;
+    if (activeTab === "events" && filteredEvents.length === 0 && filteredVenues.length > 0) {
+      setActiveTab("venues");
+    } else if (activeTab === "venues" && filteredVenues.length === 0 && filteredEvents.length > 0) {
+      setActiveTab("events");
+    }
+  }, [filteredEvents.length, filteredVenues.length, search]);
+
   const goBack = useCallback(() => {
     Keyboard.dismiss();
     router.replace("/" as any);
