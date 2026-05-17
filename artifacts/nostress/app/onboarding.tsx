@@ -327,11 +327,12 @@ function SlideView({
   });
 
   return (
-    <View style={styles.slide}>
+    <View style={[styles.slide, index === 0 && { gap: 14 }]}>
       {/* Hero visual */}
       <Animated.View
         style={[
           styles.heroWrap,
+          index === 0 && { height: 160 },
           { opacity: heroOpacity, transform: [{ scale: heroScale }] },
         ]}
       >
