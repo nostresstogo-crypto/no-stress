@@ -10,14 +10,14 @@
 name: Deploy Web to VPS
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "artifacts/nostress-web/**"
-      - "lib/api-zod/**"
-      - "lib/api-client-react/**"
-      - "deploy/web/**"
-      - ".github/workflows/deploy-web.yml"
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - "artifacts/nostress-web/**"
+  #     - "lib/api-zod/**"
+  #     - "lib/api-client-react/**"
+  #     - "deploy/web/**"
+  #     - ".github/workflows/deploy-web.yml"
   workflow_dispatch:
 
 concurrency:
