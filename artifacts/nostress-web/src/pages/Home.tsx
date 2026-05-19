@@ -107,7 +107,7 @@ export default function Home() {
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
                 <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 text-lg px-8" asChild>
-                  <a href="https://apps.apple.com/us/app/nostress-event/id6762500080" target="_blank" rel="noopener noreferrer">
+                  <a href="https://apps.apple.com/us/app/nostress-events/id6762500080" target="_blank" rel="noopener noreferrer">
                     {t("home.hero.appstore")}
                   </a>
                 </Button>
@@ -287,7 +287,7 @@ export default function Home() {
             <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">{t("home.cta.sub")}</p>
             <div className="flex flex-wrap justify-center gap-4">
               <Button size="lg" className="bg-primary text-primary-foreground hover:bg-primary/90 text-lg px-8 h-14" asChild>
-                <a href="https://apps.apple.com/us/app/nostress-event/id6762500080" target="_blank" rel="noopener noreferrer">
+                <a href="https://apps.apple.com/us/app/nostress-events/id6762500080" target="_blank" rel="noopener noreferrer">
                   {t("home.cta.ios")}
                 </a>
               </Button>
