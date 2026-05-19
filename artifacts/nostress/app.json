@@ -132,8 +132,7 @@
       },
       "eas": {
         "projectId": "b372c0cb-009a-40b0-bd7c-720947a2a462"
-      },
-      "apiBase": "https://api.no-stress.net/api"
+      }
     }
   }
 }
