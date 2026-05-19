@@ -1,14 +1,14 @@
 name: Deploy API to VPS
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "artifacts/api-server/**"
-      - "lib/db/**"
-      - "lib/api-zod/**"
-      - "deploy/**"
-      - ".github/workflows/deploy-api.yml"
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - "artifacts/api-server/**"
+  #     - "lib/db/**"
+  #     - "lib/api-zod/**"
+  #     - "deploy/**"
+  #     - ".github/workflows/deploy-api.yml"
   workflow_dispatch:
 
 concurrency:
