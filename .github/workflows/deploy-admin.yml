@@ -1,13 +1,13 @@
 name: Deploy Admin to VPS
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "artifacts/nostress-admin/**"
-      - "lib/api-zod/**"
-      - "deploy/admin/**"
-      - ".github/workflows/deploy-admin.yml"
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - "artifacts/nostress-admin/**"
+  #     - "lib/api-zod/**"
+  #     - "deploy/admin/**"
+  #     - ".github/workflows/deploy-admin.yml"
   workflow_dispatch:
 
 concurrency:
