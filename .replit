@@ -35,6 +35,12 @@ SMTP_USER = "contact@no-stress.net"
 SMTP_PASS = "5jmnEvzjHKN39@4"
 JWT_SECRET = "e882b36856ea709c4c5556f78a38b0ac355e366011997b2400156e031540c1b91bcc4851c387894431244b9c11664522"
 
+[userenv.development]
+ADMIN_EMAIL = "tamekloes@gmail.com"
+
+[userenv.production]
+ADMIN_EMAIL = "nostresstogo@gmail.com"
+
 [nix]
 channel = "stable-25_05"
 
