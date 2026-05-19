@@ -9,6 +9,17 @@
       "distribution": "internal",
       "channel": "development"
     },
+    "staging": {
+      "distribution": "store",
+      "channel": "preview",
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_BASE": "https://108cce23-0344-4159-ae30-3843966849df-00-3g9mrhf2330n.picard.replit.dev/api"
+      }
+    },
     "preview": {
       "distribution": "internal",
       "channel": "preview",
