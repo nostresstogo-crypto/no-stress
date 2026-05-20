@@ -17,6 +17,7 @@ import reportsRouter from "./reports";
 import configRouter from "./config.js";
 import openaiRouter from "./openai.js";
 import reviewsRouter from "./reviews.js";
+import feedbackRouter from "./feedback.js";
 
 const router: IRouter = Router();
 
@@ -38,5 +39,6 @@ router.use(meRouter);
 router.use(reportsRouter);
 router.use(openaiRouter);
 router.use(reviewsRouter);
+router.use(feedbackRouter);
 
 export default router;

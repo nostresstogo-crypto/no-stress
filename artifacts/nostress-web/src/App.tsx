@@ -11,6 +11,7 @@ import Privacy from "pages/Privacy";
 import AccountDeletion from "pages/AccountDeletion";
 import TermsOfUse from "pages/TermsOfUse";
 import Contact from "pages/Contact";
+import TesterFeedback from "pages/TesterFeedback";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ function Router() {
       <Route path="/politique-confidentialite" component={Privacy} />
       <Route path="/suppression-compte" component={AccountDeletion} />
       <Route path="/contact" component={Contact} />
+      <Route path="/beta-feedback" component={TesterFeedback} />
       <Route component={NotFound} />
     </Switch>
   );

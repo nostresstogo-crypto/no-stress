@@ -1177,3 +1177,33 @@ export async function sendAdminNewReviewEmail(to: string, review: {
     `,
   });
 }
+
+export async function sendTesterFeedbackEmail(
+  name: string,
+  email: string,
+  phone: string | null,
+  messageHtml: string,
+) {
+  const transporter = createTransporter();
+  await transporter.sendMail({
+    from: FROM_EMAIL,
+    to: "nostresstogo@gmail.com",
+    replyTo: email,
+    subject: `[Closed Testing] Feedback de ${escapeHtml(name)}`,
+    html: `
+      <div style="font-family:Inter,Arial,sans-serif;max-width:640px;margin:0 auto;background:#0d0e1a;color:#e8e8f0;padding:32px;border-radius:12px;">
+        <h2 style="color:#a78bfa;margin:0 0 20px;">📋 Nouveau feedback testeur</h2>
+        <div style="background:#12132a;border-radius:8px;padding:16px;margin-bottom:20px;">
+          <p style="margin:0 0 8px;color:#b0b2cc;"><strong style="color:#e8e8f0;">Nom :</strong> ${escapeHtml(name)}</p>
+          <p style="margin:0 0 8px;color:#b0b2cc;"><strong style="color:#e8e8f0;">Email :</strong> <a href="mailto:${escapeHtml(email)}" style="color:#a78bfa;">${escapeHtml(email)}</a></p>
+          ${phone ? `<p style="margin:0;color:#b0b2cc;"><strong style="color:#e8e8f0;">Téléphone :</strong> ${escapeHtml(phone)}</p>` : ""}
+        </div>
+        <div style="background:#12132a;border-radius:8px;padding:16px;">
+          <p style="margin:0 0 12px;color:#e8e8f0;font-weight:600;">Description :</p>
+          <div style="color:#b0b2cc;line-height:1.7;">${messageHtml}</div>
+        </div>
+        <p style="color:#6b7280;font-size:12px;margin-top:24px;">NoStress Togo · Closed Testing Feedback</p>
+      </div>
+    `,
+  });
+}
