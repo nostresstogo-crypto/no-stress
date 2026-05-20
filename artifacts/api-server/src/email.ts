@@ -15,7 +15,16 @@ const SMTP_USER = process.env.SMTP_USER || "";
 const SMTP_PASS = process.env.SMTP_PASS;
 const FROM_EMAIL = process.env.SMTP_FROM || process.env.SMTP_USER || "nostresstogo@gmail.com";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "nostresstogo@gmail.com";
+const ADMIN_CC_EMAIL = process.env.ADMIN_CC_EMAIL || "";
 const ADMIN_BASE_URL = (process.env.ADMIN_BASE_URL || "https://admin.no-stress.net").replace(/\/+$/, "");
+
+// Adresses considérées comme "admin" — toute alerte envoyée à ces adresses
+// inclut automatiquement ADMIN_CC_EMAIL en copie.
+const ADMIN_ALERT_ADDRESSES = new Set(
+  [ADMIN_EMAIL, "tamekloes@gmail.com", "nostresstogo@gmail.com"]
+    .map((e) => e.toLowerCase())
+    .filter(Boolean),
+);
 
 function createTransporter() {
   if (!SMTP_PASS || !SMTP_USER) {
@@ -39,12 +48,24 @@ async function sendMail(options: { to: string; subject: string; html: string }) 
     console.warn("[EMAIL] SMTP_PASS not configured, skipping email to:", options.to);
     return;
   }
+
+  // Ajoute automatiquement ADMIN_CC_EMAIL en copie pour toutes les alertes admin.
+  const isAdminAlert =
+    ADMIN_CC_EMAIL &&
+    ADMIN_CC_EMAIL.toLowerCase() !== options.to.toLowerCase() &&
+    ADMIN_ALERT_ADDRESSES.has(options.to.toLowerCase());
+
   try {
     await transporter.sendMail({
       from: `"NoStress Togo" <${FROM_EMAIL}>`,
+      ...(isAdminAlert ? { cc: ADMIN_CC_EMAIL } : {}),
       ...options,
     });
-    console.info("[EMAIL] Sent to:", options.to, "—", options.subject);
+    console.info(
+      "[EMAIL] Sent to:", options.to,
+      ...(isAdminAlert ? ["cc:", ADMIN_CC_EMAIL] : []),
+      "—", options.subject,
+    );
   } catch (err) {
     console.error("[EMAIL] Failed to send to:", options.to, err);
   }

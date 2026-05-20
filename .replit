@@ -37,6 +37,7 @@ JWT_SECRET = "e882b36856ea709c4c5556f78a38b0ac355e366011997b2400156e031540c1b91b
 
 [userenv.development]
 ADMIN_EMAIL = "tamekloes@gmail.com"
+ADMIN_CC_EMAIL = "Bentchambago17@gmail.com"
 
 [userenv.production]
 ADMIN_EMAIL = "nostresstogo@gmail.com"
