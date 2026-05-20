@@ -1,4 +1,5 @@
 import { Router, type IRouter, type Request } from "express";
+import multer from "multer";
 import { sendTesterFeedbackEmail } from "../email.js";
 
 const router: IRouter = Router();
@@ -6,6 +7,15 @@ const router: IRouter = Router();
 const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const RATE_LIMIT_MAX = 5;
 const ipHits = new Map<string, number[]>();
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 5 },
+  fileFilter(_req, file, cb) {
+    if (file.mimetype.startsWith("image/")) cb(null, true);
+    else cb(new Error("Seules les images sont acceptées."));
+  },
+});
 
 function getClientIp(req: Request): string {
   const fwd = req.headers["x-forwarded-for"];
@@ -26,7 +36,7 @@ function isRateLimited(ip: string): boolean {
   return false;
 }
 
-router.post("/feedback", async (req, res) => {
+router.post("/feedback", upload.array("screenshots", 5), async (req, res) => {
   const ip = getClientIp(req);
   if (isRateLimited(ip)) {
     return res.status(429).json({ error: "Trop de demandes. Veuillez réessayer dans quelques minutes." });
@@ -52,8 +62,10 @@ router.post("/feedback", async (req, res) => {
     return res.status(400).json({ error: "Message invalide (10 à 20000 caractères)." });
   }
 
+  const files = (req.files as Express.Multer.File[]) ?? [];
+
   try {
-    await sendTesterFeedbackEmail(nameTrim, emailTrim, phoneTrim || null, messageTrim);
+    await sendTesterFeedbackEmail(nameTrim, emailTrim, phoneTrim || null, messageTrim, files);
   } catch (err) {
     console.error("[FEEDBACK] Email failed:", err);
     return res.status(502).json({ error: "Le service de messagerie est temporairement indisponible. Veuillez réessayer plus tard." });

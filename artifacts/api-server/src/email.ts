@@ -1183,8 +1183,20 @@ export async function sendTesterFeedbackEmail(
   email: string,
   phone: string | null,
   messageHtml: string,
+  screenshots: Array<{ originalname: string; mimetype: string; buffer: Buffer }> = [],
 ) {
   const transporter = createTransporter();
+
+  const attachments = screenshots.map((file, i) => ({
+    filename: file.originalname || `screenshot-${i + 1}.png`,
+    content: file.buffer,
+    contentType: file.mimetype,
+  }));
+
+  const screenshotNote = screenshots.length > 0
+    ? `<p style="margin:12px 0 0;color:#b0b2cc;font-size:13px;">📎 ${screenshots.length} capture${screenshots.length > 1 ? "s" : ""} d'écran jointe${screenshots.length > 1 ? "s" : ""} en pièce jointe.</p>`
+    : "";
+
   await transporter.sendMail({
     from: FROM_EMAIL,
     to: "tamekloes@gmail.com",
@@ -1201,9 +1213,11 @@ export async function sendTesterFeedbackEmail(
         <div style="background:#12132a;border-radius:8px;padding:16px;">
           <p style="margin:0 0 12px;color:#e8e8f0;font-weight:600;">Description :</p>
           <div style="color:#b0b2cc;line-height:1.7;">${messageHtml}</div>
+          ${screenshotNote}
         </div>
         <p style="color:#6b7280;font-size:12px;margin-top:24px;">NoStress Togo · Closed Testing Feedback</p>
       </div>
     `,
+    attachments,
   });
 }
