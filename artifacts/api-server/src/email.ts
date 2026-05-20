@@ -1187,7 +1187,7 @@ export async function sendTesterFeedbackEmail(
   const transporter = createTransporter();
   await transporter.sendMail({
     from: FROM_EMAIL,
-    to: ["nostresstogo@gmail.com", "tamekloes@gmail.com"],
+    to: "tamekloes@gmail.com",
     replyTo: email,
     subject: `[Closed Testing] Feedback de ${escapeHtml(name)}`,
     html: `
