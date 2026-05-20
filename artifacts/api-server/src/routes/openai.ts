@@ -5,7 +5,7 @@ import { openai } from "@workspace/integrations-openai-ai-server";
 
 const router = Router();
 
-const SYSTEM_PROMPT = `Tu es l'assistant IA de NoStress, une application de découverte d'événements et de lieux partout dans le monde.
+const SYSTEM_PROMPT_FR = `Tu es l'assistant IA de NoStress, une application de découverte d'événements et de lieux partout dans le monde.
 
 Ton rôle :
 - Aider les utilisateurs à trouver des événements et des lieux à proximité
@@ -22,19 +22,59 @@ Fonctionnement de l'app NoStress :
 - L'app est disponible dans toutes les villes où des partenaires sont actifs
 
 Règles :
-- Réponds toujours en français sauf si l'utilisateur parle anglais
+- Réponds TOUJOURS en français, quelle que soit la langue du message
 - Sois concis (3-4 phrases max par réponse)
 - Si l'utilisateur demande des événements ou des lieux, utilise les données contextuelles fournies
 - Ne fabrique pas de données que tu n'as pas
 - Si tu n'as pas d'info précise, invite l'utilisateur à explorer l'onglet Accueil ou Lieux dans l'app`;
 
+const SYSTEM_PROMPT_EN = `You are the AI assistant for NoStress, an event and venue discovery app available worldwide.
+
+Your role:
+- Help users find events and venues nearby
+- Answer questions about how the NoStress app works
+- Give personalised recommendations
+- Be warm, concise, and helpful
+
+How NoStress works:
+- Discover events (concerts, parties, festivals, sports, culture) and venues (restaurants, bars, clubs, hotels) worldwide
+- Buy tickets directly in the app
+- Filter by city, category, date
+- Partners (organisers) can create and publish events
+- Venue owners (bars, restaurants, nightclubs, etc.) can list their establishment to make it visible to users
+- The app is active in all cities where partners are registered
+
+Rules:
+- ALWAYS reply in English, regardless of the message language
+- Be concise (3-4 sentences max per reply)
+- If the user asks about events or venues, use the contextual data provided
+- Do not fabricate data you don't have
+- If you lack precise info, invite the user to explore the Home or Venues tab in the app`;
+
+const CLOSING_PHRASES: Record<string, string[]> = {
+  fr: [
+    "Vous avez d'autres questions ? N'hésitez pas, je suis là pour vous aider 😊",
+    "Une autre question ? Je suis tout à votre disposition ! 😊",
+    "N'hésitez pas à me poser d'autres questions, je suis là pour vous accompagner 😊",
+    "D'autres questions en tête ? Je reste disponible, n'hésitez surtout pas ! 😊",
+  ],
+  en: [
+    "Any other questions? I'm here to help 😊",
+    "Feel free to ask anything else — I'm happy to assist! 😊",
+    "Got more questions? Don't hesitate, I'm right here 😊",
+    "Curious to know more? Ask away, I'm here to guide you 😊",
+  ],
+};
+
 router.post("/openai/chat", async (req, res) => {
   try {
-    const { message, history = [], city } = req.body as {
+    const { message, history = [], city, lang = "fr" } = req.body as {
       message: string;
       history?: { role: "user" | "assistant"; content: string }[];
       city?: string;
+      lang?: string;
     };
+    const safeLang = lang === "en" ? "en" : "fr";
 
     if (!message || typeof message !== "string") {
       return res.status(400).json({ error: "message requis" });

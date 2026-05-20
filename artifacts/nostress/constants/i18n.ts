@@ -219,6 +219,23 @@ const baseTranslations = {
     takePhoto: "Prendre une photo",
     removePhoto: "Retirer la photo",
 
+    // AI Assistant
+    aiAssistantTitle: "Assistant NoStress",
+    aiAssistantPoweredBy: "Propulsé par IA",
+    aiAssistantWelcome: "Comment puis-je t'aider ?",
+    aiAssistantWelcomeSub: "Pose ta question par écrit ou appuie sur le micro pour parler directement.",
+    aiAssistantPlaceholder: "Pose ta question…",
+    aiAssistantListening: "J'écoute…",
+    aiAssistantErrorResponse: "Désolé, je n'ai pas pu répondre.",
+    aiAssistantErrorOccurred: "Une erreur est survenue. Réessaie dans un moment.",
+    aiAssistantVoiceUnavailable: "La saisie vocale est disponible dans la version installée de l'application NoStress.",
+    aiAssistantMicPermission: "Autorisez l'accès au microphone dans les réglages pour utiliser la saisie vocale.",
+    aiQ1: "Quel est l'utilité de NoStress ?",
+    aiQ2: "Quels événements sont près de moi ?",
+    aiQ3: "Quels lieux me recommandes-tu ?",
+    aiQ4: "Comment créer un événement ?",
+    aiQ5: "Comment rendre visible mon Local (Bars, Restaurants, Boite de nuit, etc...) sur NoStress ?",
+
     // Common
     loading: "Chargement...",
     error: "Erreur",
@@ -443,6 +460,23 @@ const baseTranslations = {
     pickImage: "Choose a photo",
     takePhoto: "Take a photo",
     removePhoto: "Remove photo",
+
+    // AI Assistant
+    aiAssistantTitle: "NoStress Assistant",
+    aiAssistantPoweredBy: "Powered by AI",
+    aiAssistantWelcome: "How can I help you?",
+    aiAssistantWelcomeSub: "Type your question or press the mic to speak directly.",
+    aiAssistantPlaceholder: "Ask your question…",
+    aiAssistantListening: "Listening…",
+    aiAssistantErrorResponse: "Sorry, I couldn't respond.",
+    aiAssistantErrorOccurred: "An error occurred. Please try again.",
+    aiAssistantVoiceUnavailable: "Voice input is available in the installed version of the NoStress app.",
+    aiAssistantMicPermission: "Allow microphone access in settings to use voice input.",
+    aiQ1: "What is NoStress used for?",
+    aiQ2: "What events are near me?",
+    aiQ3: "What venues do you recommend?",
+    aiQ4: "How do I create an event?",
+    aiQ5: "How can I make my venue (Bars, Restaurants, Nightclub, etc.) visible on NoStress?",
 
     // Common
     loading: "Loading...",

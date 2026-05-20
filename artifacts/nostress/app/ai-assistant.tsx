@@ -4,6 +4,7 @@ import {
   FlatList,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -15,7 +16,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { useApp, useColors } from "@/context/AppContext";
+import { useApp, useColors, useT } from "@/context/AppContext";
 import { API_BASE } from "@/lib/apiBase";
 import { ColorPalette } from "@/constants/colors";
 import { fetch } from "expo/fetch";
@@ -42,20 +43,17 @@ try {
 
 const speechRecognitionAvailable = !!_SpeechModule;
 
+const SPEECH_LANG: Record<string, string> = {
+  fr: "fr-FR",
+  en: "en-US",
+};
+
 type Message = {
   id: string;
   role: "user" | "assistant";
   content: string;
   loading?: boolean;
 };
-
-const QUICK_QUESTIONS = [
-  "Quel est l'utilité de NoStress ?",
-  "Quels événements sont près de moi ?",
-  "Quels lieux me recommandes-tu ?",
-  "Comment créer un événement ?",
-  "Comment rendre visible mon Local (Bars, Restaurants, Boite de nuit, etc...) sur NoStress ?",
-];
 
 function makeStyles(C: ColorPalette) {
   return StyleSheet.create({
@@ -97,12 +95,16 @@ function makeStyles(C: ColorPalette) {
     },
     list: { flex: 1 },
     listContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
-    emptyWrap: {
+    emptyScroll: {
       flex: 1,
+    },
+    emptyScrollContent: {
+      flexGrow: 1,
       alignItems: "center",
       justifyContent: "center",
       paddingHorizontal: 32,
       paddingTop: 40,
+      paddingBottom: 24,
     },
     emptyIcon: {
       width: 72,
@@ -248,7 +250,8 @@ export default function AIAssistantScreen() {
   const C = useColors();
   const styles = makeStyles(C);
   const insets = useSafeAreaInsets();
-  const { user } = useApp();
+  const { user, lang } = useApp();
+  const t = useT();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -260,6 +263,15 @@ export default function AIAssistantScreen() {
   const pulseRef = useRef<Animated.CompositeAnimation | null>(null);
 
   const userCity = user?.city ?? null;
+  const speechLang = SPEECH_LANG[lang] ?? "fr-FR";
+
+  const QUICK_QUESTIONS = [
+    t("aiQ1"),
+    t("aiQ2"),
+    t("aiQ3"),
+    t("aiQ4"),
+    t("aiQ5"),
+  ];
 
   useEffect(() => {
     if (isRecording) {
@@ -307,8 +319,8 @@ export default function AIAssistantScreen() {
 
     if (!speechRecognitionAvailable) {
       Alert.alert(
-        "Reconnaissance vocale",
-        "La saisie vocale est disponible dans la version installée de l'application NoStress.",
+        t("aiAssistantTitle"),
+        t("aiAssistantVoiceUnavailable"),
         [{ text: "OK" }]
       );
       return;
@@ -327,18 +339,18 @@ export default function AIAssistantScreen() {
       const result = await _SpeechModule.requestPermissionsAsync();
       if (!result.granted) {
         Alert.alert(
-          "Permission refusée",
-          "Autorisez l'accès au microphone dans les réglages pour utiliser la saisie vocale.",
+          t("aiAssistantTitle"),
+          t("aiAssistantMicPermission"),
           [{ text: "OK" }]
         );
         return;
       }
       setIsRecording(true);
-      _SpeechModule.start({ lang: "fr-FR", interimResults: false, maxAlternatives: 1 });
+      _SpeechModule.start({ lang: speechLang, interimResults: false, maxAlternatives: 1 });
     } catch {
       setIsRecording(false);
     }
-  }, [isRecording, isStreaming]);
+  }, [isRecording, isStreaming, speechLang, t]);
 
   const toggleSpeak = useCallback(
     async (msg: Message) => {
@@ -351,14 +363,14 @@ export default function AIAssistantScreen() {
       setSpeakingId(msg.id);
       const cleanText = msg.content.replace(/[\u{1F600}-\u{1F64F}]/gu, "").trim();
       Speech.speak(cleanText, {
-        language: "fr-FR",
+        language: speechLang,
         rate: 0.95,
         onDone: () => setSpeakingId(null),
         onError: () => setSpeakingId(null),
         onStopped: () => setSpeakingId(null),
       });
     },
-    [speakingId]
+    [speakingId, speechLang]
   );
 
   const sendMessage = useCallback(
@@ -385,11 +397,11 @@ export default function AIAssistantScreen() {
         const response = await fetch(`${API_BASE}/openai/chat`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: trimmed, history, city: userCity }),
+          body: JSON.stringify({ message: trimmed, history, city: userCity, lang }),
           signal: abortRef.current.signal,
         });
 
-        if (!response.ok || !response.body) throw new Error("Réponse invalide");
+        if (!response.ok || !response.body) throw new Error(t("aiAssistantErrorResponse"));
 
         let assistantText = "";
         const reader = response.body.getReader();
@@ -423,7 +435,7 @@ export default function AIAssistantScreen() {
           setMessages((prev) =>
             prev.map((m) =>
               m.id === loadingId
-                ? { ...m, content: "Désolé, je n'ai pas pu répondre.", loading: false }
+                ? { ...m, content: t("aiAssistantErrorResponse"), loading: false }
                 : m
             )
           );
@@ -433,7 +445,7 @@ export default function AIAssistantScreen() {
         setMessages((prev) =>
           prev.map((m) =>
             m.id === loadingId
-              ? { ...m, content: "Une erreur est survenue. Réessaie dans un moment.", loading: false }
+              ? { ...m, content: t("aiAssistantErrorOccurred"), loading: false }
               : m
           )
         );
@@ -441,7 +453,7 @@ export default function AIAssistantScreen() {
         setIsStreaming(false);
       }
     },
-    [messages, isStreaming, userCity]
+    [messages, isStreaming, userCity, lang, t]
   );
 
   const renderItem = useCallback(
@@ -491,8 +503,8 @@ export default function AIAssistantScreen() {
           <Ionicons name="chevron-back" size={24} color={C.text} />
         </TouchableOpacity>
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Assistant NoStress</Text>
-          <Text style={styles.headerSub}>Propulsé par IA</Text>
+          <Text style={styles.headerTitle}>{t("aiAssistantTitle")}</Text>
+          <Text style={styles.headerSub}>{t("aiAssistantPoweredBy")}</Text>
         </View>
         <View style={styles.aiDot}>
           <Ionicons name="sparkles" size={18} color={C.gold} />
@@ -505,14 +517,17 @@ export default function AIAssistantScreen() {
         keyboardVerticalOffset={0}
       >
         {isEmpty ? (
-          <View style={styles.emptyWrap}>
+          <ScrollView
+            style={styles.emptyScroll}
+            contentContainerStyle={styles.emptyScrollContent}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
             <View style={styles.emptyIcon}>
               <Ionicons name="chatbubble-ellipses" size={34} color={C.gold} />
             </View>
-            <Text style={styles.emptyTitle}>Comment puis-je t'aider ?</Text>
-            <Text style={styles.emptySub}>
-              Pose ta question par écrit ou appuie sur le micro pour parler directement.
-            </Text>
+            <Text style={styles.emptyTitle}>{t("aiAssistantWelcome")}</Text>
+            <Text style={styles.emptySub}>{t("aiAssistantWelcomeSub")}</Text>
             <View style={styles.quickWrap}>
               {QUICK_QUESTIONS.map((q) => (
                 <TouchableOpacity
@@ -526,7 +541,7 @@ export default function AIAssistantScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-          </View>
+          </ScrollView>
         ) : (
           <FlatList
             ref={flatListRef}
@@ -547,7 +562,7 @@ export default function AIAssistantScreen() {
                 <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
                   <Ionicons name="mic" size={16} color="#FF4444" />
                 </Animated.View>
-                <Text style={styles.recordingText}>J'écoute…</Text>
+                <Text style={styles.recordingText}>{t("aiAssistantListening")}</Text>
               </View>
               <TouchableOpacity
                 style={[styles.micBtn, styles.micBtnActive]}
@@ -563,7 +578,7 @@ export default function AIAssistantScreen() {
                 style={styles.input}
                 value={input}
                 onChangeText={setInput}
-                placeholder="Pose ta question…"
+                placeholder={t("aiAssistantPlaceholder")}
                 placeholderTextColor={C.textMuted}
                 multiline
                 returnKeyType="send"
