@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Platform,
   RefreshControl,
   ScrollView,
@@ -34,6 +35,7 @@ export default function VenuesScreen() {
   const [apiVenues, setApiVenues] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [popularVenues, setPopularVenues] = useState<any[]>([]);
 
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
@@ -84,6 +86,13 @@ export default function VenuesScreen() {
   }, [city, country, selectedType, radiusKm, coords]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/venues/popular`)
+      .then((r) => r.ok ? r.json() : { venues: [] })
+      .then((data) => setPopularVenues(Array.isArray(data?.venues) ? data.venues : []))
+      .catch(() => {});
+  }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -267,6 +276,52 @@ export default function VenuesScreen() {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.lavender} />
           }
+          ListHeaderComponent={
+            popularVenues.length > 0 && activeFilterCount === 0 && !filtersOpen ? (
+              <View style={styles.popularSection}>
+                <View style={styles.popularHeader}>
+                  <Ionicons name="flame" size={16} color={C.gold} />
+                  <Text style={styles.popularTitle}>
+                    {lang === "fr" ? "Lieux populaires" : "Popular venues"}
+                  </Text>
+                </View>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.popularList}
+                >
+                  {popularVenues.map((v: any) => (
+                    <TouchableOpacity
+                      key={String(v.id)}
+                      onPress={() => safePush(`/venue/api_${v.id}` as any)}
+                      style={[styles.popularCard, { backgroundColor: C.card, borderColor: C.border }]}
+                      activeOpacity={0.85}
+                    >
+                      {v.imageUrl ? (
+                        <Image
+                          source={{ uri: v.imageUrl }}
+                          style={styles.popularCardImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={[styles.popularCardImage, styles.popularCardImagePlaceholder, { backgroundColor: C.border }]}>
+                          <Ionicons name="business-outline" size={28} color={C.textMuted} />
+                        </View>
+                      )}
+                      <View style={styles.popularCardBody}>
+                        <Text style={[styles.popularCardName, { color: C.text }]} numberOfLines={1}>
+                          {v.name}
+                        </Text>
+                        <Text style={[styles.popularCardCity, { color: C.textMuted }]} numberOfLines={1}>
+                          {v.city}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="business-outline" size={48} color={C.border} />
@@ -334,4 +389,19 @@ const makeStyles = (C: any) => StyleSheet.create({
   list: { padding: 20 },
   empty: { alignItems: "center", justifyContent: "center", paddingVertical: 60, gap: 16 },
   emptyText: { fontSize: 16, fontFamily: "Inter_500Medium", color: C.textMuted },
+  popularSection: { marginBottom: 20 },
+  popularHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 },
+  popularTitle: { fontSize: 15, fontFamily: "Inter_700Bold", color: C.text },
+  popularList: { gap: 12, paddingRight: 4 },
+  popularCard: {
+    width: 180,
+    borderRadius: 12,
+    overflow: "hidden",
+    borderWidth: 1,
+  },
+  popularCardImage: { width: "100%", height: 100 },
+  popularCardImagePlaceholder: { alignItems: "center", justifyContent: "center" },
+  popularCardBody: { padding: 10, gap: 2 },
+  popularCardName: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  popularCardCity: { fontSize: 11, fontFamily: "Inter_400Regular" },
 });
