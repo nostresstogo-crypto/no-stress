@@ -9,9 +9,10 @@ import { CheckCircle2, Mail, MapPin, Send, AlertCircle } from "lucide-react";
 import { useLanguage } from "lib/i18n";
 
 const API_BASE =
-  process.env.NODE_ENV === "production"
+  process.env.REACT_APP_API_BASE ||
+  (process.env.NODE_ENV === "production"
     ? "https://api.no-stress.net/api"
-    : `${(process.env.PUBLIC_URL || "").replace(/\/$/, "").replace("/nostress-web", "")}/api`;
+    : `${(process.env.PUBLIC_URL || "").replace(/\/$/, "").replace("/nostress-web", "")}/api`);
 
 const fieldClass =
   "w-full bg-background border border-border rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition";

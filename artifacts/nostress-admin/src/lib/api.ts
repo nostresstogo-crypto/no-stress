@@ -1,6 +1,7 @@
-const API_BASE = import.meta.env.PROD
-  ? "https://api.no-stress.net/api"
-  : `${import.meta.env.BASE_URL.replace(/\/$/, "").replace("/nostress-admin", "")}/api`;
+const API_BASE = import.meta.env.VITE_API_BASE ||
+  (import.meta.env.PROD
+    ? "https://api.no-stress.net/api"
+    : `${import.meta.env.BASE_URL.replace(/\/$/, "").replace("/nostress-admin", "")}/api`);
 
 const TOKEN_KEY = "admin_token";
 const REFRESH_KEY = "admin_refresh_token";

@@ -23,6 +23,17 @@
         "EXPO_PUBLIC_API_BASE": "https://api.no-stress.net/api"
       }
     },
+    "test": {
+      "distribution": "internal",
+      "channel": "test",
+      "android": {
+        "buildType": "apk"
+      },
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_BASE": "https://test.api.no-stress.net/api"
+      }
+    },
     "preview": {
       "distribution": "internal",
       "channel": "preview",
