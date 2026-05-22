@@ -1,0 +1,93 @@
+~/workspace$ VPS_HOST=180.149.196.8 \
+VPS_USER=nostress \
+VPS_SSH_KEY_PATH=~/.ssh/id_ed25519 \
+bash deploy/test/dump-and-transfer.sh
+════════════════════════════════════════════════════════════════
+ NoStress — Export DB Replit → VPS Test
+ Timestamp : 20260522_160500
+ VPS       : nostress@180.149.196.8:22
+ DB cible  : nostress_test
+════════════════════════════════════════════════════════════════
+
+❌ Clé SSH introuvable : /home/runner/.ssh/id_ed25519
+   Définissez VPS_SSH_KEY_PATH ou placez votre clé dans ~/.ssh/id_ed25519
+~/workspace$ mkdir -p ~/.ssh
+echo "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+chmod 600 ~/.ssh/id_ed25519
+~/workspace$ VPS_HOST=180.149.196.8 VPS_USER=nostress VPS_SSH_KEY_PATH=~/.ssh/id_ed25519 bash deploy/test/dump-and-transfer.sh
+════════════════════════════════════════════════════════════════
+ NoStress — Export DB Replit → VPS Test
+ Timestamp : 20260522_160516
+ VPS       : nostress@180.149.196.8:22
+ DB cible  : nostress_test
+════════════════════════════════════════════════════════════════
+
+▶ Export pg_dump depuis Replit...
+✅ Dump créé : /tmp/nostress_dump_20260522_160516.sql.gz (24K)
+
+▶ Transfert vers le VPS...
+Load key "/home/runner/.ssh/id_ed25519": error in libcrypto
+nostress@180.149.196.8's password: 
+Permission denied, please try again.
+nostress@180.149.196.8's password: 
+~/workspace$ VPS_HOST=180.149.196.8 VPS_USER=root VPS_SSH_KEY_PATH=~/.
+ssh/id_ed25519 bash deploy/test/dump-and-transfer.sh
+════════════════════════════════════════════════════════════════
+ NoStress — Export DB Replit → VPS Test
+ Timestamp : 20260522_160543
+ VPS       : root@180.149.196.8:22
+ DB cible  : nostress_test
+════════════════════════════════════════════════════════════════
+
+▶ Export pg_dump depuis Replit...
+✅ Dump créé : /tmp/nostress_dump_20260522_160543.sql.gz (24K)
+
+▶ Transfert vers le VPS...
+Load key "/home/runner/.ssh/id_ed25519": error in libcrypto
+root@180.149.196.8's password: 
+nostress_dump_20260522_160543.sql.g 100%   24KB 112.7KB/s   00:00    
+✅ Fichier transféré : /tmp/nostress_dump_20260522_160543.sql.gz
+
+▶ Import dans la base 'nostress_test' sur le VPS...
+Load key "/home/runner/.ssh/id_ed25519": error in libcrypto
+root@180.149.196.8's password: 
+
+~/workspace$ VPS_HOST=180.149.196.8 VPS_USER=root VPS_SSH_KEY_PATH=~/.ssh/id_ed25519 bash deploy/test/dump-and-transfer.sh
+════════════════════════════════════════════════════════════════
+ NoStress — Export DB Replit → VPS Test
+ Timestamp : 20260522_160636
+ VPS       : root@180.149.196.8:22
+ DB cible  : nostress_test
+════════════════════════════════════════════════════════════════
+
+▶ Export pg_dump depuis Replit...
+✅ Dump créé : /tmp/nostress_dump_20260522_160636.sql.gz (24K)
+
+▶ Transfert vers le VPS...
+Load key "/home/runner/.ssh/id_ed25519": error in libcrypto
+root@180.149.196.8's password: 
+nostress_dump_20260522_160636.sql.g 100%   24KB 113.0KB/s   00:00    
+✅ Fichier transféré : /tmp/nostress_dump_20260522_160636.sql.gz
+
+▶ Import dans la base 'nostress_test' sur le VPS...
+Load key "/home/runner/.ssh/id_ed25519": error in libcrypto
+root@180.149.196.8's password: 
+  Connexion : nostress_test@localhost:5432/nostress_test
+ pg_terminate_backend 
+----------------------
+(0 rows)
+
+psql: error: connection to server at "localhost" (127.0.0.1), port 5432 failed: fe_sendauth: no password supplied
+✅ Import terminé.
+✅ Fichier temporaire supprimé.
+
+▶ Nettoyage local...
+
+════════════════════════════════════════════════════════════════
+ ✅ Import DB terminé avec succès !
+    La base 'nostress_test' sur le VPS est maintenant synchronisée
+    avec la base de données Replit.
+
+    Pour redémarrer l'API test avec la nouvelle DB :
+    ssh -p 22 root@180.149.196.8 'sudo systemctl restart nostress-test-api.service'
+════════════════════════════════════════════════════════════════
