@@ -1,3 +1,13 @@
+# ────────────────────────────────────────────────────────────────────────────
+# IMPORTANT — les fichiers .github/workflows/ ne peuvent pas être poussés
+# via le scope OAuth Git de Replit (scope `workflow` manquant).
+# Pour activer ce workflow, pousser la branche `test` depuis la ligne de
+# commande avec un token ayant le scope `workflow` :
+#   git push origin test
+# OU coller le contenu dans l'UI GitHub :
+#   https://github.com/nostresstogo-crypto/no-stress/new/test?filename=.github/workflows/deploy-test.yml
+# ────────────────────────────────────────────────────────────────────────────
+
 name: 🧪 Deploy — Test
 
 on:
@@ -9,68 +19,79 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # ─── BUILD ───────────────────────────────────────────────────────────────
+  # ─── BUILD ───────────────────────────────────────────────────────────────────
   build:
     name: Build all artifacts
     runs-on: ubuntu-latest
     timeout-minutes: 25
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
         with:
           version: 10
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "pnpm"
 
-      - run: pnpm install --frozen-lockfile
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-      # ── API ──────────────────────────────────────────────────────────────
+      # ── API ──────────────────────────────────────────────────────────────────
       - name: Build api-server
         run: pnpm --filter @workspace/api-server run build
 
       - name: Stage API release
         run: |
+          set -e
           STAGE="$RUNNER_TEMP/api-release"
           mkdir -p "$STAGE/drizzle"
           cp -r artifacts/api-server/dist "$STAGE/"
           cp deploy/release-package.json "$STAGE/package.json"
+          cp deploy/ecosystem.config.cjs "$STAGE/" 2>/dev/null || true
           cp -r lib/db/. "$STAGE/drizzle/"
-          # drizzle-kit absent du package.json si déjà présent → fallback
           node -e "
             const fs = require('fs');
             const path = '$STAGE/drizzle/package.json';
             const p = JSON.parse(fs.readFileSync(path, 'utf8'));
             p.devDependencies = p.devDependencies || {};
             p.devDependencies['drizzle-kit'] = p.devDependencies['drizzle-kit'] || '^0.31.9';
+            p.scripts = p.scripts || {};
             fs.writeFileSync(path, JSON.stringify(p, null, 2));
           "
           tar -C "$STAGE" -czf api-release.tar.gz .
+          ls -lh api-release.tar.gz
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload API release
+        uses: actions/upload-artifact@v4
         with:
           name: api-release
           path: api-release.tar.gz
           retention-days: 1
 
-      # ── Admin ─────────────────────────────────────────────────────────────
+      # ── Admin ─────────────────────────────────────────────────────────────────
       - name: Build nostress-admin
         env:
           NODE_ENV: production
+          PORT: "3000"
+          BASE_PATH: /
           VITE_API_BASE: https://test.api.no-stress.net/api
         run: pnpm --filter @workspace/nostress-admin run build
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload Admin release
+        uses: actions/upload-artifact@v4
         with:
           name: admin-release
           path: artifacts/nostress-admin/dist/public/
           retention-days: 1
 
-      # ── Web ───────────────────────────────────────────────────────────────
+      # ── Web ───────────────────────────────────────────────────────────────────
       - name: Build nostress-web
         env:
           REACT_APP_API_BASE: https://test.api.no-stress.net/api
@@ -81,130 +102,172 @@ jobs:
           CI: "false"
         run: pnpm --filter @workspace/nostress-web run build:prod
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload Web release
+        uses: actions/upload-artifact@v4
         with:
           name: web-release
           path: artifacts/nostress-web/build/
           retention-days: 1
 
-  # ─── DEPLOY API ──────────────────────────────────────────────────────────
+  # ─── DEPLOY API ──────────────────────────────────────────────────────────────
   deploy-api:
     name: API → test.api.no-stress.net
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download API release
+        uses: actions/download-artifact@v4
         with:
           name: api-release
+          path: .
 
       - name: Configure SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          echo "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -p "${{ secrets.VPS_PORT }}" -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -p "${{ secrets.VPS_PORT || 22 }}" -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
 
-      - name: Upload & activer la release
+      - name: Upload & activate release
         env:
           SHA: ${{ github.sha }}
+          HOST: ${{ secrets.VPS_HOST }}
+          USER: ${{ secrets.VPS_USER }}
+          PORT: ${{ secrets.VPS_PORT || 22 }}
         run: |
           REMOTE_DIR="/var/www/nostress-test-api/releases/$SHA"
-          ssh -p "${{ secrets.VPS_PORT }}" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" "mkdir -p $REMOTE_DIR"
-          scp -P "${{ secrets.VPS_PORT }}" api-release.tar.gz "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:$REMOTE_DIR/"
-          scp -P "${{ secrets.VPS_PORT }}" deploy/test/release-api.sh "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:$REMOTE_DIR/release.sh"
-          ssh -p "${{ secrets.VPS_PORT }}" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" "
-            cd $REMOTE_DIR && tar -xzf api-release.tar.gz && rm api-release.tar.gz
-            chmod +x release.sh && ./release.sh $SHA
+          ssh -p "$PORT" "$USER@$HOST" "mkdir -p $REMOTE_DIR"
+          scp -P "$PORT" api-release.tar.gz "$USER@$HOST:$REMOTE_DIR/"
+          scp -P "$PORT" deploy/test/release-api.sh "$USER@$HOST:$REMOTE_DIR/release.sh"
+          ssh -p "$PORT" "$USER@$HOST" "
+            set -e
+            cd $REMOTE_DIR
+            tar -xzf api-release.tar.gz && rm api-release.tar.gz
+            chmod +x release.sh
+            ./release.sh $SHA
           "
 
       - name: Smoke test
         run: |
+          echo "Waiting for test API..."
           for i in {1..15}; do
             sleep 2
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://test.api.no-stress.net/api/health)
-            [ "$STATUS" = "200" ] && echo "✅ OK" && exit 0
-            echo "Tentative $i/15 — status $STATUS"
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://test.api.no-stress.net/api/health 2>/dev/null)
+            if [ "$STATUS" = "200" ]; then
+              echo "✅ Health check OK (attempt $i)"
+              exit 0
+            fi
+            echo "Attempt $i/15: status=$STATUS, retrying..."
           done
-          echo "❌ Health check échoué" && exit 1
+          echo "❌ Health check failed after 30s"
+          exit 1
 
-  # ─── DEPLOY ADMIN ────────────────────────────────────────────────────────
+  # ─── DEPLOY ADMIN ────────────────────────────────────────────────────────────
   deploy-admin:
     name: Admin → test.admin.no-stress.net
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Admin release
+        uses: actions/download-artifact@v4
         with:
           name: admin-release
           path: admin-release/
 
       - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          SSH_HOST: ${{ secrets.VPS_HOST }}
+          SSH_PORT: ${{ secrets.VPS_PORT }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
+          echo "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -p "${{ secrets.VPS_PORT }}" -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -p "${SSH_PORT:-22}" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
-      - name: Upload & activer la release
+      - name: Upload & activate release
         env:
+          SSH_USER: ${{ secrets.VPS_USER }}
+          SSH_HOST: ${{ secrets.VPS_HOST }}
+          SSH_PORT: ${{ secrets.VPS_PORT }}
           SHA: ${{ github.sha }}
         run: |
           REMOTE_DIR="/var/www/nostress-test-admin/releases/$SHA"
-          ssh -p "${{ secrets.VPS_PORT }}" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" "mkdir -p $REMOTE_DIR"
-          rsync -az --delete -e "ssh -p ${{ secrets.VPS_PORT }}" \
-            admin-release/ "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:$REMOTE_DIR/"
-          ssh -p "${{ secrets.VPS_PORT }}" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" "
-            ln -sfn $REMOTE_DIR /var/www/nostress-test-admin/current
-            sudo systemctl reload nginx
-          "
+          ssh -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" "mkdir -p $REMOTE_DIR"
+          rsync -az --delete \
+              -e "ssh -p ${SSH_PORT:-22}" \
+              admin-release/ \
+              "$SSH_USER@$SSH_HOST:$REMOTE_DIR/"
+          rsync -az \
+              -e "ssh -p ${SSH_PORT:-22}" \
+              deploy/test/release-admin.sh \
+              "$SSH_USER@$SSH_HOST:/var/www/nostress-test-admin/release.sh"
+          ssh -p "${SSH_PORT:-22}" "$SSH_USER@$SSH_HOST" \
+              "chmod +x /var/www/nostress-test-admin/release.sh && bash /var/www/nostress-test-admin/release.sh $SHA"
 
       - name: Smoke test
         run: |
           sleep 3
           curl -fsS "https://test.admin.no-stress.net/" -o /dev/null \
-            && echo "✅ test.admin.no-stress.net répond" \
-            || (echo "❌ Échec" && exit 1)
+            && echo "✅ test.admin.no-stress.net responds" \
+            || (echo "❌ Admin smoke test failed"; exit 1)
 
-  # ─── DEPLOY WEB ──────────────────────────────────────────────────────────
+  # ─── DEPLOY WEB ──────────────────────────────────────────────────────────────
   deploy-web:
     name: Web → test.no-stress.net
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Web release
+        uses: actions/download-artifact@v4
         with:
           name: web-release
           path: web-release/
 
       - name: Configure SSH
         run: |
+          set -e
           mkdir -p ~/.ssh
           echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -p "${{ secrets.VPS_PORT }}" -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -p ${{ secrets.VPS_PORT }} -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
 
-      - name: Upload & activer la release
+      - name: Upload & activate release
         env:
           SHA: ${{ github.sha }}
         run: |
+          set -e
           REMOTE_DIR="/var/www/nostress-test-web/releases/$SHA"
-          ssh -p "${{ secrets.VPS_PORT }}" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" "mkdir -p $REMOTE_DIR"
+          ssh -p ${{ secrets.VPS_PORT }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} "mkdir -p $REMOTE_DIR"
           rsync -az --delete -e "ssh -p ${{ secrets.VPS_PORT }}" \
-            web-release/ "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:$REMOTE_DIR/"
-          ssh -p "${{ secrets.VPS_PORT }}" "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" "
-            ln -sfn $REMOTE_DIR /var/www/nostress-test-web/current
-            sudo systemctl reload nginx
-          "
+            web-release/ \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:$REMOTE_DIR/"
+          rsync -az -e "ssh -p ${{ secrets.VPS_PORT }}" \
+            deploy/test/release-web.sh \
+            "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/var/www/nostress-test-web/release.sh"
+          ssh -p ${{ secrets.VPS_PORT }} ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} \
+            "bash /var/www/nostress-test-web/release.sh $SHA"
 
       - name: Smoke test
         run: |
           sleep 3
           curl -fsS "https://test.no-stress.net/" -o /dev/null \
-            && echo "✅ test.no-stress.net répond" \
-            || (echo "❌ Échec" && exit 1)
+            && echo "✅ test.no-stress.net responds" \
+            || (echo "❌ Web smoke test failed"; exit 1)
