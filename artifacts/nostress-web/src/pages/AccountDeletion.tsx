@@ -16,11 +16,12 @@ import { AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
 import { useLanguage } from "lib/i18n";
 
 const API_BASE =
-  process.env.NODE_ENV === "production"
+  process.env.REACT_APP_API_BASE ||
+  (process.env.NODE_ENV === "production"
     ? "https://api.no-stress.net/api"
     : `${(process.env.PUBLIC_URL || "")
         .replace(/\/$/, "")
-        .replace("/nostress-web", "")}/api`;
+        .replace("/nostress-web", "")}/api`);
 
 export default function AccountDeletion() {
   const { t } = useLanguage();

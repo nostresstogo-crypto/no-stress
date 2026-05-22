@@ -61,7 +61,7 @@ jobs:
             const path = '$STAGE/drizzle/package.json';
             const p = JSON.parse(fs.readFileSync(path, 'utf8'));
             p.devDependencies = p.devDependencies || {};
-            p.devDependencies['drizzle-kit'] = p.devDependencies['drizzle-kit'] || '^0.31.9';
+            p.devDependencies['drizzle-kit'] = p.devDependencies['drizzle-kit'] || '^0.31.6';
             p.scripts = p.scripts || {};
             fs.writeFileSync(path, JSON.stringify(p, null, 2));
           "
@@ -79,7 +79,6 @@ jobs:
       - name: Build nostress-admin
         env:
           NODE_ENV: production
-          PORT: "3000"
           BASE_PATH: /
           VITE_API_BASE: https://test.api.no-stress.net/api
         run: pnpm --filter @workspace/nostress-admin run build
