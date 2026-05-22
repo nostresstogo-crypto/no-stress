@@ -79,6 +79,7 @@ jobs:
       - name: Build nostress-admin
         env:
           NODE_ENV: production
+          PORT: "3000"
           BASE_PATH: /
           VITE_API_BASE: https://test.api.no-stress.net/api
         run: pnpm --filter @workspace/nostress-admin run build
