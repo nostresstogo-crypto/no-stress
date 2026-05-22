@@ -24,10 +24,10 @@
       }
     },
     "test": {
-      "distribution": "internal",
+      "distribution": "store",
       "channel": "test",
       "android": {
-        "buildType": "apk"
+        "buildType": "app-bundle"
       },
       "autoIncrement": true,
       "env": {
