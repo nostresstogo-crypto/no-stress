@@ -39,6 +39,7 @@ DUMP_FILE="/tmp/nostress_dump_${TIMESTAMP}.sql.gz"
 REMOTE_DUMP="/tmp/nostress_dump_${TIMESTAMP}.sql.gz"
 
 SSH_OPTS="-p $VPS_PORT -i $VPS_SSH_KEY_PATH -o StrictHostKeyChecking=no -o BatchMode=yes"
+SCP_OPTS="-P $VPS_PORT -i $VPS_SSH_KEY_PATH -o StrictHostKeyChecking=no -o BatchMode=yes"
 
 echo "════════════════════════════════════════════════════════════════"
 echo " NoStress — Export DB Replit → VPS Test"
@@ -85,7 +86,7 @@ echo ""
 
 # ── Transfert vers le VPS ──────────────────────────────────────────────────
 echo "▶ Transfert vers le VPS..."
-scp $SSH_OPTS "$DUMP_FILE" "$VPS_USER@$VPS_HOST:$REMOTE_DUMP"
+scp $SCP_OPTS "$DUMP_FILE" "$VPS_USER@$VPS_HOST:$REMOTE_DUMP"
 echo "✅ Fichier transféré."
 echo ""
 
