@@ -148,7 +148,8 @@ router.post("/openai/chat", async (req, res) => {
       }
     }
 
-    const systemContent = SYSTEM_PROMPT + contextBlock;
+    const systemPrompt = safeLang === "en" ? SYSTEM_PROMPT_EN : SYSTEM_PROMPT_FR;
+    const systemContent = systemPrompt + contextBlock;
 
     const chatMessages: { role: "system" | "user" | "assistant"; content: string }[] = [
       { role: "system", content: systemContent },
@@ -161,7 +162,7 @@ router.post("/openai/chat", async (req, res) => {
     res.setHeader("Connection", "keep-alive");
 
     const stream = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: "gpt-4o-mini",
       max_completion_tokens: 512,
       messages: chatMessages,
       stream: true,
