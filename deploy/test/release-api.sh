@@ -34,24 +34,26 @@ echo "▶ Pushing database schema (drizzle)"
 set -a; source "$SHARED_ENV"; set +a
 (
   cd drizzle
+  # Le VPS n'a pas de pnpm-workspace.yaml, donc les références `catalog:` ne
+  # peuvent pas être résolues. On réécrit package.json avec les versions
+  # explicites (à tenir en sync avec le bloc `catalog:` de pnpm-workspace.yaml).
   node -e '
     const fs = require("fs");
-    const path = process.env.STAGE + "/drizzle/package.json";
-    const p = JSON.parse(fs.readFileSync("package.json", "utf8"));
+    const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
     const catalog = {
       "drizzle-orm": "^0.45.2",
       "zod": "^3.25.76",
       "@types/node": "^25.3.3",
     };
     for (const section of ["dependencies", "devDependencies"]) {
-      if (!p[section]) continue;
-      for (const [name, version] of Object.entries(p[section])) {
+      if (!pkg[section]) continue;
+      for (const [name, version] of Object.entries(pkg[section])) {
         if (version === "catalog:" && catalog[name]) {
-          p[section][name] = catalog[name];
+          pkg[section][name] = catalog[name];
         }
       }
     }
-    fs.writeFileSync("package.json", JSON.stringify(p, null, 2));
+    fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));
   '
   pnpm install --silent --ignore-workspace --prod=false
   pnpm exec drizzle-kit push --config ./drizzle.config.ts

@@ -61,7 +61,7 @@ jobs:
             const path = '$STAGE/drizzle/package.json';
             const p = JSON.parse(fs.readFileSync(path, 'utf8'));
             p.devDependencies = p.devDependencies || {};
-            p.devDependencies['drizzle-kit'] = p.devDependencies['drizzle-kit'] || '^0.31.6';
+            p.devDependencies['drizzle-kit'] = p.devDependencies['drizzle-kit'] || '^0.31.9';
             p.scripts = p.scripts || {};
             fs.writeFileSync(path, JSON.stringify(p, null, 2));
           "
