@@ -159,15 +159,15 @@ jobs:
           echo "Waiting for test API..."
           for i in {1..15}; do
             sleep 2
-            STATUS=$(curl -sk -o /dev/null -w "%{http_code}" https://test.api.no-stress.net/api/health 2>/dev/null)
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://test.api.no-stress.net/api/health 2>/dev/null)
             if [ "$STATUS" = "200" ]; then
               echo "✅ Health check OK (attempt $i)"
               exit 0
             fi
             echo "Attempt $i/15: status=$STATUS, retrying..."
           done
-          echo "⚠️  Health check non concluant — vérifiez DNS et SSL sur le VPS"
-          exit 0
+          echo "❌ Health check failed after 30s"
+          exit 1
 
   # ─── DEPLOY ADMIN ────────────────────────────────────────────────────────────
   deploy-admin:
