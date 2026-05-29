@@ -256,6 +256,10 @@ export default function AccountScreen() {
 
   const [deletionLoading, setDeletionLoading] = useState(false);
 
+  const FAV_PAGE_SIZE = 3;
+  const [favEventPage, setFavEventPage] = useState(0);
+  const [favVenuePage, setFavVenuePage] = useState(0);
+
   const handleDeleteAccount = () => {
     if (!user) return;
     const isFr = lang === "fr";
@@ -690,15 +694,39 @@ export default function AccountScreen() {
       {tab === "favorites" ? (
         favoriteEvents.length > 0 || favoriteVenues.length > 0 ? (
           <>
-            {favoriteEvents.map((e) => (
+            {/* Événements favoris paginés */}
+            {favoriteEvents.slice(favEventPage * FAV_PAGE_SIZE, (favEventPage + 1) * FAV_PAGE_SIZE).map((e) => (
               <EventCard key={e.id} event={e} onPress={() => safePush(`/event/${e.id}`)} />
             ))}
+            {favoriteEvents.length > FAV_PAGE_SIZE && (
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginVertical: 6 }}>
+                <TouchableOpacity
+                  onPress={() => setFavEventPage((p) => Math.max(0, p - 1))}
+                  disabled={favEventPage === 0}
+                  style={{ padding: 6, opacity: favEventPage === 0 ? 0.3 : 1 }}
+                >
+                  <Ionicons name="chevron-back" size={20} color={C.lavender} />
+                </TouchableOpacity>
+                <Text style={{ fontSize: 12, color: C.textMuted, fontFamily: "Inter_400Regular" }}>
+                  {favEventPage + 1} / {Math.ceil(favoriteEvents.length / FAV_PAGE_SIZE)}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setFavEventPage((p) => Math.min(Math.ceil(favoriteEvents.length / FAV_PAGE_SIZE) - 1, p + 1))}
+                  disabled={favEventPage >= Math.ceil(favoriteEvents.length / FAV_PAGE_SIZE) - 1}
+                  style={{ padding: 6, opacity: favEventPage >= Math.ceil(favoriteEvents.length / FAV_PAGE_SIZE) - 1 ? 0.3 : 1 }}
+                >
+                  <Ionicons name="chevron-forward" size={20} color={C.lavender} />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {/* Lieux favoris paginés */}
             {favoriteVenues.length > 0 && (
               <>
                 <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: C.text, marginTop: 8 }}>
                   {t("favoriteVenues")}
                 </Text>
-                {favoriteVenues.map((vid) => {
+                {favoriteVenues.slice(favVenuePage * FAV_PAGE_SIZE, (favVenuePage + 1) * FAV_PAGE_SIZE).map((vid) => {
                   const numId = vid.startsWith("api_") ? vid.slice(4) : vid;
                   const navId = vid.startsWith("api_") ? vid : `api_${vid}`;
                   const displayName = venueNameCache[numId]
@@ -715,6 +743,27 @@ export default function AccountScreen() {
                     </TouchableOpacity>
                   );
                 })}
+                {favoriteVenues.length > FAV_PAGE_SIZE && (
+                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginVertical: 6 }}>
+                    <TouchableOpacity
+                      onPress={() => setFavVenuePage((p) => Math.max(0, p - 1))}
+                      disabled={favVenuePage === 0}
+                      style={{ padding: 6, opacity: favVenuePage === 0 ? 0.3 : 1 }}
+                    >
+                      <Ionicons name="chevron-back" size={20} color={C.lavender} />
+                    </TouchableOpacity>
+                    <Text style={{ fontSize: 12, color: C.textMuted, fontFamily: "Inter_400Regular" }}>
+                      {favVenuePage + 1} / {Math.ceil(favoriteVenues.length / FAV_PAGE_SIZE)}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setFavVenuePage((p) => Math.min(Math.ceil(favoriteVenues.length / FAV_PAGE_SIZE) - 1, p + 1))}
+                      disabled={favVenuePage >= Math.ceil(favoriteVenues.length / FAV_PAGE_SIZE) - 1}
+                      style={{ padding: 6, opacity: favVenuePage >= Math.ceil(favoriteVenues.length / FAV_PAGE_SIZE) - 1 ? 0.3 : 1 }}
+                    >
+                      <Ionicons name="chevron-forward" size={20} color={C.lavender} />
+                    </TouchableOpacity>
+                  </View>
+                )}
               </>
             )}
           </>
