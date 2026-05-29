@@ -308,7 +308,7 @@ export default function EventDetailScreen() {
             <TouchableOpacity style={s.iconBtn} onPress={handleShare}>
               <Ionicons name="share-outline" size={22} color="#fff" />
             </TouchableOpacity>
-            <ReportButton itemType="event" itemId={event.id} variant="icon" />
+            {user?.role !== "structure" && <ReportButton itemType="event" itemId={event.id} variant="icon" />}
           </View>
         </View>
 

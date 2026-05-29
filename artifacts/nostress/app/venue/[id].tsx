@@ -295,7 +295,7 @@ export default function VenueDetailScreen() {
                 />
               </TouchableOpacity>
             )}
-            {isApi && <ReportButton itemType="venue" itemId={venue.id} variant="icon" />}
+            {isApi && user?.role !== "structure" && <ReportButton itemType="venue" itemId={venue.id} variant="icon" />}
           </View>
 
           {venue.isVerified && (
