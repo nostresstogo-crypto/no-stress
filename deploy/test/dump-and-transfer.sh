@@ -30,7 +30,7 @@ set -euo pipefail
 # ── Configuration ─────────────────────────────────────────────────────────
 VPS_HOST="${VPS_HOST:?Définissez VPS_HOST (ex: 123.45.67.89)}"
 VPS_PORT="${VPS_PORT:-22}"
-VPS_USER="${VPS_USER:-root}"
+VPS_USER="${VPS_USER:-nostress}"
 VPS_SSH_KEY_PATH="${VPS_SSH_KEY_PATH:-$HOME/.ssh/id_ed25519}"
 TEST_ENV_FILE="/var/www/nostress-test-api/shared/.env"
 
