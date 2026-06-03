@@ -23,6 +23,10 @@ import {
   Globe,
   Phone,
   RefreshCw,
+  Info,
+  ImageOff,
+  CalendarDays,
+  User,
 } from "lucide-react";
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
@@ -53,6 +57,7 @@ export default function Venues() {
   const [rejectReason, setRejectReason] = useState("");
   const [rejectLoading, setRejectLoading] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+  const [detailVenue, setDetailVenue] = useState<Venue | null>(null);
 
   const showToast = (msg: string, type: "success" | "error" = "success") => {
     setToast({ msg, type });
@@ -304,6 +309,15 @@ export default function Venues() {
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex justify-end gap-1.5 flex-wrap">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-xs gap-1"
+                            onClick={() => setDetailVenue(v)}
+                          >
+                            <Info className="w-3 h-3" />
+                            Détails
+                          </Button>
                           {v.status !== "approved" && (
                             <Button
                               size="sm"
@@ -369,6 +383,151 @@ export default function Venues() {
             <Button onClick={handleReject} disabled={rejectLoading || rejectReason.trim().length < 3}>
               {rejectLoading ? "Envoi..." : "Confirmer le rejet"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Modale Détails */}
+      <Dialog open={!!detailVenue} onOpenChange={(o) => { if (!o) setDetailVenue(null); }}>
+        <DialogContent className="bg-card border-border max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Info className="w-5 h-5 text-primary" />
+              {detailVenue?.name}
+            </DialogTitle>
+            <DialogDescription>
+              Détails complets du lieu avant validation
+            </DialogDescription>
+          </DialogHeader>
+
+          {detailVenue && (() => {
+            const v = detailVenue;
+            const s = STATUS_LABELS[v.status] || STATUS_LABELS.pending;
+            const allImages = [
+              ...(v.imageUrl && /^https?:\/\//i.test(v.imageUrl) ? [v.imageUrl] : []),
+              ...(v.images || []).filter((img) => img !== v.imageUrl && /^https?:\/\//i.test(img)),
+            ];
+            return (
+              <div className="space-y-5 mt-2">
+
+                {/* Statut */}
+                <div className="flex items-center gap-2">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${s.bg} ${s.color}`}>
+                    {s.icon}{s.label}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{TYPE_LABELS[v.type || ""] || v.type || "Type inconnu"}</span>
+                </div>
+
+                {/* Photos */}
+                {allImages.length > 0 ? (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Photos ({allImages.length})</p>
+                    <div className="flex flex-wrap gap-2">
+                      {allImages.map((img, i) => (
+                        <a key={i} href={img} target="_blank" rel="noreferrer noopener">
+                          <img
+                            src={img}
+                            alt={`Photo ${i + 1}`}
+                            className="w-28 h-20 object-cover rounded-md border border-border hover:opacity-80 transition-opacity"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                          />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <ImageOff className="w-4 h-4" />
+                    Aucune photo fournie
+                  </div>
+                )}
+
+                {/* Infos principales */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Localisation</p>
+                    {v.city && <p className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-muted-foreground" />{v.city}</p>}
+                    {v.address && <p className="text-muted-foreground text-xs pl-5">{v.address}</p>}
+                    {v.latitude != null && v.longitude != null ? (
+                      <a
+                        href={`https://www.openstreetmap.org/?mlat=${v.latitude}&mlon=${v.longitude}#map=17/${v.latitude}/${v.longitude}`}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="flex items-center gap-1.5 text-primary hover:underline text-xs pl-5"
+                      >
+                        📍 Voir sur la carte ({v.latitude.toFixed(4)}, {v.longitude.toFixed(4)})
+                      </a>
+                    ) : (
+                      <p className="text-xs text-yellow-400 pl-5">GPS non renseigné</p>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Contact</p>
+                    {v.phone ? (
+                      <p className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5 text-muted-foreground" />{v.phone}</p>
+                    ) : <p className="text-muted-foreground text-xs">Pas de téléphone</p>}
+                    {v.websiteUrl ? (
+                      <a
+                        href={v.websiteUrl}
+                        target="_blank"
+                        rel="noreferrer noopener"
+                        className="flex items-center gap-1.5 text-primary hover:underline text-xs"
+                      >
+                        <Globe className="w-3.5 h-3.5" />{v.websiteUrl}
+                      </a>
+                    ) : <p className="text-muted-foreground text-xs">Pas de site web</p>}
+                  </div>
+                </div>
+
+                {/* Description */}
+                {v.description && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Description</p>
+                    <p className="text-sm text-foreground/90 whitespace-pre-line leading-relaxed">{v.description}</p>
+                  </div>
+                )}
+
+                {/* Partenaire */}
+                <div className="border-t border-border pt-3 space-y-1">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Partenaire</p>
+                  <p className="flex items-center gap-1.5 text-sm"><User className="w-3.5 h-3.5 text-muted-foreground" />{v.partnerName || `#${v.partnerId}`}</p>
+                  {v.partnerEmail && <p className="text-xs text-muted-foreground pl-5">{v.partnerEmail}</p>}
+                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <CalendarDays className="w-3 h-3" />
+                    Soumis le {new Date(v.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                  </p>
+                </div>
+
+                {v.status === "rejected" && v.rejectionReason && (
+                  <div className="bg-destructive/10 border border-destructive/30 rounded-md px-3 py-2 text-sm text-destructive">
+                    Motif de rejet : {v.rejectionReason}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          <DialogFooter className="mt-4 gap-2">
+            <Button variant="outline" onClick={() => setDetailVenue(null)}>Fermer</Button>
+            {detailVenue?.status !== "approved" && (
+              <Button
+                className="text-green-400 border-green-400/30 hover:bg-green-400/10"
+                variant="outline"
+                onClick={() => { handleApprove(detailVenue!); setDetailVenue(null); }}
+              >
+                <ThumbsUp className="w-4 h-4 mr-1.5" />
+                Approuver
+              </Button>
+            )}
+            {detailVenue?.status !== "rejected" && (
+              <Button
+                variant="outline"
+                className="text-yellow-400 border-yellow-400/30 hover:bg-yellow-400/10"
+                onClick={() => { setDetailVenue(null); openReject(detailVenue!); }}
+              >
+                <ThumbsDown className="w-4 h-4 mr-1.5" />
+                Rejeter
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
