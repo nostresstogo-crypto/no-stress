@@ -9,6 +9,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -120,6 +121,16 @@ export default function VenueDetailScreen() {
     if (isApi) return apiVenue ?? undefined;
     return MOCK_VENUES.find((v) => v.id === id) as Venue | undefined;
   }, [isApi, apiVenue, id]);
+
+  const handleShare = async () => {
+    try {
+      if (!venue) return;
+      await Share.share({
+        title: venue.name,
+        message: `${venue.name} — ${venue.city}`,
+      });
+    } catch {}
+  };
 
   // Sépare les événements à venir (date >= aujourd'hui) et passés.
   // - Côté API : on a fetché avec includeArchived=1 pour récupérer tout l'historique du lieu.
@@ -274,28 +285,28 @@ export default function VenueDetailScreen() {
             style={styles.heroOverlay}
           />
 
-          <TouchableOpacity
-            style={[styles.navBtn, { top: (insets.top || 20) + 8 }]}
-            onPress={() => router.back()}
-          >
-            <Ionicons name="arrow-back" size={20} color={C.text} />
-          </TouchableOpacity>
-
-          <View style={{ position: "absolute", top: (insets.top || 20) + 8, right: 16, flexDirection: "row", gap: 8 }}>
-            {user?.role === "user" && isApi && (
-              <TouchableOpacity
-                style={styles.navBtn}
-                onPress={() => toggleFavoriteVenue(venue.id)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons
-                  name={isFavoriteVenue(venue.id) ? "heart" : "heart-outline"}
-                  size={20}
-                  color={isFavoriteVenue(venue.id) ? "#ef4444" : C.text}
-                />
+          <View style={[styles.heroActions, { top: (Platform.OS === "web" ? 67 : insets.top) + 12 }]}>
+            <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={22} color="#fff" />
+            </TouchableOpacity>
+            <View style={styles.heroRightActions}>
+              {user?.role === "user" && isApi && (
+                <TouchableOpacity
+                  style={styles.iconBtn}
+                  onPress={() => toggleFavoriteVenue(venue.id)}
+                >
+                  <Ionicons
+                    name={isFavoriteVenue(venue.id) ? "heart" : "heart-outline"}
+                    size={22}
+                    color={isFavoriteVenue(venue.id) ? "#E05C5C" : "#fff"}
+                  />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={styles.iconBtn} onPress={handleShare}>
+                <Ionicons name="share-outline" size={22} color="#fff" />
               </TouchableOpacity>
-            )}
-            {isApi && <ReportButton itemType="venue" itemId={venue.id} variant="icon" />}
+              {isApi && user?.role !== "structure" && <ReportButton itemType="venue" itemId={venue.id} variant="icon" />}
+            </View>
           </View>
 
           {venue.isVerified && (
@@ -745,17 +756,22 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
   heroOverlay: {
     ...StyleSheet.absoluteFillObject,
   },
-  navBtn: {
+  heroActions: {
     position: "absolute",
-    left: 16,
+    left: 20,
+    right: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  heroRightActions: { flexDirection: "row", gap: 8 },
+  iconBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(14,17,32,0.7)",
+    backgroundColor: "rgba(0,0,0,0.5)",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: C.border,
   },
   verifiedHero: {
     position: "absolute",

@@ -8,51 +8,64 @@
 #
 #  Prérequis :
 #    - deploy/test/setup.sh doit avoir été exécuté sur le VPS
-#    - Les secrets VPS_SSH_KEY, VPS_HOST, VPS_PORT, VPS_USER doivent être
-#      configurés dans GitHub Secrets ET accessibles en local sous forme de
-#      variables d'environnement, OU renseignés manuellement ci-dessous.
+#    - Clé SSH disponible dans ~/.ssh/id_ed25519 (voir ci-dessous)
+#
+#  Créer la clé SSH avant d'utiliser ce script :
+#    mkdir -p ~/.ssh
+#    printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+#    chmod 600 ~/.ssh/id_ed25519
 #
 #  Usage :
-#    bash deploy/test/dump-and-transfer.sh
+#    VPS_HOST=1.2.3.4 VPS_USER=root bash deploy/test/dump-and-transfer.sh
 #
-#  Variables d'environnement optionnelles (surcharge les valeurs par défaut) :
-#    VPS_HOST, VPS_PORT, VPS_USER, VPS_SSH_KEY_PATH, TEST_DB_NAME
+#  Variables d'environnement :
+#    VPS_HOST              — IP ou domaine du VPS (obligatoire)
+#    VPS_USER              — utilisateur SSH (défaut: root)
+#    VPS_PORT              — port SSH (défaut: 22)
+#    VPS_SSH_KEY_PATH      — chemin vers la clé SSH (défaut: ~/.ssh/id_ed25519)
+#    TEST_DB_NAME          — nom de la base test (défaut: nostress_test)
 # ────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
 # ── Configuration ─────────────────────────────────────────────────────────
 VPS_HOST="${VPS_HOST:?Définissez VPS_HOST (ex: 123.45.67.89)}"
 VPS_PORT="${VPS_PORT:-22}"
-VPS_USER="${VPS_USER:?Définissez VPS_USER (ex: deploy)}"
+VPS_USER="${VPS_USER:-nostress}"
 VPS_SSH_KEY_PATH="${VPS_SSH_KEY_PATH:-$HOME/.ssh/id_ed25519}"
-TEST_DB_NAME="${TEST_DB_NAME:-nostress_test}"
 TEST_ENV_FILE="/var/www/nostress-test-api/shared/.env"
 
 TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
 DUMP_FILE="/tmp/nostress_dump_${TIMESTAMP}.sql.gz"
+REMOTE_DUMP="/tmp/nostress_dump_${TIMESTAMP}.sql.gz"
+
+SSH_OPTS="-p $VPS_PORT -i $VPS_SSH_KEY_PATH -o StrictHostKeyChecking=no -o BatchMode=yes"
+SCP_OPTS="-P $VPS_PORT -i $VPS_SSH_KEY_PATH -o StrictHostKeyChecking=no -o BatchMode=yes"
 
 echo "════════════════════════════════════════════════════════════════"
 echo " NoStress — Export DB Replit → VPS Test"
 echo " Timestamp : $TIMESTAMP"
 echo " VPS       : $VPS_USER@$VPS_HOST:$VPS_PORT"
-echo " DB cible  : $TEST_DB_NAME"
 echo "════════════════════════════════════════════════════════════════"
 echo ""
 
-# ── Vérifications préalables ───────────────────────────────────────────────
+# ── Vérifications ─────────────────────────────────────────────────────────
 if [[ -z "${DATABASE_URL:-}" ]]; then
-  echo "❌ DATABASE_URL n'est pas définie dans l'environnement Replit."
+  echo "❌ DATABASE_URL non définie dans l'environnement Replit."
   exit 1
 fi
 
 if ! command -v pg_dump &>/dev/null; then
-  echo "❌ pg_dump introuvable. Installez postgresql-client."
+  echo "❌ pg_dump introuvable."
   exit 1
 fi
 
 if [[ ! -f "$VPS_SSH_KEY_PATH" ]]; then
   echo "❌ Clé SSH introuvable : $VPS_SSH_KEY_PATH"
-  echo "   Définissez VPS_SSH_KEY_PATH ou placez votre clé dans ~/.ssh/id_ed25519"
+  echo ""
+  echo "   Créez-la avec :"
+  echo "   mkdir -p ~/.ssh"
+  echo "   printf '%s\n' \"\$VPS_SSH_KEY\" > ~/.ssh/id_ed25519"
+  echo "   chmod 600 ~/.ssh/id_ed25519"
   exit 1
 fi
 
@@ -72,87 +85,58 @@ echo "✅ Dump créé : $DUMP_FILE ($DUMP_SIZE)"
 echo ""
 
 # ── Transfert vers le VPS ──────────────────────────────────────────────────
-REMOTE_DUMP="/tmp/nostress_dump_${TIMESTAMP}.sql.gz"
-
 echo "▶ Transfert vers le VPS..."
-scp \
-  -P "$VPS_PORT" \
-  -i "$VPS_SSH_KEY_PATH" \
-  -o StrictHostKeyChecking=no \
-  "$DUMP_FILE" \
-  "$VPS_USER@$VPS_HOST:$REMOTE_DUMP"
-echo "✅ Fichier transféré : $REMOTE_DUMP"
+scp $SCP_OPTS "$DUMP_FILE" "$VPS_USER@$VPS_HOST:$REMOTE_DUMP"
+echo "✅ Fichier transféré."
 echo ""
 
 # ── Import sur le VPS ─────────────────────────────────────────────────────
-echo "▶ Import dans la base '$TEST_DB_NAME' sur le VPS..."
-ssh \
-  -p "$VPS_PORT" \
-  -i "$VPS_SSH_KEY_PATH" \
-  -o StrictHostKeyChecking=no \
-  "$VPS_USER@$VPS_HOST" \
-  bash << REMOTESCRIPT
+echo "▶ Import dans la base test sur le VPS..."
+ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" bash << REMOTESCRIPT
 set -euo pipefail
 
 REMOTE_DUMP="$REMOTE_DUMP"
 TEST_ENV_FILE="$TEST_ENV_FILE"
-TEST_DB_NAME="$TEST_DB_NAME"
 
-# Lire DATABASE_URL depuis le .env test pour extraire les credentials
 if [[ ! -f "\$TEST_ENV_FILE" ]]; then
   echo "❌ \$TEST_ENV_FILE introuvable. Lancez d'abord deploy/test/setup.sh."
   exit 1
 fi
 
-# Extraire les composants de la DATABASE_URL
+# Lire DATABASE_URL directement depuis le .env
 DB_URL="\$(grep -E '^DATABASE_URL=' "\$TEST_ENV_FILE" | cut -d= -f2-)"
 if [[ -z "\$DB_URL" ]]; then
   echo "❌ DATABASE_URL absent de \$TEST_ENV_FILE."
   exit 1
 fi
 
-# Parser la DATABASE_URL (format : postgresql://user:pass@host:port/dbname)
-DB_USER="\$(echo "\$DB_URL" | sed -E 's|postgresql://([^:]+):.*|\1|')"
-DB_PASS="\$(echo "\$DB_URL" | sed -E 's|postgresql://[^:]+:([^@]+)@.*|\1|')"
-DB_HOST="\$(echo "\$DB_URL" | sed -E 's|.*@([^:/]+).*|\1|')"
-DB_PORT="\$(echo "\$DB_URL" | sed -E 's|.*:([0-9]+)/.*|\1|')"
-DB_NAME="\$(echo "\$DB_URL" | sed -E 's|.*/([^?]+).*|\1|')"
+echo "  Base cible : \$(echo "\$DB_URL" | sed -E 's|postgresql://[^:]+:[^@]+@||')"
 
-echo "  Connexion : \$DB_USER@\$DB_HOST:\$DB_PORT/\$DB_NAME"
-
-# Supprimer les connexions actives pour éviter les conflits
+# Couper les connexions actives
 sudo -u postgres psql -c "
   SELECT pg_terminate_backend(pid)
   FROM pg_stat_activity
-  WHERE datname = '\$DB_NAME' AND pid <> pg_backend_pid();
+  WHERE datname = (
+    SELECT regexp_replace('\$DB_URL', '.*/', '')
+  ) AND pid <> pg_backend_pid();
 " 2>/dev/null || true
 
-# Import du dump
-PGPASSWORD="\$DB_PASS" gunzip -c "\$REMOTE_DUMP" \
-  | psql \
-    --host="\$DB_HOST" \
-    --port="\$DB_PORT" \
-    --username="\$DB_USER" \
-    --dbname="\$DB_NAME" \
-    --no-password \
+# Import — psql accepte directement une DATABASE_URL complète
+gunzip -c "\$REMOTE_DUMP" \
+  | psql "\$DB_URL" \
     2>&1 | grep -v "^NOTICE\|^WARNING\|already exists\|does not exist" || true
 
 echo "✅ Import terminé."
-
-# Nettoyage
 rm -f "\$REMOTE_DUMP"
 echo "✅ Fichier temporaire supprimé."
+
+# Redémarrage de l'API test
+sudo systemctl restart nostress-test-api.service
+echo "✅ API test redémarrée."
 REMOTESCRIPT
 
 echo ""
-echo "▶ Nettoyage local..."
 rm -f "$DUMP_FILE"
-echo ""
 echo "════════════════════════════════════════════════════════════════"
-echo " ✅ Import DB terminé avec succès !"
-echo "    La base '$TEST_DB_NAME' sur le VPS est maintenant synchronisée"
-echo "    avec la base de données Replit."
-echo ""
-echo "    Pour redémarrer l'API test avec la nouvelle DB :"
-echo "    ssh -p $VPS_PORT $VPS_USER@$VPS_HOST 'sudo systemctl restart nostress-test-api.service'"
+echo " ✅ Base de données test synchronisée avec Replit !"
 echo "════════════════════════════════════════════════════════════════"
