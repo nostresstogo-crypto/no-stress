@@ -13,7 +13,7 @@ import {
   verificationCodeExpiry,
 } from "../lib/auth-utils.js";
 
-const partnerRegisterLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, key: "partner-register" });
+const partnerRegisterLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, key: "partner-register" });
 import {
   sendPartnerRegistrationEmailToPartner,
   sendPartnerRegistrationEmailToAdmin,
