@@ -2,7 +2,6 @@ import React, { useState, useCallback, useEffect, useMemo } from "react";
 import {
   ActivityIndicator,
   Alert,
-  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -13,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -1350,7 +1350,7 @@ export default function DashboardScreen() {
                   <View key={idx} style={{ backgroundColor: C.bg, borderRadius: 10, borderWidth: 1, borderColor: C.border, padding: 10, marginBottom: 10, flexDirection: "row", gap: 10 }}>
                     <TouchableOpacity onPress={() => pickSpecialtyImage(idx)} style={{ width: 70, height: 70, borderRadius: 8, backgroundColor: C.card, borderWidth: 1, borderColor: C.border, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
                       {sp.imageUrl ? (
-                        <Image source={{ uri: sp.imageUrl }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                        <Image source={{ uri: sp.imageUrl }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
                       ) : (
                         <Ionicons name="image-outline" size={22} color={C.textMuted} />
                       )}
@@ -1393,7 +1393,7 @@ export default function DashboardScreen() {
                 <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
                   {venueImages.map((uri, idx) => (
                     <View key={`${idx}-${uri}`} style={{ position: "relative", width: "48%", aspectRatio: 16 / 9, borderRadius: 10, overflow: "hidden", borderWidth: 1, borderColor: C.border }}>
-                      <Image source={{ uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                      <Image source={{ uri }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
                       <TouchableOpacity
                         style={{ position: "absolute", top: 4, right: 4, backgroundColor: C.error, borderRadius: 12, width: 24, height: 24, alignItems: "center", justifyContent: "center" }}
                         onPress={() => setVenueImages((prev) => prev.filter((_, i) => i !== idx))}

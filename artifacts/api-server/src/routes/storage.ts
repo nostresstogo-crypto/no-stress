@@ -1,10 +1,30 @@
 import { Router, type IRouter, type Request, type Response, raw } from "express";
 import { Readable } from "stream";
+import sharp from "sharp";
 import {
   ObjectStorageService,
   ObjectNotFoundError,
   verifyLocalUploadToken,
 } from "../lib/objectStorage.js";
+
+// 1 year cache for immutable images (append ?v= to bust)
+const IMAGE_CACHE_HEADERS = {
+  "Cache-Control": "public, max-age=31536000, immutable",
+} as const;
+
+// 1 hour for transformed variants (size/quality can change)
+const TRANSFORM_CACHE_HEADERS = {
+  "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+} as const;
+
+async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+    stream.on("end", () => resolve(Buffer.concat(chunks)));
+    stream.on("error", reject);
+  });
+}
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -93,6 +113,74 @@ router.put(
   },
 );
 
+/**
+ * GET /api/storage/transform?path=/storage/objects/...&w=400&h=300&q=80
+ *
+ * Redimensionne une image stockée avec sharp et retourne du WebP.
+ * Paramètres:
+ *   path  — chemin relatif commençant par /storage/ (ex: /storage/objects/uploads/abc)
+ *   w     — largeur cible en pixels (obligatoire)
+ *   h     — hauteur cible en pixels (optionnel, crop centré si fourni avec w)
+ *   q     — qualité WebP 1-100 (défaut 80)
+ */
+router.get("/storage/transform", async (req: Request, res: Response) => {
+  try {
+    const storagePath = String(req.query.path || "");
+    const w = parseInt(String(req.query.w || "0"), 10);
+    const h = req.query.h ? parseInt(String(req.query.h), 10) : undefined;
+    const q = Math.min(100, Math.max(1, parseInt(String(req.query.q || "80"), 10)));
+
+    if (!storagePath.startsWith("/storage/")) {
+      return res.status(400).json({ error: "path must start with /storage/" });
+    }
+    if (!w || w < 1 || w > 4000) {
+      return res.status(400).json({ error: "w must be between 1 and 4000" });
+    }
+    if (h !== undefined && (h < 1 || h > 4000)) {
+      return res.status(400).json({ error: "h must be between 1 and 4000" });
+    }
+
+    // Résolution du fichier selon le type de chemin
+    let objectFile;
+    if (storagePath.startsWith("/storage/objects/")) {
+      const wildcardPath = storagePath.slice("/storage/objects/".length);
+      const objectPath = `/objects/${wildcardPath}`;
+      objectFile = await objectStorageService.getObjectEntityFile(objectPath);
+    } else if (storagePath.startsWith("/storage/public-objects/")) {
+      const filePath = storagePath.slice("/storage/public-objects/".length);
+      objectFile = await objectStorageService.searchPublicObject(filePath);
+      if (!objectFile) return res.status(404).json({ error: "File not found" });
+    } else {
+      return res.status(400).json({ error: "Unsupported storage path" });
+    }
+
+    const srcStream = objectFile.createReadStream();
+    const srcBuffer = await streamToBuffer(srcStream);
+
+    let transformer = sharp(srcBuffer).resize({
+      width: w,
+      height: h,
+      fit: h ? "cover" : "inside",
+      withoutEnlargement: true,
+      position: "centre",
+    });
+    transformer = transformer.webp({ quality: q });
+
+    const output = await transformer.toBuffer();
+
+    Object.entries(TRANSFORM_CACHE_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
+    res.setHeader("Content-Type", "image/webp");
+    res.setHeader("Vary", "Accept");
+    res.status(200).send(output);
+  } catch (error) {
+    if (error instanceof ObjectNotFoundError) {
+      return res.status(404).json({ error: "Object not found" });
+    }
+    (req as any).log?.error({ err: error }, "Error transforming image");
+    res.status(500).json({ error: "Failed to transform image" });
+  }
+});
+
 router.get("/storage/public-objects/*filePath", async (req: Request, res: Response) => {
   try {
     const raw = (req.params as any).filePath;
@@ -102,6 +190,7 @@ router.get("/storage/public-objects/*filePath", async (req: Request, res: Respon
     const response = await objectStorageService.downloadObject(file);
     res.status(response.status);
     response.headers.forEach((value, key) => res.setHeader(key, value));
+    Object.entries(IMAGE_CACHE_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
     if (response.body) {
       Readable.fromWeb(response.body as any).pipe(res);
     } else res.end();
@@ -120,6 +209,7 @@ router.get("/storage/objects/*path", async (req: Request, res: Response) => {
     const response = await objectStorageService.downloadObject(objectFile);
     res.status(response.status);
     response.headers.forEach((value, key) => res.setHeader(key, value));
+    Object.entries(IMAGE_CACHE_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
     if (response.body) {
       Readable.fromWeb(response.body as any).pipe(res);
     } else res.end();

@@ -3,13 +3,13 @@ import {
   Animated,
   Dimensions,
   FlatList,
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
   ViewToken,
 } from "react-native";
+import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -341,7 +341,7 @@ function SlideView({
             <Image
               source={require("@/assets/images/concert-crowd.png")}
               style={styles.concertImg}
-              resizeMode="cover"
+              contentFit="cover"
             />
             <LinearGradient
               colors={[

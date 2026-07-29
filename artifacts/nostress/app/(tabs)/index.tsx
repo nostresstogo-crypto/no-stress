@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Dimensions,
   FlatList,
-  Image,
   Modal,
   ScrollView,
   StyleSheet,
@@ -12,6 +11,7 @@ import {
   Platform,
   RefreshControl,
 } from "react-native";
+import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
@@ -451,7 +451,7 @@ export default function HomeScreen() {
                   activeOpacity={0.85}
                 >
                   {item.imageUrl ? (
-                    <Image source={{ uri: item.imageUrl }} style={{ width: "100%", height: 110 }} resizeMode="cover" />
+                    <Image source={{ uri: item.imageUrl }} style={{ width: "100%", height: 110 }} contentFit="cover" />
                   ) : (
                     <View style={{ width: "100%", height: 110, backgroundColor: C.border, alignItems: "center", justifyContent: "center" }}>
                       <Ionicons name="business" size={28} color={C.textMuted} />
@@ -669,7 +669,7 @@ export default function HomeScreen() {
                 <Image
                   source={{ uri: venueModal.imageUrl }}
                   style={{ width: "100%", height: 220 }}
-                  resizeMode="cover"
+                  contentFit="cover"
                 />
               ) : (
                 <View style={{ width: "100%", height: 160, backgroundColor: C.card2, alignItems: "center", justifyContent: "center" }}>

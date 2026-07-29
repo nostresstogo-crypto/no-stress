@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
-  Image,
   Linking,
   Modal,
   Platform,
@@ -15,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router, useLocalSearchParams } from "expo-router";
@@ -269,7 +269,7 @@ export default function VenueDetailScreen() {
               <Image
                 source={{ uri: venue.imageUrl }}
                 style={styles.heroImage}
-                resizeMode="cover"
+                contentFit="cover"
               />
             </TouchableOpacity>
           ) : (
@@ -398,7 +398,7 @@ export default function VenueDetailScreen() {
                     accessibilityRole="imagebutton"
                     accessibilityLabel={lang === "fr" ? `Agrandir ${sp.name}` : `Zoom on ${sp.name}`}
                   >
-                    <Image source={{ uri: sp.imageUrl }} style={styles.specialtyImage} resizeMode="cover" />
+                    <Image source={{ uri: sp.imageUrl }} style={styles.specialtyImage} contentFit="cover" />
                     <View style={styles.specialtyZoomBadge}>
                       <Ionicons name="expand" size={12} color="#fff" />
                     </View>
@@ -469,7 +469,7 @@ export default function VenueDetailScreen() {
                       <Image
                         source={{ uri: event.imageUrl }}
                         style={styles.eventThumb}
-                        resizeMode="cover"
+                        contentFit="cover"
                       />
                     ) : (
                       <View style={styles.eventDateBox}>
@@ -520,7 +520,7 @@ export default function VenueDetailScreen() {
                       <Image
                         source={{ uri: event.imageUrl }}
                         style={styles.eventThumb}
-                        resizeMode="cover"
+                        contentFit="cover"
                       />
                     ) : (
                       <View style={[styles.eventDateBox, { backgroundColor: C.border + "22" }]}>
@@ -669,7 +669,7 @@ export default function VenueDetailScreen() {
             <Image
               source={{ uri: zoomImage.uri }}
               style={styles.zoomImage}
-              resizeMode="contain"
+              contentFit="contain"
             />
           ) : null}
           {zoomImage?.name ? (

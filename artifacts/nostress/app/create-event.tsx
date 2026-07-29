@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   Alert,
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -13,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
@@ -558,7 +558,7 @@ export default function CreateEventScreen() {
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {form.images.map((uri, idx) => (
               <View key={`${idx}-${uri}`} style={{ position: "relative", width: "48%", aspectRatio: 16 / 9, borderRadius: 12, overflow: "hidden", borderWidth: 1, borderColor: C.border }}>
-                <Image source={{ uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                <Image source={{ uri }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
                 <TouchableOpacity
                   style={{
                     position: "absolute", top: 6, right: 6, backgroundColor: C.error,

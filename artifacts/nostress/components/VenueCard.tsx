@@ -1,13 +1,14 @@
 import React, { useMemo } from "react";
 import {
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useT, useColors } from "@/context/AppContext";
+import { thumbUrl } from "@/lib/imageUrl";
 import { ColorPalette } from "@/constants/colors";
 
 interface Venue {
@@ -67,9 +68,11 @@ export function VenueCard({ venue, onPress, compact = false }: VenueCardProps) {
     >
       {venue.imageUrl ? (
         <Image
-          source={{ uri: venue.imageUrl }}
+          source={{ uri: thumbUrl(venue.imageUrl, compact ? 144 : 480, compact ? 144 : 280) ?? venue.imageUrl }}
           style={compact ? styles.compactImage : styles.image}
-          resizeMode="cover"
+          contentFit="cover"
+          cachePolicy="disk"
+          transition={200}
         />
       ) : (
         <View style={[compact ? styles.compactImage : styles.image, styles.placeholder]}>

@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Image,
   Platform,
   RefreshControl,
   ScrollView,
@@ -12,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
@@ -301,7 +301,7 @@ export default function VenuesScreen() {
                         <Image
                           source={{ uri: v.imageUrl }}
                           style={styles.popularCardImage}
-                          resizeMode="cover"
+                          contentFit="cover"
                         />
                       ) : (
                         <View style={[styles.popularCardImage, styles.popularCardImagePlaceholder, { backgroundColor: C.border }]}>

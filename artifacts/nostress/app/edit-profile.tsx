@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import {
   Alert,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -215,7 +215,7 @@ export default function EditProfileScreen() {
         <View style={styles.avatarBlock}>
           <View style={styles.avatar}>
             {profileImage ? (
-              <Image source={{ uri: profileImage }} style={styles.avatarImg} resizeMode="cover" />
+              <Image source={{ uri: profileImage }} style={styles.avatarImg} contentFit="cover" />
             ) : (
               <Text style={styles.avatarText}>{(name || user.email).charAt(0).toUpperCase()}</Text>
             )}

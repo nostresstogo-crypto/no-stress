@@ -1,16 +1,17 @@
 import React, { useMemo } from "react";
 import {
   Dimensions,
-  Image,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { ColorPalette } from "@/constants/colors";
 import { formatDateLocalized } from "@/lib/formatDate";
+import { thumbUrl } from "@/lib/imageUrl";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.72;
@@ -118,7 +119,13 @@ export function EventCard({ event, onPress, horizontal = false }: EventCardProps
     >
       <View style={styles.imageContainer}>
         {event.imageUrl ? (
-          <Image source={{ uri: event.imageUrl }} style={styles.image} resizeMode="cover" />
+          <Image
+            source={{ uri: thumbUrl(event.imageUrl, 480, 320) ?? event.imageUrl }}
+            style={styles.image}
+            contentFit="cover"
+            cachePolicy="disk"
+            transition={200}
+          />
         ) : (
           <View style={[styles.image, styles.imagePlaceholder]}>
             <Ionicons name="musical-notes" size={32} color={C.lavender} />

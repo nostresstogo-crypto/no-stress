@@ -4,7 +4,6 @@ import {
   Alert,
   Dimensions,
   FlatList,
-  Image,
   Linking,
   Modal,
   Platform,
@@ -16,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
@@ -259,7 +259,7 @@ export default function EventDetailScreen() {
               <Image
                 source={{ uri: item }}
                 style={{ width: SW, height: HERO_H }}
-                resizeMode="cover"
+                contentFit="cover"
               />
               <View style={[StyleSheet.absoluteFill, s.heroOverlay]} />
             </TouchableOpacity>
@@ -385,7 +385,7 @@ export default function EventDetailScreen() {
                   <Image
                     source={{ uri }}
                     style={s.thumbImg}
-                    resizeMode="cover"
+                    contentFit="cover"
                   />
                   {i === activeIdx && (
                     <View style={s.thumbActiveDot} />
@@ -677,7 +677,7 @@ export default function EventDetailScreen() {
                 <Image
                   source={{ uri: item }}
                   style={s.lbImage}
-                  resizeMode="contain"
+                  contentFit="contain"
                 />
               </View>
             )}

@@ -9,6 +9,7 @@ allowBuilds:
   core-js-pure: true
   dtrace-provider: true
   esbuild: true
+  sharp: true
 
 autoInstallPeers: false
 
@@ -45,6 +46,7 @@ onlyBuiltDependencies:
   - '@swc/core'
   - esbuild
   - msw
+  - sharp
   - unrs-resolver
 
 overrides:
