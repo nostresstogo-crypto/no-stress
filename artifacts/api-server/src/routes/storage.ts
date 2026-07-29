@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response, raw } from "express";
 import { Readable } from "stream";
 import sharp from "sharp";
+import { encode as blurhashEncode } from "blurhash";
 import {
   ObjectStorageService,
   ObjectNotFoundError,
@@ -98,7 +99,25 @@ router.put(
           stream,
           String(contentType),
         );
-        return res.status(200).json({ ok: true, objectPath });
+        // Generate blurhash from the uploaded image (best-effort, never blocks the response on failure)
+        let blurhash: string | null = null;
+        try {
+          const { data, info } = await sharp(body)
+            .resize(32, 32, { fit: "cover", withoutEnlargement: false })
+            .ensureAlpha()
+            .raw()
+            .toBuffer({ resolveWithObject: true });
+          blurhash = blurhashEncode(
+            new Uint8ClampedArray(data.buffer),
+            info.width,
+            info.height,
+            4,
+            3,
+          );
+        } catch {
+          // blurhash generation failure is non-fatal
+        }
+        return res.status(200).json({ ok: true, objectPath, blurhash });
       } catch (e: any) {
         if (e?.code === "EEXIST") {
           // Token replay or concurrent upload to the same id.

@@ -46,6 +46,7 @@ type Venue = {
   address?: string;
   description?: string;
   imageUrl?: string;
+  blurhash?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   isVerified?: boolean;
@@ -99,6 +100,7 @@ export default function VenueDetailScreen() {
             address: data.address || "",
             description: data.description || "",
             imageUrl: data.imageUrl || undefined,
+            blurhash: data.blurhash ?? null,
             latitude: data.latitude ?? null,
             longitude: data.longitude ?? null,
             isVerified: !!data.isVerified,
@@ -270,6 +272,7 @@ export default function VenueDetailScreen() {
                 source={{ uri: venue.imageUrl }}
                 style={styles.heroImage}
                 contentFit="cover"
+                placeholder={venue.blurhash ? { blurhash: venue.blurhash } : undefined}
               />
             </TouchableOpacity>
           ) : (

@@ -47,7 +47,7 @@ interface MyVenue {
 
 const MAX_VENUE_IMAGES = 3;
 
-async function uploadVenueImage(uri: string, apiBase: string): Promise<string> {
+async function uploadVenueImage(uri: string, apiBase: string): Promise<{ url: string; blurhash: string | null }> {
   const lowerUri = uri.toLowerCase();
   const contentType = lowerUri.endsWith(".png") ? "image/png" : lowerUri.endsWith(".webp") ? "image/webp" : "image/jpeg";
   // Normaliser le nom : pour blob:/data: URIs, le pop() donne soit un UUID
@@ -83,7 +83,8 @@ async function uploadVenueImage(uri: string, apiBase: string): Promise<string> {
     const txt = await putResp.text().catch(() => "");
     throw new Error(`Envoi photo échoué (${putResp.status}): ${txt.slice(0, 120)}`);
   }
-  return `${apiBase}/storage${objectPath}`;
+  const putData = await putResp.json().catch(() => ({}));
+  return { url: `${apiBase}/storage${objectPath}`, blurhash: putData.blurhash ?? null };
 }
 
 const NS_MY_VENUES_KEY = "ns_my_venues";
@@ -243,8 +244,10 @@ export default function DashboardScreen() {
       // telles quelles à l'API → liens morts.
       const isPersisted = /^https?:\/\//i.test(imageUrl) && !imageUrl.startsWith("blob:");
       if (!isPersisted) {
-        try { imageUrl = await uploadVenueImage(imageUrl, API_BASE); }
-        catch (e: any) {
+        try {
+          const { url } = await uploadVenueImage(imageUrl, API_BASE);
+          imageUrl = url;
+        } catch (e: any) {
           console.warn("specialty upload failed", e?.message);
           specialtyFailures.push(`${s.name}: ${e?.message || "upload échoué"}`);
           continue;
@@ -295,6 +298,7 @@ export default function DashboardScreen() {
     setSavingVenue(true);
     try {
       const uploaded: string[] = [];
+      let firstVenueBlurhash: string | null = null;
       const uploadFailures: string[] = [];
       for (const uri of venueImages.slice(0, MAX_VENUE_IMAGES)) {
         if (!uri) continue;
@@ -307,7 +311,11 @@ export default function DashboardScreen() {
         if (isPersisted) {
           uploaded.push(uri);
         } else {
-          try { uploaded.push(await uploadVenueImage(uri, API_BASE)); }
+          try {
+            const { url, blurhash } = await uploadVenueImage(uri, API_BASE);
+            uploaded.push(url);
+            if (!firstVenueBlurhash && blurhash) firstVenueBlurhash = blurhash;
+          }
           catch (e: any) {
             console.warn("venue upload failed", e?.message);
             uploadFailures.push(e?.message || "unknown");
@@ -353,6 +361,7 @@ export default function DashboardScreen() {
       if (uploaded.length > 0) {
         payload.images = uploaded;
         payload.imageUrl = uploaded[0];
+        if (firstVenueBlurhash) payload.blurhash = firstVenueBlurhash;
       } else if (!isEdit) {
         payload.images = [];
       }

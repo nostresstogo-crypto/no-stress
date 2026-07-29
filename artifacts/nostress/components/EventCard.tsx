@@ -35,6 +35,7 @@ interface Event {
   city?: string | null;
   category?: string | null;
   imageUrl?: string | null;
+  blurhash?: string | null;
   price?: number | null;
   priceFCFA?: number | null;
   currency?: string | null;
@@ -125,6 +126,7 @@ export function EventCard({ event, onPress, horizontal = false }: EventCardProps
             contentFit="cover"
             cachePolicy="disk"
             transition={200}
+            placeholder={event.blurhash ? { blurhash: event.blurhash } : undefined}
           />
         ) : (
           <View style={[styles.image, styles.imagePlaceholder]}>

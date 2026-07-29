@@ -457,6 +457,7 @@ export default function HomeScreen() {
       priceFCFA: typeof e.price === "number" ? e.price : 0,
       isFree: !e.price || e.price === 0,
       imageUrl: e.imageUrl || undefined,
+      blurhash: (e as any).blurhash ?? null,
       status: "approved" as const,
     }));
   }, [apiEvents]);

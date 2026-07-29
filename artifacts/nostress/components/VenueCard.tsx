@@ -18,6 +18,7 @@ interface Venue {
   city: string;
   address?: string;
   imageUrl?: string;
+  blurhash?: string | null;
   description?: string;
   isVerified?: boolean;
 }
@@ -73,6 +74,7 @@ export function VenueCard({ venue, onPress, compact = false }: VenueCardProps) {
           contentFit="cover"
           cachePolicy="disk"
           transition={200}
+          placeholder={venue.blurhash ? { blurhash: venue.blurhash } : undefined}
         />
       ) : (
         <View style={[compact ? styles.compactImage : styles.image, styles.placeholder]}>

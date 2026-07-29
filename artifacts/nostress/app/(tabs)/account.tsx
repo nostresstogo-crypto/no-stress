@@ -331,6 +331,7 @@ export default function AccountScreen() {
       city: e.city || "",
       category: e.category || "",
       imageUrl: e.imageUrl,
+      blurhash: (e as any).blurhash ?? null,
       price: typeof e.price === "number" ? e.price : 0,
       status: e.status || "approved",
     }));

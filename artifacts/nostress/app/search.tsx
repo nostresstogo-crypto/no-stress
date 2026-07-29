@@ -326,6 +326,7 @@ export default function SearchScreen() {
       priceFCFA: typeof e.price === "number" ? e.price : 0,
       isFree: !e.price || e.price === 0,
       imageUrl: e.imageUrl || undefined,
+      blurhash: e.blurhash ?? null,
       status: "approved" as const,
     }));
   }, [allEvents, search, eventFilters]);
@@ -479,6 +480,7 @@ export default function SearchScreen() {
             city: v.city || "",
             address: v.address || "",
             imageUrl: v.imageUrl || (Array.isArray(v.images) && v.images[0]) || undefined,
+            blurhash: v.blurhash ?? null,
             isVerified: v.isVerified,
           }))}
           keyExtractor={(v) => v.id}

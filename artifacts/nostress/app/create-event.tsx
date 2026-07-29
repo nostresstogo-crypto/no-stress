@@ -25,7 +25,7 @@ import type { MyEvent } from "@/context/AppContext";
 import { API_BASE } from "@/lib/apiBase";
 import { DateField, TimeField, todayISO } from "@/components/DateTimeField";
 
-async function uploadImageToBackend(uri: string): Promise<string> {
+async function uploadImageToBackend(uri: string): Promise<{ url: string; blurhash: string | null }> {
   const lowerUri = uri.toLowerCase();
   const contentType = lowerUri.endsWith(".png")
     ? "image/png"
@@ -56,7 +56,8 @@ async function uploadImageToBackend(uri: string): Promise<string> {
   if (!putResp.ok) {
     throw new Error("Échec de l'envoi du fichier (HTTP " + putResp.status + ")");
   }
-  return `${API_BASE}/storage${objectPath}`;
+  const putData = await putResp.json().catch(() => ({}));
+  return { url: `${API_BASE}/storage${objectPath}`, blurhash: putData.blurhash ?? null };
 }
 
 type FormData = {
@@ -231,13 +232,15 @@ export default function CreateEventScreen() {
     setSubmitting(true);
     try {
       const uploadedImages: string[] = [];
+      let firstBlurhash: string | null = null;
       for (const uri of form.images.slice(0, MAX_EVENT_IMAGES)) {
         const trimmed = (uri || "").trim();
         if (!trimmed) continue;
         if (trimmed.startsWith("file:") || trimmed.startsWith("content:") || trimmed.startsWith("ph:") || trimmed.startsWith("/")) {
           try {
-            const url = await uploadImageToBackend(trimmed);
+            const { url, blurhash } = await uploadImageToBackend(trimmed);
             uploadedImages.push(url);
+            if (!firstBlurhash && blurhash) firstBlurhash = blurhash;
           } catch (uploadErr: any) {
             console.warn("Image upload failed, skipping:", uploadErr?.message);
           }
@@ -265,6 +268,7 @@ export default function CreateEventScreen() {
         currency: "FCFA",
         imageUrl: finalImageUrl,
         images: uploadedImages,
+        blurhash: firstBlurhash,
         partnerId: user?.id || null,
       };
       const url = isEdit ? `${API_BASE}/partners/me/events/${editId}` : `${API_BASE}/partners/me/events`;

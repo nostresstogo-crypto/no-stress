@@ -216,6 +216,7 @@ router.post("/partners/me/events", requireAuth, async (req: any, res) => {
   if (imgs.length === 0) {
     return res.status(400).json({ error: "Au moins une photo de l'événement est obligatoire (jusqu'à 3 photos)." });
   }
+  const blurhash = typeof req.body.blurhash === "string" && req.body.blurhash.trim() ? req.body.blurhash.trim() : null;
   const [event] = await db
     .insert(eventsTable)
     .values({
@@ -231,6 +232,7 @@ router.post("/partners/me/events", requireAuth, async (req: any, res) => {
       category: category || null,
       imageUrl: imgs[0],
       images: imgs,
+      blurhash,
       price: price != null ? Number(price) : null,
       currency: currency || "FCFA",
       partnerId,
@@ -298,6 +300,9 @@ router.patch("/partners/me/events/:id", requireAuth, async (req: any, res) => {
     }
     allowed.images = imgs;
     allowed.imageUrl = imgs[0];
+    if (typeof req.body.blurhash === "string" && req.body.blurhash.trim()) {
+      allowed.blurhash = req.body.blurhash.trim();
+    }
   }
   // Auto-approbation : les événements édités restent visibles immédiatement.
   allowed.status = "approved";

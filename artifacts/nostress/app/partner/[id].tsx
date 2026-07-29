@@ -256,6 +256,7 @@ export default function PartnerPublicPage() {
                 city: e.city || partner.city,
                 category: e.category || "event",
                 imageUrl: e.imageUrl,
+                blurhash: (e as any).blurhash ?? null,
                 price: e.price ?? 0,
               }}
               onPress={() => safePush(`/event/${e.id}`)}

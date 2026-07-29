@@ -164,6 +164,7 @@ router.post("/partners/me/venues", requireAuth, async (req: any, res) => {
     return res.status(400).json({ error: "Le nom et la ville sont obligatoires." });
   }
   const imgs = normalizeImages(images || (imageUrl ? [imageUrl] : []));
+  const blurhash = typeof req.body.blurhash === "string" && req.body.blurhash.trim() ? req.body.blurhash.trim() : null;
   const [v] = await db
     .insert(venuesTable)
     .values({
@@ -175,6 +176,7 @@ router.post("/partners/me/venues", requireAuth, async (req: any, res) => {
       description: description || null,
       imageUrl: imgs[0] ?? null,
       images: imgs.length > 0 ? imgs : null,
+      blurhash,
       latitude: latitude != null ? Number(latitude) : null,
       longitude: longitude != null ? Number(longitude) : null,
       openingTime: normalizeTime(openingTime),
@@ -212,6 +214,9 @@ router.patch("/partners/me/venues/:id", requireAuth, async (req: any, res) => {
     const imgs = normalizeImages(req.body.images || (req.body.imageUrl ? [req.body.imageUrl] : []));
     allowed.images = imgs.length > 0 ? imgs : null;
     allowed.imageUrl = imgs[0] ?? null;
+    if (typeof req.body.blurhash === "string" && req.body.blurhash.trim()) {
+      allowed.blurhash = req.body.blurhash.trim();
+    }
   }
   // Editing core info resets status to pending so admin re-validates.
   const triggersRevalidation =

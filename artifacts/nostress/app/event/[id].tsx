@@ -250,7 +250,7 @@ export default function EventDetailScreen() {
           onScroll={onCarouselScroll}
           scrollEventThrottle={16}
           getItemLayout={(_, i) => ({ length: SW, offset: SW * i, index: i })}
-          renderItem={({ item }) => (
+          renderItem={({ item, index }) => (
             <TouchableOpacity
               activeOpacity={0.95}
               onPress={() => openLightbox(activeIdx)}
@@ -260,6 +260,7 @@ export default function EventDetailScreen() {
                 source={{ uri: item }}
                 style={{ width: SW, height: HERO_H }}
                 contentFit="cover"
+                placeholder={index === 0 && apiEvent?.blurhash ? { blurhash: apiEvent.blurhash } : undefined}
               />
               <View style={[StyleSheet.absoluteFill, s.heroOverlay]} />
             </TouchableOpacity>

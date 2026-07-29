@@ -114,6 +114,7 @@ export default function AllEventsScreen() {
     priceFCFA: typeof e.price === "number" ? e.price : 0,
     isFree: !e.price || e.price === 0,
     imageUrl: e.imageUrl || undefined,
+    blurhash: e.blurhash ?? null,
     status: "approved" as const,
   })), [events]);
 

@@ -124,6 +124,7 @@ export default function VenuesScreen() {
     address: v.address || "",
     description: v.description || "",
     imageUrl: v.imageUrl || (Array.isArray(v.images) && v.images[0]) || undefined,
+    blurhash: v.blurhash ?? null,
     images: Array.isArray(v.images) ? v.images : [],
   })), [apiVenues]);
 
