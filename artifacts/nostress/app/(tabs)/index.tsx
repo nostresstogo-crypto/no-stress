@@ -95,7 +95,7 @@ function makeStyles(C: ColorPalette) {
     filterBtn: {
       width: 44, height: 44, borderRadius: 12, borderWidth: 1, borderColor: C.border,
       backgroundColor: C.card, alignItems: "center", justifyContent: "center",
-      position: "relative",
+      position: "relative", marginLeft: 8,
     },
     filterBadge: {
       position: "absolute", top: -4, right: -4, minWidth: 18, height: 18, borderRadius: 9,
