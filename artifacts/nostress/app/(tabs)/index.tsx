@@ -78,7 +78,7 @@ function makeStyles(C: ColorPalette) {
       marginBottom: 12,
     },
     appName: { fontSize: 22, fontFamily: "Inter_700Bold", color: C.text, letterSpacing: -0.5 },
-    searchFilterRow: { flexDirection: "row", gap: 8, alignItems: "center" },
+    searchFilterRow: { flexDirection: "row", gap: 10, alignItems: "center" },
     searchRow: {
       flexDirection: "row",
       alignItems: "center",
