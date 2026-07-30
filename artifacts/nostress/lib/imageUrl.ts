@@ -3,18 +3,15 @@ import { API_BASE } from "./apiBase";
 /**
  * Construit l'URL d'une image redimensionnée côté serveur.
  *
- * Le serveur expose GET /api/storage/transform?path=...&w=...&h=...&q=...
- * qui redimensionne avec sharp et retourne du WebP avec cache-control 1 an.
+ * Le transform (sharp → WebP) n'est tenté que si :
+ *   1. EXPO_PUBLIC_HAS_IMAGE_TRANSFORM=true  (endpoint déployé sur ce serveur)
+ *   2. L'image est hébergée sur le même serveur que API_BASE
  *
- * La transformation n'est déclenchée que si l'image est hébergée sur le même
- * serveur que API_BASE. Pour toute autre origine (API test, CDN externe, etc.),
- * l'URL originale est retournée telle quelle afin d'éviter des erreurs 404.
- *
- * @param url    URL complète de l'image originale
- * @param width  Largeur cible en pixels
- * @param height Hauteur cible en pixels (optionnel — crop centré si fourni)
- * @param quality Qualité WebP 1-100 (défaut 80)
+ * Dans tous les autres cas (API test, CDN externe…) l'URL originale est
+ * retournée telle quelle pour éviter des 404 silencieux.
  */
+const HAS_TRANSFORM = process.env.EXPO_PUBLIC_HAS_IMAGE_TRANSFORM === "true";
+
 export function thumbUrl(
   url: string | null | undefined,
   width: number,
@@ -23,15 +20,15 @@ export function thumbUrl(
 ): string | null {
   if (!url) return null;
 
-  // Vérifie que l'image est bien hébergée sur le même serveur que l'API.
-  // Si l'API est https://test.api.no-stress.net/api, l'origine est https://test.api.no-stress.net.
-  // Si l'image vient d'un autre serveur, on la retourne sans transformation.
+  // Transform désactivé → image originale
+  if (!HAS_TRANSFORM) return url;
+
+  // Vérifie que l'image vient du même serveur que l'API
   try {
-    const apiOrigin = new URL(API_BASE).origin;  // ex: https://api.no-stress.net
+    const apiOrigin = new URL(API_BASE).origin;
     const imgOrigin = new URL(url).origin;
     if (apiOrigin !== imgOrigin) return url;
   } catch {
-    // URL malformée → on la retourne telle quelle
     return url;
   }
 
@@ -39,7 +36,7 @@ export function thumbUrl(
 
   const idx = url.indexOf("/storage/");
   if (idx === -1) return url;
-  const storagePath = url.slice(idx); // ex: /storage/objects/uploads/abc123
+  const storagePath = url.slice(idx);
 
   const params = new URLSearchParams();
   params.set("path", storagePath);
