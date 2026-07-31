@@ -165,6 +165,12 @@ router.post("/partners/me/venues", requireAuth, async (req: any, res) => {
   }
   const imgs = normalizeImages(images || (imageUrl ? [imageUrl] : []));
   const blurhash = typeof req.body.blurhash === "string" && req.body.blurhash.trim() ? req.body.blurhash.trim() : null;
+  // Approved partners publish new venues immediately — no separate admin validation needed.
+  const [partnerRow] = await db
+    .select({ status: partnersTable.status })
+    .from(partnersTable)
+    .where(eq(partnersTable.id, partnerId));
+  const venueStatus = partnerRow?.status === "approved" ? "approved" : "pending";
   const [v] = await db
     .insert(venuesTable)
     .values({
@@ -182,7 +188,7 @@ router.post("/partners/me/venues", requireAuth, async (req: any, res) => {
       openingTime: normalizeTime(openingTime),
       closingTime: normalizeTime(closingTime),
       partnerId,
-      status: "pending",
+      status: venueStatus,
     })
     .returning();
   res.status(201).json(serialize(v));
@@ -295,7 +301,7 @@ router.delete("/partners/me/venues/:id", requireAuth, async (req: any, res) => {
 
 // ── Admin moderation ──────────────────────────────────────────────────────
 router.get("/admin/venues", requireAdmin, async (req: any, res) => {
-  const { status } = req.query;
+  const { status, partnerId } = req.query;
   // Left-join partner so the admin UI can show the business name (and a contact
   // fallback) rather than a raw numeric ID. Partner may be null for legacy rows.
   const baseQuery = db
@@ -307,8 +313,15 @@ router.get("/admin/venues", requireAdmin, async (req: any, res) => {
     })
     .from(venuesTable)
     .leftJoin(partnersTable, eq(partnersTable.id, venuesTable.partnerId));
-  const rows = status
-    ? await baseQuery.where(eq(venuesTable.status, String(status)))
+
+  const conds: any[] = [];
+  if (status) conds.push(eq(venuesTable.status, String(status)));
+  if (partnerId) {
+    const pid = parseInt(String(partnerId), 10);
+    if (Number.isFinite(pid)) conds.push(eq(venuesTable.partnerId, pid));
+  }
+  const rows = conds.length > 0
+    ? await baseQuery.where(and(...conds))
     : await baseQuery;
   const venues = rows.map((r: any) => ({
     ...serialize(r.v),

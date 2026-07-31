@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import crypto from "node:crypto";
 import { eq, and, gte, gt, sql, isNull } from "drizzle-orm";
-import { db, partnersTable, usersTable, eventsTable, registrationLogTable, refreshTokensTable } from "@workspace/db";
+import { db, partnersTable, usersTable, eventsTable, registrationLogTable, refreshTokensTable, venuesTable } from "@workspace/db";
 import {
   hashPassword,
   signToken,
@@ -9,6 +9,7 @@ import {
   issueRefreshToken,
   requireAuth,
   generateVerificationCode,
+  generateRandomPassword,
   verificationCodeExpiry,
   revokeAllForSubject,
 } from "../lib/auth-utils.js";
@@ -162,7 +163,7 @@ router.get("/partners/approved-map", async (_req, res) => {
 router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
   const email = normEmail(req.body?.email);
   const phone = normPhone(req.body?.phone);
-  const { contactName, businessName, businessType, city, description, websiteUrl, country } = req.body || {};
+  const { contactName, businessName, businessType, city, description, websiteUrl, country, venueName, venueType, venueAddress, venueDescription } = req.body || {};
   if (!email || !contactName || !businessName || !businessType || !phone || !city) {
     return res.status(400).json({ error: "Tous les champs obligatoires doivent être remplis." });
   }
@@ -227,6 +228,22 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
       });
     }
     partner = updated[0];
+    // Re-submission: refresh the first pending venue (delete + re-insert if provided).
+    if (venueName && String(venueName).trim()) {
+      await db.delete(venuesTable).where(
+        and(eq(venuesTable.partnerId, partner.id), eq(venuesTable.status, "pending")),
+      );
+      await db.insert(venuesTable).values({
+        partnerId: partner.id,
+        name: String(venueName).trim(),
+        type: (venueType || businessType || null) as string | null,
+        city: city || "",
+        country: country || null,
+        address: venueAddress ? String(venueAddress).trim() : null,
+        description: (venueDescription || description || null) as string | null,
+        status: "pending",
+      });
+    }
     res.status(200).json({
       message: "Nouveau code de vérification envoyé par email.",
       pendingVerification: true,
@@ -253,6 +270,19 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
         })
         .returning();
       isNewRegistration = true;
+      // Insert the first venue if provided.
+      if (venueName && String(venueName).trim()) {
+        await db.insert(venuesTable).values({
+          partnerId: partner.id,
+          name: String(venueName).trim(),
+          type: (venueType || businessType || null) as string | null,
+          city: city || "",
+          country: country || null,
+          address: venueAddress ? String(venueAddress).trim() : null,
+          description: (venueDescription || description || null) as string | null,
+          status: "pending",
+        });
+      }
     } catch (err: any) {
       // Race on initial creation: another request inserted the partner between our SELECT and INSERT.
       // Re-fetch and route to the re-submission path if the existing row is still unverified.
@@ -281,6 +311,22 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
             .returning();
           if (updated.length > 0) {
             partner = updated[0];
+            // Race-condition re-submission: also refresh the venue.
+            if (venueName && String(venueName).trim()) {
+              await db.delete(venuesTable).where(
+                and(eq(venuesTable.partnerId, partner.id), eq(venuesTable.status, "pending")),
+              );
+              await db.insert(venuesTable).values({
+                partnerId: partner.id,
+                name: String(venueName).trim(),
+                type: (venueType || businessType || null) as string | null,
+                city: city || "",
+                country: country || null,
+                address: venueAddress ? String(venueAddress).trim() : null,
+                description: (venueDescription || description || null) as string | null,
+                status: "pending",
+              });
+            }
             res.status(200).json({
               message: "Nouveau code de vérification envoyé par email.",
               pendingVerification: true,
@@ -458,6 +504,11 @@ router.post("/admin/partners/:id/approve", requireAdmin, async (req: any, res) =
     .where(eq(partnersTable.id, id))
     .returning();
   if (!partner) return res.status(404).json({ error: "Partenaire introuvable." });
+  // Auto-approve all pending venues submitted at registration — single atomic action.
+  await db
+    .update(venuesTable)
+    .set({ status: "approved", rejectionReason: null })
+    .where(and(eq(venuesTable.partnerId, id), eq(venuesTable.status, "pending")));
   // Explicitly revoke any active refresh tokens issued before approval (the auto-issued
   // session at registration). The new emailed password is the only valid credential going forward.
   const sub = `p_${partner.id}`;

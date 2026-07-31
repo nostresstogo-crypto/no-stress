@@ -86,6 +86,8 @@ export default function AuthScreen() {
   const [businessType,    setBusinessType]    = useState("");
   const [description,     setDescription]     = useState("");
   const [businessTypeModal, setBusinessTypeModal] = useState(false);
+  const [venueName,       setVenueName]       = useState("");
+  const [venueAddress,    setVenueAddress]    = useState("");
 
   // Partner step 3 / location
   const [country,              setCountry]              = useState("Togo");
@@ -113,6 +115,8 @@ export default function AuthScreen() {
   const pwdConfirmRef   = useRef<TextInput>(null);
   const businessNameRef = useRef<TextInput>(null);
   const descriptionRef  = useRef<TextInput>(null);
+  const venueNameRef    = useRef<TextInput>(null);
+  const venueAddressRef = useRef<TextInput>(null);
 
   // ── Helpers ─────────────────────────────────────────────────
   const clearErrors = () => { setGlobalError(""); setFieldErrors({}); setEmailExistsHint(false); };
@@ -182,6 +186,7 @@ export default function AuthScreen() {
     if (step === 2) {
       if (!businessName.trim()) errs.businessName = lang === "fr" ? "Requis." : "Required.";
       if (!businessType)        errs.businessType = lang === "fr" ? "Sélectionnez un type." : "Select a type.";
+      if (!venueName.trim())    errs.venueName    = lang === "fr" ? "Requis." : "Required.";
     }
     if (step === 3) {
       if (!city) errs.city = lang === "fr" ? "La ville est requise." : "City is required.";
@@ -311,6 +316,10 @@ export default function AuthScreen() {
           city,
           country,
           description: description.trim() || null,
+          venueName: venueName.trim() || null,
+          venueType: businessType || null,
+          venueAddress: venueAddress.trim() || null,
+          venueDescription: description.trim() || null,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -661,7 +670,7 @@ export default function AuthScreen() {
   function PartnerProgressBar() {
     const steps = [
       lang === "fr" ? "Contact" : "Contact",
-      lang === "fr" ? "Structure" : "Business",
+      lang === "fr" ? "Structure & Lieu" : "Business & Venue",
       lang === "fr" ? "Localisation" : "Location",
     ];
     return (
@@ -772,6 +781,32 @@ export default function AuthScreen() {
             placeholder={lang === "fr" ? "Décrivez votre établissement…" : "Describe your establishment…"}
             icon="document-text-outline" multiline autoCapitalize="sentences" autoCorrect
             accessLabel={lang === "fr" ? "Description" : "Description"}
+          />
+        </FieldWrap>
+
+        {/* Premier lieu */}
+        <View style={S.sectionDivider}>
+          <View style={S.sectionDividerLine} />
+          <Text style={S.sectionDividerLabel}>{lang === "fr" ? "Premier lieu" : "First venue"}</Text>
+          <View style={S.sectionDividerLine} />
+        </View>
+
+        <FieldWrap label={lang === "fr" ? "Nom du lieu *" : "Venue name *"} error={fe("venueName")}>
+          <InputBox
+            ref={venueNameRef} value={venueName} onChange={v => { setVenueName(v); setFieldErrors(e => ({ ...e, venueName: "" })); }}
+            placeholder={lang === "fr" ? "Ex : Club X, Bar Y…" : "e.g. Club X, Bar Y…"}
+            icon="location-outline" autoCapitalize="words"
+            returnKeyType="next" onSubmit={() => venueAddressRef.current?.focus()}
+            accessLabel={lang === "fr" ? "Nom du lieu" : "Venue name"}
+          />
+        </FieldWrap>
+
+        <FieldWrap label={lang === "fr" ? "Adresse du lieu" : "Venue address"}>
+          <InputBox
+            ref={venueAddressRef} value={venueAddress} onChange={setVenueAddress}
+            placeholder={lang === "fr" ? "Adresse complète (optionnelle)" : "Full address (optional)"}
+            icon="map-outline" autoCapitalize="sentences"
+            accessLabel={lang === "fr" ? "Adresse du lieu" : "Venue address"}
           />
         </FieldWrap>
 
@@ -1139,6 +1174,11 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
   hint:      { textAlign: "center", fontSize: 13, fontFamily: "Inter_400Regular" },
   hintLabel: { color: C.textMuted },
   hintLink:  { color: C.lavender, fontFamily: "Inter_600SemiBold" },
+
+  // Section divider (used in partner step 2 between business and venue fields)
+  sectionDivider:      { flexDirection: "row", alignItems: "center", gap: 10, marginVertical: 4 },
+  sectionDividerLine:  { flex: 1, height: 1, backgroundColor: C.border },
+  sectionDividerLabel: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: C.textMuted, textTransform: "uppercase", letterSpacing: 0.8 },
 });
 
 const makeModalStyles = (C: ColorPalette) => StyleSheet.create({

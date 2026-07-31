@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { api, type Partner } from "@/lib/api";
+import { api, type Partner, type Venue } from "@/lib/api";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -148,6 +148,8 @@ export default function Partners() {
   const [banReason, setBanReason] = useState("");
   const [reactivateOpen, setReactivateOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [pendingVenue,  setPendingVenue]  = useState<Venue | null>(null);
+  const [venueLoading,  setVenueLoading]  = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
   const showToast = (msg: string, type: "success" | "error" = "success") => {
@@ -161,6 +163,19 @@ export default function Partners() {
   }, []);
 
   useEffect(() => { loadPartners(); }, [loadPartners]);
+
+  // Fetch the first pending venue when a pending partner's detail dialog is shown.
+  useEffect(() => {
+    if (!selected || selected.status !== "pending") {
+      setPendingVenue(null);
+      return;
+    }
+    setVenueLoading(true);
+    api.venues.listByPartner(selected.id)
+      .then(({ venues }) => setPendingVenue(venues.length > 0 ? venues[0] : null))
+      .catch(() => setPendingVenue(null))
+      .finally(() => setVenueLoading(false));
+  }, [selected]);
 
   const filtered = partners.filter((p) => {
     const matchStatus = !filterStatus || p.status === filterStatus;
@@ -587,6 +602,36 @@ export default function Partners() {
                 </div>
               )}
 
+              {selected.status === "pending" && (
+                <div className="bg-muted/30 rounded-lg p-3 space-y-2 border border-border/50">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5" />
+                    Premier lieu soumis
+                  </p>
+                  {venueLoading ? (
+                    <p className="text-xs text-muted-foreground">Chargement…</p>
+                  ) : pendingVenue ? (
+                    <div className="space-y-1">
+                      <p className="text-sm text-foreground font-medium">{pendingVenue.name}</p>
+                      {pendingVenue.type && (
+                        <p className="text-xs text-muted-foreground">{BUSINESS_TYPES[pendingVenue.type] || pendingVenue.type}</p>
+                      )}
+                      {pendingVenue.address && (
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <MapPin className="w-3 h-3 flex-shrink-0" />
+                          {pendingVenue.address}
+                        </p>
+                      )}
+                      {pendingVenue.description && (
+                        <p className="text-xs text-muted-foreground italic line-clamp-2">{pendingVenue.description}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">Aucun lieu soumis à l'inscription.</p>
+                  )}
+                </div>
+              )}
+
               {selected.status === "rejected" && selected.rejectionReason && (
                 <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
                   <p className="text-xs text-destructive font-medium mb-1 flex items-center gap-1">
@@ -614,10 +659,10 @@ export default function Partners() {
               <Button
                 className="bg-green-500 hover:bg-green-600 text-white"
                 onClick={() => selected && handleApprove(selected)}
-                disabled={actionLoading}
+                disabled={actionLoading || venueLoading}
               >
                 <CheckCircle className="w-4 h-4 mr-1" />
-                Approuver
+                {pendingVenue ? "Approuver le partenaire et le lieu" : "Approuver"}
               </Button>
             </DialogFooter>
           )}

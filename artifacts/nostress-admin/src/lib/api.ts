@@ -183,6 +183,8 @@ export const api = {
   venues: {
     list: (status?: string) =>
       request<{ venues: Venue[]; total: number }>(`/admin/venues${status ? `?status=${status}` : ""}`),
+    listByPartner: (partnerId: string) =>
+      request<{ venues: Venue[]; total: number }>(`/admin/venues?partnerId=${partnerId}`),
     approve: (id: string) => request<Venue>(`/admin/venues/${id}/approve`, { method: "POST" }),
     reject: (id: string, reason: string) =>
       request<Venue>(`/admin/venues/${id}/reject`, { method: "POST", body: JSON.stringify({ reason }) }),
