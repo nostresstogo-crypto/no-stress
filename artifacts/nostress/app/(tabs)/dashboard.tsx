@@ -743,28 +743,32 @@ export default function DashboardScreen() {
               icon="calendar" value={myEvents.length}
               label={lang === "fr" ? "Événements" : "Events"}
               color={C.lavender} C={C} compact
-              onPress={() => setTab("events")}
+              onPress={() => { setTab("events"); setEventStatusFilter("all"); }}
+              selected={tab === "events" && eventStatusFilter === "all"}
             />
             <PremiumStatCard
               icon="business" value={myVenues.length}
               label={lang === "fr" ? "Lieux" : "Venues"}
               color={C.gold} C={C} compact
               onPress={() => setTab("venues")}
+              selected={tab === "venues"}
             />
             <PremiumStatCard
               icon="checkmark-circle" value={approvedEventsCount}
               label={lang === "fr" ? "Approuvés" : "Approved"}
               color={C.success} C={C} compact
               onPress={() => { setTab("events"); setEventStatusFilter("approved"); }}
+              selected={tab === "events" && eventStatusFilter === "approved"}
             />
             <PremiumStatCard
               icon="hourglass-outline" value={pendingEventsCount}
               label={lang === "fr" ? "En attente" : "Pending"}
               color="#F59E0B" C={C} compact
               onPress={() => { setTab("events"); setEventStatusFilter("pending"); }}
+              selected={tab === "events" && eventStatusFilter === "pending"}
             />
           </View>
-          {/* Ligne 2 : Avis + Note — toujours visibles, même hauteur compact */}
+          {/* Ligne 2 : Avis + Note — indicateurs seuls, pas de changement de vue */}
           <View style={styles.statsRow}>
             <PremiumStatCard
               icon="star" value={partnerStats?.reviewCount ?? 0}
@@ -779,37 +783,30 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* Bouton Créer compact */}
-        <TouchableOpacity
-          style={[styles.createMenuBtn, { backgroundColor: C.lavender }]}
-          onPress={() => setShowCreateMenu(true)}
-          activeOpacity={0.85}
-          accessibilityRole="button"
-          accessibilityLabel={lang === "fr" ? "Créer" : "Create"}
-        >
-          <Ionicons name="add-circle-outline" size={17} color="#fff" />
-          <Text style={styles.createMenuBtnText}>{lang === "fr" ? "Créer" : "Create"}</Text>
-          <Ionicons name="chevron-down" size={13} color="rgba(255,255,255,0.75)" />
-        </TouchableOpacity>
+        {/* Ligne actions : Créer + lien Abonnement */}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <TouchableOpacity
+            style={[styles.createMenuBtn, { backgroundColor: C.lavender, flex: 1 }]}
+            onPress={() => setShowCreateMenu(true)}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={lang === "fr" ? "Créer" : "Create"}
+          >
+            <Ionicons name="add-circle-outline" size={17} color="#fff" />
+            <Text style={styles.createMenuBtnText}>{lang === "fr" ? "Créer" : "Create"}</Text>
+            <Ionicons name="chevron-down" size={13} color="rgba(255,255,255,0.75)" />
+          </TouchableOpacity>
 
-        {/* Tabs avec icônes */}
-        <View style={styles.tabs}>
-          {(["events", "venues", "plan"] as DashTab[]).map((dt) => (
-            <TouchableOpacity
-              key={dt}
-              style={[styles.tabBtn, tab === dt && styles.tabBtnActive]}
-              onPress={() => setTab(dt)}
-            >
-              <Ionicons
-                name={tabIcons[dt] as any}
-                size={13}
-                color={tab === dt ? C.lavender : C.textMuted}
-              />
-              <Text style={[styles.tabText, tab === dt && styles.tabTextActive]}>
-                {tabLabels[dt]}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {/* Accès abonnement — discret */}
+          <TouchableOpacity
+            style={[styles.planLink, tab === "plan" && { backgroundColor: C.gold + "18", borderColor: C.gold + "44" }]}
+            onPress={() => setTab(tab === "plan" ? "events" : "plan")}
+            activeOpacity={0.75}
+            accessibilityRole="button"
+            accessibilityLabel={lang === "fr" ? "Mon abonnement" : "My plan"}
+          >
+            <Ionicons name="star-outline" size={13} color={tab === "plan" ? C.gold : C.textMuted} />
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -1570,10 +1567,10 @@ export default function DashboardScreen() {
 }
 
 function PremiumStatCard({
-  icon, value, label, color, C, onPress, compact = false,
+  icon, value, label, color, C, onPress, compact = false, selected = false,
 }: {
   icon: string; value: number; label: string; color: string;
-  C: ColorPalette; onPress?: () => void; compact?: boolean;
+  C: ColorPalette; onPress?: () => void; compact?: boolean; selected?: boolean;
 }) {
   const { width: sw } = useWindowDimensions();
   const Wrapper: any = onPress ? TouchableOpacity : View;
@@ -1588,17 +1585,34 @@ function PremiumStatCard({
         backgroundColor: C.card,
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: C.border,
+        borderColor: selected ? color + "55" : C.border,
         paddingHorizontal: cardPad,
         paddingVertical: compact ? 5 : 6,
         gap: 2,
         minHeight: compact ? 52 : 56,
         justifyContent: "center",
+        overflow: "hidden",
       }}
       onPress={onPress}
       activeOpacity={0.8}
       accessibilityRole={onPress ? "button" : undefined}
     >
+      {/* Pastille indicateur — coin supérieur droit */}
+      {selected && (
+        <View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            top: 6,
+            right: 6,
+            width: 8,
+            height: 8,
+            borderRadius: 4,
+            backgroundColor: color,
+            opacity: 0.28,
+          }}
+        />
+      )}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
         <View style={{ width: iconBoxSize, height: iconBoxSize, borderRadius: iconBoxSize / 2, backgroundColor: color + "18", alignItems: "center", justifyContent: "center" }}>
           <Ionicons name={icon as any} size={iconSize} color={color} />
@@ -1801,35 +1815,16 @@ const makeStyles = (C: ColorPalette, screenWidth = 375) => StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     flexShrink: 0,
   },
-  /* Tabs */
-  tabs: {
-    flexDirection: "row",
-    backgroundColor: C.card,
-    borderRadius: 12,
+  /* Plan link — accès abonnement discret */
+  planLink: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: C.border,
-    padding: 4,
-    gap: 4,
-    marginBottom: 2,
-  },
-  tabBtn: {
-    flex: 1,
-    flexDirection: "row",
-    paddingVertical: 7,
-    borderRadius: 8,
+    backgroundColor: C.card,
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
-  },
-  tabBtnActive: { backgroundColor: C.card2 },
-  tabText: {
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
-    color: C.textMuted,
-  },
-  tabTextActive: {
-    color: C.lavender,
-    fontFamily: "Inter_600SemiBold",
   },
   content: { padding: 20, gap: 12 },
 
