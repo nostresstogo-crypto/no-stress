@@ -21,6 +21,7 @@ import { API_BASE } from "@/lib/apiBase";
 import { ColorPalette } from "@/constants/colors";
 import { fetch } from "expo/fetch";
 import * as Speech from "expo-speech";
+import { AIAssistantLogo } from "@/components/AIAssistantLogo";
 
 // Graceful degradation: expo-speech-recognition requires a native dev build.
 // In Expo Go it will not be available — the mic button will show an informative alert.
@@ -506,9 +507,7 @@ export default function AIAssistantScreen() {
           <Text style={styles.headerTitle}>{t("aiAssistantTitle")}</Text>
           <Text style={styles.headerSub}>{t("aiAssistantPoweredBy")}</Text>
         </View>
-        <View style={styles.aiDot}>
-          <Ionicons name="sparkles" size={18} color={C.gold} />
-        </View>
+        <AIAssistantLogo size={36} color={C.gold} />
       </View>
 
       <KeyboardAvoidingView
@@ -523,9 +522,7 @@ export default function AIAssistantScreen() {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            <View style={styles.emptyIcon}>
-              <Ionicons name="chatbubble-ellipses" size={34} color={C.gold} />
-            </View>
+            <AIAssistantLogo size={72} color={C.gold} />
             <Text style={styles.emptyTitle}>{t("aiAssistantWelcome")}</Text>
             <Text style={styles.emptySub}>{t("aiAssistantWelcomeSub")}</Text>
             <View style={styles.quickWrap}>

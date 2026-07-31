@@ -2,6 +2,8 @@ import React, { useState, useCallback, useEffect, useRef, useMemo } from "react"
 import {
   ActivityIndicator,
   FlatList,
+  Keyboard,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
@@ -9,6 +11,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -113,11 +116,28 @@ export function LocationPickerModal({
   const [gpsLoading, setGpsLoading]   = useState(false);
   const [gpsError, setGpsError]       = useState<string | null>(null);
   const [recentCities, setRecentCities] = useState<ConfigCity[]>([]);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inputRef    = useRef<TextInput>(null);
+  const { height: windowHeight } = useWindowDimensions();
+
+  // Keyboard height tracking (Android: adjusts sheet maxHeight; iOS: KAV handles it)
+  useEffect(() => {
+    const showEvt = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvt = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const onShow = Keyboard.addListener(showEvt, (e) =>
+      setKeyboardHeight(e.endCoordinates.height),
+    );
+    const onHide = Keyboard.addListener(hideEvt, () => setKeyboardHeight(0));
+    return () => { onShow.remove(); onHide.remove(); };
+  }, []);
 
   // Reset + load recents on open
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {
+      setKeyboardHeight(0);
+      return;
+    }
     setQuery("");
     setDebouncedQ("");
     setGpsError(null);
@@ -238,6 +258,19 @@ export function LocationPickerModal({
   const showRecent = !hasQuery && recentCities.length > 0;
   const showEmpty  = hasQuery && results.length === 0;
 
+  // Dynamic sheet height: on Android, shrink the sheet when keyboard is open
+  // so the search field and results stay visible above the keyboard.
+  // On iOS, KeyboardAvoidingView behavior="padding" handles it automatically.
+  const sheetMaxHeight =
+    Platform.OS === "android" && keyboardHeight > 0
+      ? windowHeight - keyboardHeight - insets.top - 20
+      : windowHeight * 0.82;
+
+  const paddingBottom =
+    keyboardHeight > 0 && Platform.OS === "android"
+      ? 8
+      : Math.max(insets.bottom, 16);
+
   return (
     <Modal
       visible={visible}
@@ -246,172 +279,192 @@ export function LocationPickerModal({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      {/* Backdrop */}
-      <Pressable style={styles.backdrop} onPress={onClose} />
+      {/*
+       * Layout: full-screen View → backdrop (absoluteFill Pressable) sits behind
+       * the KAV+sheet so taps outside the sheet dismiss it.
+       * KeyboardAvoidingView wraps only the sheet, positioned at the bottom.
+       */}
+      <View style={styles.modalRoot}>
+        {/* Backdrop — closes on tap */}
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
 
-      {/* Sheet */}
-      <View style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-        {/* Handle */}
-        <View style={[styles.handle, { backgroundColor: C.border }]} />
-
-        {/* Title row */}
-        <View style={styles.titleRow}>
-          <Text style={[styles.title, { color: C.text }]}>
-            {lang === "fr" ? "Choisir une localisation" : "Choose a location"}
-          </Text>
-          <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button">
-            <Ionicons name="close" size={22} color={C.textMuted} />
-          </TouchableOpacity>
-        </View>
-
-        {/* GPS button */}
-        <TouchableOpacity
-          style={[
-            styles.gpsBtn,
-            {
-              backgroundColor: C.lavender + "12",
-              borderColor: usingGPS && !gpsError ? C.lavender : C.lavender + "44",
-            },
-          ]}
-          onPress={handleGPS}
-          disabled={gpsLoading}
-          activeOpacity={0.8}
-          accessibilityRole="button"
-          accessibilityLabel={lang === "fr" ? "Utiliser ma position" : "Use my location"}
+        {/* iOS: KAV pushes sheet up when keyboard appears */}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={styles.kavOuter}
         >
-          {gpsLoading ? (
-            <ActivityIndicator size="small" color={C.lavender} style={{ width: 20 }} />
-          ) : (
-            <Ionicons name="navigate" size={18} color={C.lavender} />
-          )}
-          <Text style={[styles.gpsBtnText, { color: C.lavender }]}>
-            {gpsLoading
-              ? (lang === "fr" ? "Localisation en cours…" : "Getting location…")
-              : usingGPS
-                ? (lang === "fr" ? "Ma position (active)" : "My location (active)")
-                : (lang === "fr" ? "Utiliser ma position" : "Use my location")}
-          </Text>
-          {usingGPS && !gpsLoading && (
-            <Ionicons name="checkmark-circle" size={16} color={C.lavender} />
-          )}
-        </TouchableOpacity>
+          {/* Sheet */}
+          <View style={[styles.sheet, { paddingBottom, maxHeight: sheetMaxHeight }]}>
+            {/* Handle */}
+            <View style={[styles.handle, { backgroundColor: C.border }]} />
 
-        {gpsError ? (
-          <Text style={[styles.gpsError, { color: C.error }]}>{gpsError}</Text>
-        ) : null}
-
-        {/* Separator */}
-        <View style={styles.sepRow}>
-          <View style={[styles.sepLine, { backgroundColor: C.border }]} />
-          <Text style={[styles.sepText, { color: C.textMuted }]}>
-            {lang === "fr" ? "ou" : "or"}
-          </Text>
-          <View style={[styles.sepLine, { backgroundColor: C.border }]} />
-        </View>
-
-        {/* Search */}
-        <View style={[styles.searchWrap, { backgroundColor: C.card2, borderColor: C.border }]}>
-          <Ionicons name="search-outline" size={16} color={C.textMuted} />
-          <TextInput
-            style={[styles.searchInput, { color: C.text }]}
-            placeholder={
-              lang === "fr"
-                ? "Rechercher une ville ou un pays"
-                : "Search a city or country"
-            }
-            placeholderTextColor={C.textMuted}
-            value={query}
-            onChangeText={setQuery}
-            autoCorrect={false}
-            autoCapitalize="none"
-            returnKeyType="search"
-            accessibilityLabel={
-              lang === "fr" ? "Rechercher une ville" : "Search for a city"
-            }
-          />
-          {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery("")} hitSlop={8}>
-              <Ionicons name="close-circle" size={15} color={C.textMuted} />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* ── Results ── */}
-        <View style={styles.resultArea}>
-          {/* Recent cities */}
-          {showRecent && (
-            <>
-              <Text style={[styles.sectionLabel, { color: C.textMuted }]}>
-                {lang === "fr" ? "Récents" : "Recent"}
+            {/* Title row */}
+            <View style={styles.titleRow}>
+              <Text style={[styles.title, { color: C.text }]}>
+                {lang === "fr" ? "Choisir une localisation" : "Choose a location"}
               </Text>
-              {recentCities.map((city) => (
-                <CityRow
-                  key={city.slug}
-                  city={city}
-                  selected={city.slug === currentCity && !usingGPS}
-                  onPress={() => handleSelectCity(city)}
-                  C={C}
-                />
-              ))}
-            </>
-          )}
+              <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button">
+                <Ionicons name="close" size={22} color={C.textMuted} />
+              </TouchableOpacity>
+            </View>
 
-          {/* Search results */}
-          {hasQuery && (
-            <>
-              {showEmpty ? (
-                <View style={styles.emptyWrap}>
-                  <Text style={[styles.emptyText, { color: C.textMuted }]}>
-                    {lang === "fr" ? "Aucune ville trouvée" : "No city found"}
+            {/* GPS button — hidden when keyboard is open to save vertical space */}
+            {keyboardHeight === 0 && (
+              <>
+                <TouchableOpacity
+                  style={[
+                    styles.gpsBtn,
+                    {
+                      backgroundColor: C.lavender + "12",
+                      borderColor: usingGPS && !gpsError ? C.lavender : C.lavender + "44",
+                    },
+                  ]}
+                  onPress={handleGPS}
+                  disabled={gpsLoading}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel={lang === "fr" ? "Utiliser ma position" : "Use my location"}
+                >
+                  {gpsLoading ? (
+                    <ActivityIndicator size="small" color={C.lavender} style={{ width: 20 }} />
+                  ) : (
+                    <Ionicons name="navigate" size={18} color={C.lavender} />
+                  )}
+                  <Text style={[styles.gpsBtnText, { color: C.lavender }]}>
+                    {gpsLoading
+                      ? (lang === "fr" ? "Localisation en cours…" : "Getting location…")
+                      : usingGPS
+                        ? (lang === "fr" ? "Ma position (active)" : "My location (active)")
+                        : (lang === "fr" ? "Utiliser ma position" : "Use my location")}
                   </Text>
+                  {usingGPS && !gpsLoading && (
+                    <Ionicons name="checkmark-circle" size={16} color={C.lavender} />
+                  )}
+                </TouchableOpacity>
+
+                {gpsError ? (
+                  <Text style={[styles.gpsError, { color: C.error }]}>{gpsError}</Text>
+                ) : null}
+
+                {/* Separator */}
+                <View style={styles.sepRow}>
+                  <View style={[styles.sepLine, { backgroundColor: C.border }]} />
+                  <Text style={[styles.sepText, { color: C.textMuted }]}>
+                    {lang === "fr" ? "ou" : "or"}
+                  </Text>
+                  <View style={[styles.sepLine, { backgroundColor: C.border }]} />
                 </View>
-              ) : (
-                <FlatList
-                  data={results}
-                  keyExtractor={(c) => c.slug}
-                  keyboardShouldPersistTaps="handled"
-                  renderItem={({ item }) => (
+              </>
+            )}
+
+            {/* Search — always visible, gets focus smoothly */}
+            <View style={[styles.searchWrap, { backgroundColor: C.card2, borderColor: C.border }]}>
+              <Ionicons name="search-outline" size={16} color={C.textMuted} />
+              <TextInput
+                ref={inputRef}
+                style={[styles.searchInput, { color: C.text }]}
+                placeholder={
+                  lang === "fr"
+                    ? "Rechercher une ville ou un pays"
+                    : "Search a city or country"
+                }
+                placeholderTextColor={C.textMuted}
+                value={query}
+                onChangeText={setQuery}
+                autoCorrect={false}
+                autoCapitalize="none"
+                returnKeyType="search"
+                clearButtonMode="while-editing"
+                accessibilityLabel={
+                  lang === "fr" ? "Rechercher une ville" : "Search for a city"
+                }
+              />
+              {query.length > 0 && Platform.OS === "android" && (
+                <TouchableOpacity onPress={() => setQuery("")} hitSlop={8}>
+                  <Ionicons name="close-circle" size={15} color={C.textMuted} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* ── Results list — takes remaining space ── */}
+            <View style={styles.resultArea}>
+              {/* Recent cities */}
+              {showRecent && (
+                <>
+                  <Text style={[styles.sectionLabel, { color: C.textMuted }]}>
+                    {lang === "fr" ? "Récents" : "Recent"}
+                  </Text>
+                  {recentCities.map((city) => (
                     <CityRow
-                      city={item}
-                      selected={item.slug === currentCity && !usingGPS}
-                      onPress={() => handleSelectCity(item)}
+                      key={city.slug}
+                      city={city}
+                      selected={city.slug === currentCity && !usingGPS}
+                      onPress={() => handleSelectCity(city)}
                       C={C}
                     />
+                  ))}
+                </>
+              )}
+
+              {/* Search results */}
+              {hasQuery && (
+                showEmpty ? (
+                  <View style={styles.emptyWrap}>
+                    <Text style={[styles.emptyText, { color: C.textMuted }]}>
+                      {lang === "fr" ? "Aucune ville trouvée" : "No city found"}
+                    </Text>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={results}
+                    keyExtractor={(c) => c.slug}
+                    keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="none"
+                    renderItem={({ item }) => (
+                      <CityRow
+                        city={item}
+                        selected={item.slug === currentCity && !usingGPS}
+                        onPress={() => handleSelectCity(item)}
+                        C={C}
+                      />
+                    )}
+                  />
+                )
+              )}
+
+              {/* All cities option (no query) */}
+              {!hasQuery && (
+                <TouchableOpacity
+                  style={[styles.allBtn, { borderBottomColor: C.border }]}
+                  onPress={() => onSelectCity("", "")}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="globe-outline" size={15} color={C.textMuted} />
+                  <Text style={[styles.allBtnText, { color: C.text }]}>
+                    {lang === "fr" ? "Toutes les villes" : "All cities"}
+                  </Text>
+                  {!currentCity && !usingGPS && (
+                    <Ionicons name="checkmark" size={16} color={C.lavender} />
                   )}
-                />
+                </TouchableOpacity>
               )}
-            </>
-          )}
+            </View>
 
-          {/* All cities option (no query) */}
-          {!hasQuery && (
-            <TouchableOpacity
-              style={[styles.allBtn, { borderBottomColor: C.border }]}
-              onPress={() => onSelectCity("", "")}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="globe-outline" size={15} color={C.textMuted} />
-              <Text style={[styles.allBtnText, { color: C.text }]}>
-                {lang === "fr" ? "Toutes les villes" : "All cities"}
-              </Text>
-              {!currentCity && !usingGPS && (
-                <Ionicons name="checkmark" size={16} color={C.lavender} />
-              )}
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Cancel */}
-        <TouchableOpacity
-          style={[styles.cancelBtn, { borderColor: C.border }]}
-          onPress={onClose}
-          accessibilityRole="button"
-          accessibilityLabel={lang === "fr" ? "Annuler" : "Cancel"}
-        >
-          <Text style={[styles.cancelText, { color: C.textMuted }]}>
-            {lang === "fr" ? "Annuler" : "Cancel"}
-          </Text>
-        </TouchableOpacity>
+            {/* Cancel — visible only when keyboard is closed */}
+            {keyboardHeight === 0 && (
+              <TouchableOpacity
+                style={[styles.cancelBtn, { borderColor: C.border }]}
+                onPress={onClose}
+                accessibilityRole="button"
+                accessibilityLabel={lang === "fr" ? "Annuler" : "Cancel"}
+              >
+                <Text style={[styles.cancelText, { color: C.textMuted }]}>
+                  {lang === "fr" ? "Annuler" : "Cancel"}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
@@ -420,16 +473,22 @@ export function LocationPickerModal({
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const makeStyles = (C: ColorPalette) =>
   StyleSheet.create({
-    backdrop: {
+    /** Root fills the whole screen; content stacks in a column */
+    modalRoot: {
       flex: 1,
       backgroundColor: "rgba(0,0,0,0.55)",
+      justifyContent: "flex-end",
+    },
+    /** KeyboardAvoidingView wrapper — sits at the bottom */
+    kavOuter: {
+      // No flex: 1 here — wraps the sheet tightly
     },
     sheet: {
       backgroundColor: C.bg,
       borderTopLeftRadius: 26,
       borderTopRightRadius: 26,
       paddingTop: 12,
-      maxHeight: "82%",
+      // maxHeight is set dynamically in the component
     },
     handle: {
       width: 40,
