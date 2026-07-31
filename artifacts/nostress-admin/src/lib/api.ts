@@ -143,6 +143,11 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ months }),
       }),
+    setSubscription: (id: string, subscriptionUntil: string, subscriptionStart?: string) =>
+      request<{ message: string; partner: Partner }>(`/admin/partners/${id}/subscription`, {
+        method: "PATCH",
+        body: JSON.stringify({ subscriptionUntil, ...(subscriptionStart ? { subscriptionStart } : {}) }),
+      }),
     suspend: (id: string, reason: string, until?: string) =>
       request<{ partner: AdminPartner }>(`/admin/partners/${id}/suspend`, {
         method: "PUT",

@@ -560,6 +560,60 @@ router.post("/admin/partners/:id/extend-subscription", requireSuperAdmin, async 
   });
 });
 
+// Set subscription dates directly (admin override — useful for manual renewals or corrections).
+router.patch("/admin/partners/:id/subscription", requireSuperAdmin, async (req: any, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (!Number.isFinite(id)) return res.status(404).json({ error: "Partenaire introuvable." });
+
+  const { subscriptionStart, subscriptionUntil } = req.body ?? {};
+
+  if (!subscriptionUntil) {
+    return res.status(400).json({ error: "La date d'expiration est requise." });
+  }
+  const untilDate = new Date(subscriptionUntil);
+  if (isNaN(untilDate.getTime())) {
+    return res.status(400).json({ error: "Date d'expiration invalide." });
+  }
+
+  let startDate: Date | null = null;
+  if (subscriptionStart) {
+    startDate = new Date(subscriptionStart);
+    if (isNaN(startDate.getTime())) {
+      return res.status(400).json({ error: "Date de début invalide." });
+    }
+  }
+
+  const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.id, id));
+  if (!partner) return res.status(404).json({ error: "Partenaire introuvable." });
+  if (partner.status !== "approved") {
+    return res.status(400).json({ error: "Le partenaire doit être approuvé pour modifier son abonnement." });
+  }
+
+  // Validate ordering against the *effective* start: submitted value if present,
+  // otherwise the existing subscriptionStart retained in the DB.
+  const effectiveStart = startDate ?? (partner.subscriptionStart ? new Date(partner.subscriptionStart) : null);
+  if (effectiveStart !== null && untilDate <= effectiveStart) {
+    return res.status(400).json({ error: "La date d'expiration doit être postérieure à la date de début." });
+  }
+  if (startDate !== null && startDate >= untilDate) {
+    return res.status(400).json({ error: "La date de début doit être antérieure à la date d'expiration." });
+  }
+
+  const updateFields: Record<string, unknown> = { subscriptionUntil: untilDate, updatedAt: new Date() };
+  if (startDate !== null) updateFields.subscriptionStart = startDate;
+
+  const [updated] = await db
+    .update(partnersTable)
+    .set(updateFields)
+    .where(eq(partnersTable.id, id))
+    .returning();
+
+  res.json({
+    message: `Abonnement mis à jour. Expiration : ${untilDate.toLocaleDateString("fr-FR")}.`,
+    partner: serializePartner(updated),
+  });
+});
+
 // Admin can regenerate + resend credentials if the original approval email failed
 // (e.g. SMTP outage) or the partner lost their password.
 router.post("/admin/partners/:id/resend-credentials", requireAdmin, async (req: any, res) => {

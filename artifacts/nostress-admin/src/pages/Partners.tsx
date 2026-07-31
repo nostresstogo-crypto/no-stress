@@ -141,6 +141,9 @@ export default function Partners() {
   const [deletePartnerReason, setDeletePartnerReason] = useState("");
   const [extendOpen, setExtendOpen] = useState(false);
   const [extendMonths, setExtendMonths] = useState<1 | 2 | 3 | 6>(1);
+  const [setSubOpen, setSetSubOpen] = useState(false);
+  const [setSubStart, setSetSubStart] = useState("");
+  const [setSubUntil, setSetSubUntil] = useState("");
   const [suspendOpen, setSuspendOpen] = useState(false);
   const [suspendReason, setSuspendReason] = useState("");
   const [suspendUntil, setSuspendUntil] = useState("");
@@ -245,6 +248,22 @@ export default function Partners() {
       const res = await api.partners.extendSubscription(selected.id, extendMonths);
       showToast(res.message);
       setExtendOpen(false);
+      setSelected(res.partner);
+      loadPartners();
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSetSubscription = async () => {
+    if (!selected || !setSubUntil) return;
+    setActionLoading(true);
+    try {
+      const res = await api.partners.setSubscription(selected.id, setSubUntil, setSubStart || undefined);
+      showToast(res.message);
+      setSetSubOpen(false);
       setSelected(res.partner);
       loadPartners();
     } catch (err: any) {
@@ -416,7 +435,14 @@ export default function Partners() {
                       <StatusBadge status={partner.status} />
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
-                      <SubscriptionBadge partner={partner} />
+                      <div className="flex flex-col gap-0.5">
+                        <SubscriptionBadge partner={partner} />
+                        {partner.status === "approved" && (partner.subscription?.subscriptionUntil || partner.subscriptionUntil) && (
+                          <span className="text-[10px] text-muted-foreground">
+                            exp. {formatDateShort(partner.subscription?.subscriptionUntil || partner.subscriptionUntil)}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
                       <span className="text-sm text-muted-foreground">{formatDate(partner.createdAt)}</span>
@@ -686,6 +712,23 @@ export default function Partners() {
                 >
                   <CalendarPlus className="w-4 h-4 mr-1" />
                   Étendre l'abonnement
+                </Button>
+              )}
+              {isSuperAdmin && (
+                <Button
+                  variant="outline"
+                  className="text-primary border-primary/30 hover:bg-primary/10"
+                  onClick={() => {
+                    const until = selected?.subscription?.subscriptionUntil || selected?.subscriptionUntil || null;
+                    const start = selected?.subscription?.subscriptionStart || null;
+                    setSetSubUntil(until ? new Date(until).toISOString().slice(0, 10) : "");
+                    setSetSubStart(start ? new Date(start).toISOString().slice(0, 10) : "");
+                    setSetSubOpen(true);
+                  }}
+                  disabled={actionLoading}
+                >
+                  <Calendar className="w-4 h-4 mr-1" />
+                  Définir les dates
                 </Button>
               )}
               {isSuperAdmin && (
@@ -985,6 +1028,77 @@ export default function Partners() {
               disabled={actionLoading || !banReason.trim()}
             >
               {actionLoading ? "En cours..." : "Confirmer le bannissement"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={setSubOpen} onOpenChange={(o) => { setSetSubOpen(o); }}>
+        <DialogContent className="bg-card border-border max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-primary">
+              <Calendar className="w-5 h-5" />
+              Définir les dates d'abonnement
+            </DialogTitle>
+            <DialogDescription>
+              Fixer manuellement les dates d'abonnement de <strong>{selected?.businessName}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="set-sub-start">Date de début (optionnel)</Label>
+              <Input
+                id="set-sub-start"
+                type="date"
+                value={setSubStart}
+                onChange={(e) => setSetSubStart(e.target.value)}
+                className="bg-background mt-1.5"
+              />
+              <p className="text-xs text-muted-foreground mt-1">Laissez vide pour conserver la date de début actuelle.</p>
+            </div>
+            <div>
+              <Label htmlFor="set-sub-until">Date d'expiration <span className="text-destructive">*</span></Label>
+              <Input
+                id="set-sub-until"
+                type="date"
+                value={setSubUntil}
+                onChange={(e) => setSetSubUntil(e.target.value)}
+                min={(() => {
+                  // Effective start: typed value, then partner's existing start, then today
+                  const effectiveStart = setSubStart
+                    || (selected?.subscription?.subscriptionStart
+                        ? new Date(selected.subscription.subscriptionStart).toISOString().slice(0, 10)
+                        : null);
+                  return effectiveStart || format(new Date(), "yyyy-MM-dd");
+                })()}
+                className="bg-background mt-1.5"
+              />
+            </div>
+            {setSubUntil && (
+              <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
+                <p className="text-xs text-primary/80">
+                  L'abonnement expirera le{" "}
+                  <strong>{new Date(setSubUntil).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</strong>.
+                  {new Date(setSubUntil).getTime() > Date.now()
+                    ? ` (${Math.ceil((new Date(setSubUntil).getTime() - Date.now()) / 86_400_000)} jours restants)`
+                    : " ⚠️ Cette date est dans le passé."}
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSetSubOpen(false)}>
+              Annuler
+            </Button>
+            <Button
+              className="gap-2"
+              onClick={handleSetSubscription}
+              disabled={actionLoading || !setSubUntil}
+            >
+              <Calendar className="w-4 h-4" />
+              {actionLoading ? "Enregistrement..." : "Enregistrer"}
             </Button>
           </DialogFooter>
         </DialogContent>
