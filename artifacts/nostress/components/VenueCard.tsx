@@ -120,6 +120,7 @@ function makeStyles(C: ColorPalette) {
     listTypePill: {
       borderRadius: 8, borderWidth: 1, paddingHorizontal: 7, paddingVertical: 2,
       borderColor: C.lavender + "40", backgroundColor: C.lavender + "10",
+      alignSelf: "flex-start",
     },
     listTypeTxt: {
       fontFamily: Fonts.semiBold, fontSize: FontSize.xs - 1,
