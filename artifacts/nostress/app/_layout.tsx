@@ -32,6 +32,7 @@ import { StatusBar } from "expo-status-bar";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider, useApp, useColors } from "@/context/AppContext";
+import { NetworkProvider } from "@/context/NetworkContext";
 import { initSentry, captureException } from "@/lib/sentry";
 import { setupNotificationResponseHandling } from "@/lib/pushNotifications";
 import AnimatedSplash from "@/components/AnimatedSplash";
@@ -614,13 +615,15 @@ function RootLayout() {
     <SafeAreaProvider>
       <ErrorBoundary>
         <AppProvider>
-          <QueryClientProvider client={queryClient}>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <KeyboardProvider>
-                <RootLayoutNav />
-              </KeyboardProvider>
-            </GestureHandlerRootView>
-          </QueryClientProvider>
+          <NetworkProvider>
+            <QueryClientProvider client={queryClient}>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <KeyboardProvider>
+                  <RootLayoutNav />
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </QueryClientProvider>
+          </NetworkProvider>
         </AppProvider>
       </ErrorBoundary>
     </SafeAreaProvider>

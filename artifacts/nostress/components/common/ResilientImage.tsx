@@ -26,6 +26,7 @@ import { Image, type ImageContentFit } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 
 import { useColors } from "@/context/AppContext";
+import { useLowDataMode } from "@/context/NetworkContext";
 import { normalizeImageUrl } from "@/lib/imageUrl";
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -111,6 +112,8 @@ export function ResilientImage({
   fallbackIconSize = 28,
 }: ResilientImageProps) {
   const C = useColors();
+  // En mode économique : pas de skeleton (économise du CPU), blurhash prioritaire
+  const lowData = useLowDataMode();
 
   // Normaliser l'URL au premier rendu et quand l'URI change
   const normalized = React.useMemo(
@@ -205,8 +208,8 @@ export function ResilientImage({
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="image"
     >
-      {/* Skeleton affiché jusqu'au chargement de l'image */}
-      {status === "loading" && !noSkeleton && (
+      {/* Skeleton affiché jusqu'au chargement (désactivé en mode économique) */}
+      {status === "loading" && !noSkeleton && !lowData && (
         <Skeleton style={StyleSheet.absoluteFill} />
       )}
 

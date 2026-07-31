@@ -17,6 +17,7 @@ import { router, useFocusEffect } from "expo-router";
 import { safePush } from "@/lib/navigation";
 
 import { useT, useApp, useColors } from "@/context/AppContext";
+import { useNetwork, type DataSaverMode } from "@/context/NetworkContext";
 import { ColorPalette } from "@/constants/colors";
 import { LANG_LABELS, type Lang } from "@/constants/i18n";
 import { API_BASE } from "@/lib/apiBase";
@@ -223,6 +224,7 @@ export default function AccountScreen() {
   const t = useT();
   const C = useColors();
   const { user, lang, setLang, logout, unreadCount, isDark, themeMode, setThemeMode, locationNotificationsEnabled, setLocationNotificationsEnabled, selectedCity, nearbyEventsCount, refreshApiEvents, syncMyEventsFromBackend } = useApp();
+  const { dataSaverMode, setDataSaverMode } = useNetwork();
   const insets = useSafeAreaInsets();
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const styles = useMemo(() => makeStyles(C), [C]);
@@ -557,6 +559,46 @@ export default function AccountScreen() {
             trackColor={{ false: C.border, true: C.lavender }}
           />
         </TouchableOpacity>
+
+        <View style={styles.settingDivider} />
+
+        {/* Économie de données */}
+        <View style={[styles.settingRow, { flexDirection: "column", alignItems: "flex-start", gap: 10 }]}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, alignSelf: "stretch" }}>
+            <Ionicons name="cellular-outline" size={20} color={C.textMuted} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.settingLabel}>
+                {lang === "fr" ? "Économie de données" : "Data saver"}
+              </Text>
+              <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: C.textMuted, marginTop: 1, lineHeight: 15 }}>
+                {lang === "fr"
+                  ? "Réduit la qualité des images avec une connexion lente."
+                  : "Reduces image quality on slow connections."}
+              </Text>
+            </View>
+          </View>
+          <View style={{ flexDirection: "row", gap: 8, paddingLeft: 32 }}>
+            {(["auto", "on", "off"] as DataSaverMode[]).map((mode) => {
+              const labels: Record<DataSaverMode, [string, string]> = {
+                auto: ["Auto", "Auto"],
+                on:   [lang === "fr" ? "Activé" : "On",  lang === "fr" ? "Activé" : "On"],
+                off:  [lang === "fr" ? "Désactivé" : "Off", lang === "fr" ? "Désactivé" : "Off"],
+              };
+              const isActive = dataSaverMode === mode;
+              return (
+                <TouchableOpacity
+                  key={mode}
+                  onPress={() => setDataSaverMode(mode)}
+                  style={[styles.guestChip, isActive && { borderColor: C.lavender, backgroundColor: C.lavender + "18" }]}
+                >
+                  <Text style={[styles.guestChipText, isActive && { color: C.text, fontFamily: "Inter_600SemiBold" }]}>
+                    {labels[mode][0]}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
 
         {user && user.role === "user" && (
           <>
