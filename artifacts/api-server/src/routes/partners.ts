@@ -9,8 +9,8 @@ import {
   issueRefreshToken,
   requireAuth,
   generateVerificationCode,
-  generateRandomPassword,
   verificationCodeExpiry,
+  revokeAllForSubject,
 } from "../lib/auth-utils.js";
 
 const partnerRegisterLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 10, key: "partner-register" });
@@ -22,52 +22,74 @@ import {
   sendPublicationWarningEmail,
   sendAccountDeletedEmail,
   sendVerificationCodeEmail,
-  sendPasswordResetEmail,
+  sendPasswordResetCodeEmail,
 } from "../email.js";
 
 const partnerForgotLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, key: "partner-forgot" });
 
-// Forgot-password: regenerates a 6-char password, hashes & saves it, revokes
-// existing refresh tokens, and emails the new password. Always returns 200 with
-// a generic message — never reveals whether the email exists (no enumeration).
+// ─── Forgot / reset password (partner accounts) ──────────────────────────────
+//
+// Two-step OTP flow — mirrors the user account flow in auth.ts:
+//   1. POST /partners/forgot-password  → stores a 6-digit OTP in
+//      verificationCode/verificationCodeExpires, sends it by email.
+//      passwordHash is NOT touched here.
+//   2. POST /partners/reset-password   → validates OTP (single-use), sets new
+//      password, revokes all active sessions with correct subject format p_<id>.
+
+const partnerResetLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: "partner-reset-password" });
+
 async function handlePartnerForgotPassword(req: any, res: any) {
   const email = normEmail(req.body?.email);
-  const generic = {
-    message:
-      "Si un compte partenaire correspond à cet email, un nouveau mot de passe vient d'être envoyé.",
-  };
+  const generic = { message: "Si un compte correspond à cet email, un code de réinitialisation vient d'être envoyé." };
   if (!email) return res.status(200).json(generic);
-  const [partner] = await db
-    .select()
-    .from(partnersTable)
-    .where(eq(partnersTable.email, email));
+  const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.email, email));
   if (!partner) return res.status(200).json(generic);
-  const newPassword = generateRandomPassword();
+
+  // Generate OTP — passwordHash unchanged until reset is confirmed.
+  const code = generateVerificationCode();
+  const expires = verificationCodeExpiry();
+  await db
+    .update(partnersTable)
+    .set({ verificationCode: code, verificationCodeExpires: expires, updatedAt: new Date() })
+    .where(eq(partnersTable.id, partner.id));
+
+  // Fire-and-forget — must not log the code itself.
+  sendPasswordResetCodeEmail(partner.email, partner.contactName, code, true).catch(() => {
+    console.error("[partners][forgot-password] email send failed");
+  });
+  return res.status(200).json(generic);
+}
+
+async function handlePartnerResetPassword(req: any, res: any) {
+  const email = normEmail(req.body?.email);
+  const code = String(req.body?.code ?? "").trim();
+  const newPassword = String(req.body?.newPassword ?? "");
+
+  if (!email || !code || !newPassword) {
+    return res.status(400).json({ error: "Email, code et nouveau mot de passe requis." });
+  }
+  if (newPassword.length < 8 || !/[A-Za-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+    return res.status(400).json({ error: "Le mot de passe doit contenir au moins 8 caractères, des lettres et des chiffres." });
+  }
+
+  const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.email, email));
+  const badCode = { error: "Code incorrect ou expiré." };
+  if (!partner || !partner.verificationCode) return res.status(400).json(badCode);
+  if (!partner.verificationCodeExpires || partner.verificationCodeExpires < new Date()) {
+    return res.status(400).json({ error: "Code expiré. Demandez un nouveau code." });
+  }
+  if (partner.verificationCode !== code) return res.status(400).json(badCode);
+
   const passwordHash = await hashPassword(newPassword);
   await db
     .update(partnersTable)
-    .set({ passwordHash, updatedAt: new Date() })
+    .set({ passwordHash, verificationCode: null, verificationCodeExpires: null, updatedAt: new Date() })
     .where(eq(partnersTable.id, partner.id));
-  // Revoke active sessions so the old password (and any stolen tokens) become
-  // useless immediately.
-  try {
-    await db
-      .update(refreshTokensTable)
-      .set({ revokedAt: new Date() })
-      .where(
-        and(
-          eq(refreshTokensTable.subject, String(partner.id)),
-          isNull(refreshTokensTable.revokedAt),
-        ),
-      );
-  } catch {}
-  try {
-    await sendPasswordResetEmail(partner.email, partner.contactName, newPassword, true);
-  } catch (err) {
-    console.error("[partners][forgot-password] email send failed:", err);
-    // Still return generic — operator can resend manually if needed.
-  }
-  return res.status(200).json(generic);
+
+  // Revoke all active sessions — correct subject format: p_<id>.
+  await revokeAllForSubject(`p_${partner.id}`).catch(() => {});
+
+  return res.status(200).json({ message: "Mot de passe réinitialisé avec succès." });
 }
 import { requireAdmin, requireSuperAdmin } from "./admin.js";
 import { computeNewSubscriptionUntil, subscriptionInfo } from "../lib/subscriptions.js";
@@ -334,6 +356,7 @@ router.post("/partners/verify-email", partnerVerifyLimiter, async (req, res) => 
 });
 
 router.post("/partners/forgot-password", partnerForgotLimiter, handlePartnerForgotPassword);
+router.post("/partners/reset-password", partnerResetLimiter, handlePartnerResetPassword);
 
 router.post("/partners/resend-verification", partnerResendLimiter, async (req, res) => {
   const email = normEmail(req.body?.email);

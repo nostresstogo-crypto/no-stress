@@ -535,6 +535,50 @@ export async function sendPasswordResetEmail(
   });
 }
 
+// OTP-based password reset email (replaces the old "send plain password" flow).
+// The code is a 6-digit number valid for 15 minutes. NEVER log it — only pass it
+// directly to this function and let it travel encrypted via SMTP.
+export async function sendPasswordResetCodeEmail(
+  to: string,
+  name: string,
+  code: string,
+  isPartner: boolean,
+) {
+  const safeName = escapeHtml(name || (isPartner ? "Partenaire" : "Utilisateur"));
+  const safeCode = escapeHtml(code);
+  const audience = isPartner ? "partenaire" : "utilisateur";
+  await sendMailOrThrow({
+    to,
+    subject: "🔒 Code de réinitialisation – NoStress",
+    html: `
+      <div style="${baseStyle}">
+        ${headerHtml(`Bonjour ${safeName},`)}
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 0 0 16px;">
+          Vous avez demandé la réinitialisation de votre mot de passe ${audience} NoStress.
+          Utilisez le code ci-dessous dans l'application pour créer un nouveau mot de passe.
+        </p>
+        <div style="background: #1a1c2e; border-radius: 12px; padding: 24px 20px; margin: 20px 0; text-align: center; border-left: 4px solid #7c6af7;">
+          <p style="margin: 0 0 8px; font-size: 12px; color: #6b6d8a; text-transform: uppercase; letter-spacing: 1px;">Code de réinitialisation</p>
+          <p style="margin: 0 0 12px; font-family: 'Courier New', monospace; font-size: 36px; font-weight: bold; letter-spacing: 10px; color: #f0c040;">${safeCode}</p>
+          <p style="margin: 0; font-size: 12px; color: #8a8caa;">⏱ Valide pendant <strong style="color: #e8e8f0;">15 minutes</strong></p>
+        </div>
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 16px 0 8px;">
+          Si vous n'êtes pas à l'origine de cette demande, ignorez cet email — votre mot de passe actuel reste inchangé.
+        </p>
+        <div style="background: #e0525215; border-radius: 10px; padding: 12px 16px; margin: 12px 0; border: 1px solid #e0525233;">
+          <p style="margin: 0; font-size: 12px; color: #e05252; line-height: 1.6;">
+            🔒 Ne partagez jamais ce code. NoStress ne vous demandera jamais votre code par téléphone ou email.
+          </p>
+        </div>
+        <p style="color: #b0b2cc; line-height: 1.7; margin: 16px 0 0;">
+          <strong style="color: #e8e8f0;">L'équipe NoStress</strong>
+        </p>
+        ${footerHtml}
+      </div>
+    `,
+  });
+}
+
 export async function sendPublicationWarningEmail(to: string, partnerName: string, publicationTitle: string, reason: string) {
   const safeName = escapeHtml(partnerName);
   const safeTitle = escapeHtml(publicationTitle);

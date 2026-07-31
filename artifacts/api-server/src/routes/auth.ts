@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, partnersTable, usersTable, adminsTable } from "@workspace/db";
-import { sendWelcomeEmail, sendAccountDeletedEmail, sendVerificationCodeEmail, sendPasswordResetEmail } from "../email.js";
+import { sendWelcomeEmail, sendAccountDeletedEmail, sendVerificationCodeEmail, sendPasswordResetCodeEmail } from "../email.js";
 import { requireAdmin } from "./admin.js";
 import {
   hashPassword,
@@ -10,11 +10,11 @@ import {
   rateLimit,
   requireAuth,
   generateVerificationCode,
-  generateRandomPassword,
   verificationCodeExpiry,
   issueRefreshToken,
   rotateRefreshToken,
   revokeRefreshToken,
+  revokeAllForSubject,
 } from "../lib/auth-utils.js";
 import { and, isNull } from "drizzle-orm";
 import { refreshTokensTable } from "@workspace/db";
@@ -59,42 +59,78 @@ const verifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: "verif
 const resendLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, key: "resend" });
 const forgotLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, key: "forgot" });
 
-// Forgot-password (user accounts). Always returns 200 with a generic message
-// to prevent email-enumeration. When an account matches, generates a 6-char
-// password, hashes & saves it, revokes refresh tokens, and emails the new pwd.
+// ─── Forgot / reset password (user accounts) ────────────────────────────────
+//
+// Two-step flow:
+//   1. POST /auth/forgot-password  → generates a 6-digit OTP, stores it in
+//      verificationCode/verificationCodeExpires, emails it. Does NOT touch
+//      passwordHash, does NOT revoke sessions.
+//   2. POST /auth/reset-password   → validates OTP, sets new password, clears
+//      the code (single-use), revokes all active sessions.
+//
+// Both endpoints always return 200 with a generic message — no email enumeration.
+
+const resetLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: "reset-password" });
+
 router.post("/auth/forgot-password", forgotLimiter, async (req, res) => {
   const email = normEmail(req.body?.email);
-  const generic = {
-    message:
-      "Si un compte utilisateur correspond à cet email, un nouveau mot de passe vient d'être envoyé.",
-  };
+  const generic = { message: "Si un compte correspond à cet email, un code de réinitialisation vient d'être envoyé." };
   if (!email) return res.status(200).json(generic);
   const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
   if (!user) return res.status(200).json(generic);
-  const newPassword = generateRandomPassword();
+
+  // Generate OTP — password unchanged until reset is confirmed
+  const code = generateVerificationCode();
+  const expires = verificationCodeExpiry();
+  await db
+    .update(usersTable)
+    .set({ verificationCode: code, verificationCodeExpires: expires, updatedAt: new Date() })
+    .where(eq(usersTable.id, user.id));
+
+  const displayName = user.name || user.firstName || "Utilisateur";
+  // Fire-and-forget — email failure does not block the response (and must not
+  // log the code itself to prevent it appearing in log files).
+  sendPasswordResetCodeEmail(user.email, displayName, code, false).catch(() => {
+    console.error("[auth][forgot-password] email send failed");
+  });
+  return res.status(200).json(generic);
+});
+
+router.post("/auth/reset-password", resetLimiter, async (req, res) => {
+  const email = normEmail(req.body?.email);
+  const code = String(req.body?.code ?? "").trim();
+  const newPassword = String(req.body?.newPassword ?? "");
+
+  if (!email || !code || !newPassword) {
+    return res.status(400).json({ error: "Email, code et nouveau mot de passe requis." });
+  }
+
+  // Enforce the same strength rules as registration: ≥8 chars, letter + digit.
+  if (newPassword.length < 8 || !/[A-Za-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+    return res.status(400).json({ error: "Le mot de passe doit contenir au moins 8 caractères, des lettres et des chiffres." });
+  }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+  // Return the same error for not-found and bad-code to prevent enumeration.
+  const badCode = { error: "Code incorrect ou expiré." };
+  if (!user || !user.verificationCode) return res.status(400).json(badCode);
+
+  if (!user.verificationCodeExpires || user.verificationCodeExpires < new Date()) {
+    return res.status(400).json({ error: "Code expiré. Demandez un nouveau code." });
+  }
+  if (user.verificationCode !== code) return res.status(400).json(badCode);
+
+  // Clear the OTP first (single-use), then update the password atomically.
   const passwordHash = await hashPassword(newPassword);
   await db
     .update(usersTable)
-    .set({ passwordHash, updatedAt: new Date() })
+    .set({ passwordHash, verificationCode: null, verificationCodeExpires: null, updatedAt: new Date() })
     .where(eq(usersTable.id, user.id));
-  try {
-    await db
-      .update(refreshTokensTable)
-      .set({ revokedAt: new Date() })
-      .where(
-        and(
-          eq(refreshTokensTable.subject, String(user.id)),
-          isNull(refreshTokensTable.revokedAt),
-        ),
-      );
-  } catch {}
-  try {
-    const displayName = user.name || user.firstName || "Utilisateur";
-    await sendPasswordResetEmail(user.email, displayName, newPassword, false);
-  } catch (err) {
-    console.error("[auth][forgot-password] email send failed:", err);
-  }
-  return res.status(200).json(generic);
+
+  // Revoke all active sessions — use the correct subject format (u_<id>).
+  await revokeAllForSubject(`u_${user.id}`).catch(() => {});
+
+  return res.status(200).json({ message: "Mot de passe réinitialisé avec succès." });
 });
 
 router.post("/auth/login", loginLimiter, async (req, res) => {
