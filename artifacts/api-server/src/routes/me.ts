@@ -57,6 +57,7 @@ function publicPartner(p: typeof partnersTable.$inferSelect) {
     businessType: p.businessType,
     phone: p.phone,
     city: p.city,
+    country: p.country ?? null,
     description: p.description ?? null,
     websiteUrl: p.websiteUrl ?? null,
     latitude: p.latitude,
@@ -153,10 +154,35 @@ router.patch("/partners/me", requireAuth, async (req: any, res) => {
   const id = partnerIdFromAuth(req.auth);
   if (id == null) return res.status(403).json({ error: "Réservé aux partenaires." });
   const allowed: any = {};
-  for (const k of ["contactName", "businessName", "businessType", "phone", "city", "description", "websiteUrl", "profileImage", "displayName"]) {
+  for (const k of ["contactName", "businessName", "businessType", "phone", "city", "country", "description", "websiteUrl", "profileImage", "displayName"]) {
     if (k in req.body) {
       const v = req.body[k];
       allowed[k] = typeof v === "string" ? v.trim() || null : v;
+    }
+  }
+  // latitude / longitude — accept numbers or null (null explicitly clears coordinates)
+  if ("latitude" in req.body) {
+    const v = req.body.latitude;
+    if (v === null || v === "" || v === undefined) {
+      allowed.latitude = null;
+    } else {
+      const n = Number(v);
+      if (!Number.isFinite(n) || n < -90 || n > 90) {
+        return res.status(400).json({ error: "Latitude invalide." });
+      }
+      allowed.latitude = n;
+    }
+  }
+  if ("longitude" in req.body) {
+    const v = req.body.longitude;
+    if (v === null || v === "" || v === undefined) {
+      allowed.longitude = null;
+    } else {
+      const n = Number(v);
+      if (!Number.isFinite(n) || n < -180 || n > 180) {
+        return res.status(400).json({ error: "Longitude invalide." });
+      }
+      allowed.longitude = n;
     }
   }
   if ("contactName" in allowed && !allowed.contactName) {

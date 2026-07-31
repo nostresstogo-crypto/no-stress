@@ -40,6 +40,7 @@ export const partnersTable = pgTable("partners", {
   city: text("city").notNull(),
   description: text("description"),
   websiteUrl: text("website_url"),
+  country: text("country"),
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
   status: text("status").notNull().default("pending"),

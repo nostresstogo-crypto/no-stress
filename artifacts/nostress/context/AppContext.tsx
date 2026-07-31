@@ -112,6 +112,11 @@ interface User {
   emailVerified?: boolean;
   subscriptionUntil?: string | null;
   subscriptionStart?: string | null;
+  // Location — used by partners (edit-profile) and potentially users
+  city?: string | null;
+  country?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 interface Notification {
@@ -574,6 +579,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
           emailVerified: p.emailVerified ?? prev.emailVerified,
           subscriptionUntil: p.subscription?.subscriptionUntil !== undefined ? p.subscription.subscriptionUntil : prev.subscriptionUntil,
           subscriptionStart: p.subscription?.subscriptionStart !== undefined ? p.subscription.subscriptionStart : prev.subscriptionStart,
+          // Location fields
+          ...(p.city      !== undefined ? { city:      p.city      ?? null } : {}),
+          ...(p.country   !== undefined ? { country:   p.country   ?? null } : {}),
+          ...(p.latitude  !== undefined ? { latitude:  p.latitude  ?? null } : {}),
+          ...(p.longitude !== undefined ? { longitude: p.longitude ?? null } : {}),
         };
         AsyncStorage.setItem(KEYS.user, JSON.stringify(updated)).catch(() => {});
         return updated;
