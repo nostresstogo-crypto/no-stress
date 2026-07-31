@@ -128,7 +128,7 @@ function makeStyles(C: ColorPalette) {
     },
     listChevron: { paddingHorizontal: 12, alignSelf: "center" },
     listRightActions: { flexDirection: "row", alignItems: "center" },
-    listHeartBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
+    listHeartBtn: { padding: 6, alignItems: "center", justifyContent: "center" },
 
     // ── favorite heart button ─────────────────────────────────────────────
     heartBtn: {
