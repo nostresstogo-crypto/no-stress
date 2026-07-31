@@ -769,12 +769,12 @@ export default function DashboardScreen() {
             <PremiumStatCard
               icon="star" value={partnerStats?.reviewCount ?? 0}
               label={lang === "fr" ? "Avis reçus" : "Reviews"}
-              color={C.gold} C={C} compact
+              color={C.gold} C={C}
             />
             <PremiumStatCard
               icon="star-half" value={partnerStats?.averageRating ?? 0}
               label={lang === "fr" ? "Note moyenne" : "Avg. rating"}
-              color="#F59E0B" C={C} compact
+              color="#F59E0B" C={C}
             />
           </View>
         </View>
@@ -1590,9 +1590,9 @@ function PremiumStatCard({
         borderWidth: 1,
         borderColor: C.border,
         paddingHorizontal: cardPad,
-        paddingVertical: compact ? 5 : 8,
+        paddingVertical: compact ? 5 : 6,
         gap: 2,
-        minHeight: compact ? 52 : 60,
+        minHeight: compact ? 52 : 56,
         justifyContent: "center",
       }}
       onPress={onPress}
