@@ -340,7 +340,7 @@ export default function HomeScreen() {
     <View style={[s.root, { backgroundColor: C.bg }]}>
 
       {/* ── Fixed header ─────────────────────────────────────────────────── */}
-      <View style={[s.header, { paddingTop: topInset + 8, backgroundColor: C.bg, borderBottomColor: C.border }]}>
+      <View style={[s.header, { paddingTop: topInset + 4, backgroundColor: C.bg, borderBottomColor: C.border }]}>
 
         {/* Row 1: salutation + localisation | recherche + filtres + favoris + notifs */}
         <View style={s.headerTop}>
@@ -389,31 +389,6 @@ export default function HomeScreen() {
               hitSlop={8}
             >
               <Ionicons name="search-outline" size={18} color={C.textMuted} />
-            </TouchableOpacity>
-            {/* Filtres */}
-            <TouchableOpacity
-              onPress={openFilters}
-              style={[
-                s.headerActionBtn,
-                {
-                  backgroundColor: activeFilterCount > 0 ? C.lavender + "15" : C.card,
-                  borderColor: activeFilterCount > 0 ? C.lavender : C.border,
-                },
-              ]}
-              accessibilityLabel={lang === "fr" ? "Filtres" : "Filters"}
-              accessibilityRole="button"
-              hitSlop={8}
-            >
-              <Ionicons
-                name="options-outline"
-                size={18}
-                color={activeFilterCount > 0 ? C.lavender : C.textMuted}
-              />
-              {activeFilterCount > 0 && (
-                <View style={[s.headerBadge, { backgroundColor: C.lavender }]}>
-                  <Text style={s.headerBadgeText}>{activeFilterCount}</Text>
-                </View>
-              )}
             </TouchableOpacity>
             {/* Favoris */}
             <TouchableOpacity
@@ -750,7 +725,7 @@ const s = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 14,
+    marginBottom: 8,
   },
   greetingCol: { gap: 2 },
   greeting: {
@@ -824,7 +799,7 @@ const s = StyleSheet.create({
 
   /* Scroll */
   scroll: { flex: 1 },
-  scrollContent: { paddingTop: 24 },
+  scrollContent: { paddingTop: 14 },
 
   /* Carousel */
   carouselWrap: { marginBottom: 28, paddingHorizontal: 0 },
