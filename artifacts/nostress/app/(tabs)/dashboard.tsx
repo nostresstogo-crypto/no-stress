@@ -10,6 +10,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { Image } from "expo-image";
@@ -60,8 +61,9 @@ export default function DashboardScreen() {
   const t = useT();
   const { user, lang, myEvents, setUser, addNotification, updateMyEvent, removeMyEvent, syncMyEventsStatus, syncMyEventsFromBackend, refreshApiEvents, authFetch, token, configCities, configVenueTypes, configCountries, unreadCount } = useApp();
   const insets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
   const C = useColors();
-  const styles = useMemo(() => makeStyles(C), [C]);
+  const styles = useMemo(() => makeStyles(C, screenWidth), [C, screenWidth]);
   // statStyles conservé pour éviter toute rupture si référencé ailleurs
   const _statStyles = useMemo(() => makeStatStyles(C), [C]);
 
@@ -680,7 +682,7 @@ export default function DashboardScreen() {
           </View>
           <View style={styles.headerMeta}>
             <Text style={styles.headerGreeting}>{dashGreeting}</Text>
-            <Text style={styles.headerName} numberOfLines={1}>{user.name}</Text>
+            <Text style={styles.headerName} numberOfLines={1} ellipsizeMode="tail">{user.name}</Text>
           </View>
           <View style={styles.headerRight}>
             <View style={[
@@ -693,7 +695,7 @@ export default function DashboardScreen() {
                 size={10}
                 color={user.role === "admin" ? C.error : C.gold}
               />
-              <Text style={[styles.roleBadgeText, { color: user.role === "admin" ? C.error : C.gold }]}>
+              <Text style={[styles.roleBadgeText, { color: user.role === "admin" ? C.error : C.gold }]} numberOfLines={1} ellipsizeMode="tail">
                 {user.role === "admin" ? "Admin" : activePlan.name}
               </Text>
             </View>
@@ -1565,7 +1567,11 @@ function PremiumStatCard({
   icon: string; value: number; label: string; color: string;
   C: ColorPalette; onPress?: () => void;
 }) {
+  const { width: sw } = useWindowDimensions();
   const Wrapper: any = onPress ? TouchableOpacity : View;
+  const cardPad = sw < 360 ? 10 : 13;
+  const valueFontSize = sw < 360 ? 18 : 22;
+  const iconBoxSize = sw < 360 ? 26 : 30;
   return (
     <Wrapper
       style={{
@@ -1574,23 +1580,24 @@ function PremiumStatCard({
         borderRadius: 14,
         borderWidth: 1,
         borderColor: C.border,
-        padding: 13,
+        padding: cardPad,
         gap: 4,
-        activeOpacity: 0.8,
+        minHeight: 88,
+        justifyContent: "space-between",
       }}
       onPress={onPress}
       activeOpacity={0.8}
     >
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: color + "18", alignItems: "center", justifyContent: "center" }}>
-          <Ionicons name={icon as any} size={15} color={color} />
+        <View style={{ width: iconBoxSize, height: iconBoxSize, borderRadius: iconBoxSize / 2, backgroundColor: color + "18", alignItems: "center", justifyContent: "center" }}>
+          <Ionicons name={icon as any} size={sw < 360 ? 13 : 15} color={color} />
         </View>
         {onPress && <Ionicons name="chevron-forward" size={12} color={C.textMuted} />}
       </View>
-      <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: C.text, marginTop: 2 }}>
+      <Text style={{ fontSize: valueFontSize, fontFamily: "Inter_700Bold", color: C.text, marginTop: 2 }}>
         {value}
       </Text>
-      <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: C.textMuted, lineHeight: 15 }}>
+      <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: C.textMuted, lineHeight: 15 }} numberOfLines={1} ellipsizeMode="tail">
         {label}
       </Text>
     </Wrapper>
@@ -1612,7 +1619,7 @@ const makeStatStyles = (_C: ColorPalette) => StyleSheet.create({
   label: {},
 });
 
-const makeStyles = (C: ColorPalette) => StyleSheet.create({
+const makeStyles = (C: ColorPalette, screenWidth = 375) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
 
   /* Gate screens */
@@ -1675,28 +1682,28 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
   /* ── Premium Header ── */
   header: {
     backgroundColor: C.bg,
-    paddingHorizontal: 20,
+    paddingHorizontal: screenWidth < 360 ? 14 : 20,
     paddingBottom: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: C.border,
-    gap: 14,
+    gap: screenWidth < 375 ? 10 : 14,
   },
   /* Ligne 1 : avatar + meta + badge + notifs */
   headerRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: screenWidth < 375 ? 8 : 12,
   },
   headerAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: screenWidth < 360 ? 38 : 44,
+    height: screenWidth < 360 ? 38 : 44,
+    borderRadius: screenWidth < 360 ? 19 : 22,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
   },
   headerAvatarText: {
-    fontSize: 18,
+    fontSize: screenWidth < 360 ? 15 : 18,
     fontFamily: "Inter_700Bold",
   },
   headerMeta: {
@@ -1711,41 +1718,46 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
     letterSpacing: 0.3,
   },
   headerName: {
-    fontSize: 18,
+    fontSize: screenWidth < 375 ? 15 : 18,
     fontFamily: "Inter_700Bold",
     color: C.text,
   },
   headerRight: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     flexShrink: 0,
+    maxWidth: screenWidth < 375 ? 120 : 160,
   },
   roleBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    paddingHorizontal: 8,
+    paddingHorizontal: screenWidth < 375 ? 6 : 8,
     paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1,
+    maxWidth: screenWidth < 375 ? 72 : 100,
+    flexShrink: 1,
   },
   roleBadgeText: {
     fontSize: 11,
     fontFamily: "Inter_600SemiBold",
+    flexShrink: 1,
   },
   notifBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
+    flexShrink: 0,
   },
   notifDot: {
     position: "absolute",
-    top: 6,
-    right: 6,
+    top: 5,
+    right: 5,
     width: 7,
     height: 7,
     borderRadius: 3.5,
@@ -1757,11 +1769,12 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
   statsRow: {
     flexDirection: "row",
     gap: 8,
+    minHeight: 88,
   },
   /* Quick actions */
   quickActionsRow: {
     gap: 8,
-    paddingRight: 4,
+    paddingHorizontal: 2,
   },
   quickAction: {
     flexDirection: "row",
@@ -1775,6 +1788,7 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
   quickActionText: {
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
+    flexShrink: 0,
   },
   /* Tabs */
   tabs: {
