@@ -1609,7 +1609,7 @@ function PremiumStatCard({
             height: 8,
             borderRadius: 4,
             backgroundColor: color,
-            opacity: 0.28,
+            opacity: 0.45,
           }}
         />
       )}
