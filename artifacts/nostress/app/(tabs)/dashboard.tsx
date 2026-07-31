@@ -736,51 +736,47 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        {/* Stats 2 × 2 — chiffres réels uniquement */}
+        {/* Stats — ligne 1 : 4 blocs compacts | ligne 2 : Avis + Note */}
         <View style={styles.statsGrid}>
           <View style={styles.statsRow}>
             <PremiumStatCard
               icon="calendar" value={myEvents.length}
               label={lang === "fr" ? "Événements" : "Events"}
-              color={C.lavender} C={C} onPress={() => setTab("events")}
+              color={C.lavender} C={C} compact
+              onPress={() => setTab("events")}
             />
             <PremiumStatCard
               icon="business" value={myVenues.length}
               label={lang === "fr" ? "Lieux" : "Venues"}
-              color={C.gold} C={C} onPress={() => setTab("venues")}
+              color={C.gold} C={C} compact
+              onPress={() => setTab("venues")}
             />
-          </View>
-          <View style={styles.statsRow}>
             <PremiumStatCard
               icon="checkmark-circle" value={approvedEventsCount}
               label={lang === "fr" ? "Approuvés" : "Approved"}
-              color={C.success} C={C}
+              color={C.success} C={C} compact
               onPress={() => { setTab("events"); setEventStatusFilter("approved"); }}
             />
             <PremiumStatCard
               icon="hourglass-outline" value={pendingEventsCount}
               label={lang === "fr" ? "En attente" : "Pending"}
-              color="#F59E0B" C={C}
+              color="#F59E0B" C={C} compact
               onPress={() => { setTab("events"); setEventStatusFilter("pending"); }}
             />
           </View>
-          {/* Avis — affichés seulement si des données réelles existent */}
-          {partnerStats !== null && partnerStats.reviewCount > 0 && (
-            <View style={styles.statsRow}>
-              <PremiumStatCard
-                icon="star" value={partnerStats.reviewCount}
-                label={lang === "fr" ? "Avis reçus" : "Reviews"}
-                color={C.gold} C={C}
-              />
-              {partnerStats.averageRating !== null && (
-                <PremiumStatCard
-                  icon="star-half" value={partnerStats.averageRating}
-                  label={lang === "fr" ? "Note moyenne" : "Avg. rating"}
-                  color="#F59E0B" C={C}
-                />
-              )}
-            </View>
-          )}
+          {/* Ligne 2 : Avis + Note — toujours visibles */}
+          <View style={styles.statsRow}>
+            <PremiumStatCard
+              icon="star" value={partnerStats?.reviewCount ?? 0}
+              label={lang === "fr" ? "Avis reçus" : "Reviews"}
+              color={C.gold} C={C}
+            />
+            <PremiumStatCard
+              icon="star-half" value={partnerStats?.averageRating ?? 0}
+              label={lang === "fr" ? "Note moyenne" : "Avg. rating"}
+              color="#F59E0B" C={C}
+            />
+          </View>
         </View>
 
         {/* Bouton Créer compact */}
@@ -869,68 +865,6 @@ export default function DashboardScreen() {
         {/* ── Events tab ── */}
         {tab === "events" && (
           <>
-            <TouchableOpacity
-              style={styles.createBtn}
-              onPress={() => safePush("/create-event")}
-            >
-              <Ionicons name="add-circle" size={20} color={C.bg} />
-              <Text style={styles.createBtnText}>{t("createEvent")}</Text>
-            </TouchableOpacity>
-
-            {myEvents.length > 0 && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={{ marginBottom: 12 }}
-                contentContainerStyle={{ gap: 8, paddingRight: 16 }}
-              >
-                {(["all", "pending", "approved", "rejected"] as EventStatusFilter[]).map((f) => {
-                  const labels: Record<EventStatusFilter, { fr: string; en: string }> = {
-                    all: { fr: "Tous", en: "All" },
-                    pending: { fr: "Brouillons", en: "Drafts" },
-                    approved: { fr: "Approuvés", en: "Approved" },
-                    rejected: { fr: "Rejetés", en: "Rejected" },
-                  };
-                  const count = f === "all" ? myEvents.length : myEvents.filter((e) => e.status === f).length;
-                  const active = eventStatusFilter === f;
-                  return (
-                    <TouchableOpacity
-                      key={f}
-                      onPress={() => setEventStatusFilter(f)}
-                      style={{
-                        paddingHorizontal: 14,
-                        paddingVertical: 8,
-                        borderRadius: 18,
-                        backgroundColor: active ? C.lavender : C.card2,
-                        borderWidth: 1,
-                        borderColor: active ? C.lavender : C.border,
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 6,
-                      }}
-                    >
-                      <Text style={{
-                        fontSize: 12,
-                        fontFamily: "Inter_600SemiBold",
-                        color: active ? C.bg : C.text,
-                      }}>
-                        {lang === "fr" ? labels[f].fr : labels[f].en}
-                      </Text>
-                      <View style={{
-                        backgroundColor: active ? C.bg + "33" : C.border,
-                        borderRadius: 10,
-                        paddingHorizontal: 6,
-                        paddingVertical: 1,
-                      }}>
-                        <Text style={{ fontSize: 10, fontFamily: "Inter_700Bold", color: active ? C.bg : C.textMuted }}>
-                          {count}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            )}
             {(() => {
               const filtered = eventStatusFilter === "all"
                 ? myEvents
@@ -1640,16 +1574,17 @@ export default function DashboardScreen() {
 }
 
 function PremiumStatCard({
-  icon, value, label, color, C, onPress,
+  icon, value, label, color, C, onPress, compact = false,
 }: {
   icon: string; value: number; label: string; color: string;
-  C: ColorPalette; onPress?: () => void;
+  C: ColorPalette; onPress?: () => void; compact?: boolean;
 }) {
   const { width: sw } = useWindowDimensions();
   const Wrapper: any = onPress ? TouchableOpacity : View;
-  const cardPad = sw < 360 ? 10 : 13;
-  const valueFontSize = sw < 360 ? 18 : 22;
-  const iconBoxSize = sw < 360 ? 26 : 30;
+  const cardPad = compact ? (sw < 360 ? 6 : 8) : (sw < 360 ? 10 : 12);
+  const valueFontSize = compact ? (sw < 360 ? 14 : 16) : (sw < 360 ? 18 : 20);
+  const iconBoxSize = compact ? (sw < 360 ? 20 : 22) : (sw < 360 ? 26 : 28);
+  const iconSize = compact ? (sw < 360 ? 9 : 10) : (sw < 360 ? 11 : 13);
   return (
     <Wrapper
       style={{
@@ -1670,7 +1605,7 @@ function PremiumStatCard({
     >
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
         <View style={{ width: iconBoxSize, height: iconBoxSize, borderRadius: iconBoxSize / 2, backgroundColor: color + "18", alignItems: "center", justifyContent: "center" }}>
-          <Ionicons name={icon as any} size={sw < 360 ? 11 : 13} color={color} />
+          <Ionicons name={icon as any} size={iconSize} color={color} />
         </View>
         <Text style={{ fontSize: valueFontSize, fontFamily: "Inter_700Bold", color: C.text }}>
           {value}
@@ -1763,10 +1698,10 @@ const makeStyles = (C: ColorPalette, screenWidth = 375) => StyleSheet.create({
   header: {
     backgroundColor: C.bg,
     paddingHorizontal: screenWidth < 360 ? 14 : 20,
-    paddingBottom: 10,
+    paddingBottom: 8,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: C.border,
-    gap: screenWidth < 375 ? 10 : 14,
+    gap: screenWidth < 375 ? 8 : 10,
   },
   /* Ligne 1 : avatar + meta + badge + notifs */
   headerRow: {
