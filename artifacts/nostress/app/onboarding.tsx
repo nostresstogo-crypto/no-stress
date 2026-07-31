@@ -146,6 +146,8 @@ export default function OnboardingScreen() {
             style={[styles.skipBtn, { backgroundColor: C.card2 }]}
             onPress={goSkip}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityLabel={lang === "fr" ? "Passer l'introduction" : "Skip intro"}
+            accessibilityRole="button"
           >
             <Text style={[styles.skipText, { color: C.textMuted }]}>{t("onboardingSkip")}</Text>
           </TouchableOpacity>
@@ -215,7 +217,12 @@ export default function OnboardingScreen() {
             })}
           </View>
 
-          <TouchableOpacity onPress={goNext} activeOpacity={0.85}>
+          <TouchableOpacity
+            onPress={goNext}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={isTourLast ? t("onboardingStart") : t("onboardingNext")}
+          >
             <LinearGradient
               colors={[activeAccent, activeAccentDeep]}
               start={{ x: 0, y: 0 }}
@@ -475,6 +482,8 @@ function AuthGatewaySlide({
           onPress={onCreateAccount}
           activeOpacity={0.88}
           style={gwStyles.primaryBtnWrap}
+          accessibilityRole="button"
+          accessibilityLabel={t("onboardingCreateAccount")}
         >
           <LinearGradient
             colors={[LAVENDER, LAVENDER_DEEP]}
@@ -503,6 +512,8 @@ function AuthGatewaySlide({
               backgroundColor: LAVENDER + (isDark ? "12" : "09"),
             },
           ]}
+          accessibilityRole="button"
+          accessibilityLabel={t("onboardingHaveAccount")}
         >
           <Ionicons name="log-in-outline" size={18} color={LAVENDER} />
           <Text style={[gwStyles.secondaryBtnText, { color: LAVENDER }]}>{t("onboardingHaveAccount")}</Text>
@@ -515,6 +526,9 @@ function AuthGatewaySlide({
         activeOpacity={0.7}
         style={gwStyles.guestBtn}
         hitSlop={{ top: 10, bottom: 10, left: 20, right: 20 }}
+        accessibilityRole="button"
+        accessibilityLabel={t("onboardingGuest")}
+        accessibilityHint={lang === "fr" ? "Continuer sans créer de compte" : "Continue without creating an account"}
       >
         <Text style={[gwStyles.guestText, { color: C.textMuted }]}>
           {t("onboardingGuest")}
@@ -540,6 +554,9 @@ function LangChip({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.82}
+      accessibilityRole="radio"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={label}
       style={[
         styles.langChip,
         { borderColor: active ? color : C.border, backgroundColor: active ? color + "1E" : C.card },

@@ -1,5 +1,5 @@
-import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { Animated, View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
@@ -15,14 +15,27 @@ export default function PartnerPendingScreen() {
   const email = String(params.email || "").trim();
   const styles = makeStyles(C);
 
+  // Entrance animation
+  const enterAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(enterAnim, {
+      toValue: 1,
+      tension: 52,
+      friction: 7,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
   return (
     <ScrollView
       contentContainerStyle={[styles.root, { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 32 }]}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.iconCircle}>
-        <Ionicons name="hourglass-outline" size={48} color={C.gold} />
-      </View>
+      <Animated.View style={{ transform: [{ scale: enterAnim }], opacity: enterAnim }}>
+        <View style={styles.iconCircle}>
+          <Ionicons name="hourglass-outline" size={48} color={C.gold} />
+        </View>
+      </Animated.View>
 
       <Text style={styles.title}>
         {fr ? "Compte en attente d'approbation" : "Account pending approval"}
@@ -78,6 +91,9 @@ export default function PartnerPendingScreen() {
         style={styles.primaryBtn}
         onPress={() => router.replace("/(tabs)")}
         activeOpacity={0.85}
+        accessibilityLabel={fr ? "Retour à l'accueil" : "Back to home"}
+        accessibilityRole="button"
+        accessibilityHint={fr ? "Ferme cet écran et revient à l'accueil de l'application" : "Closes this screen and returns to the app home"}
       >
         <Ionicons name="home-outline" size={18} color={C.bg} />
         <Text style={styles.primaryBtnText}>{fr ? "Retour à l'accueil" : "Back to home"}</Text>
@@ -91,12 +107,12 @@ const makeStyles = (C: any) => StyleSheet.create({
   iconCircle: { width: 96, height: 96, borderRadius: 48, backgroundColor: C.gold + "22", alignItems: "center", justifyContent: "center", marginBottom: 24 },
   title: { fontSize: 22, fontFamily: "Inter_700Bold", color: C.text, textAlign: "center", marginBottom: 12 },
   subtitle: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.textMuted, textAlign: "center", lineHeight: 22, marginBottom: 24, maxWidth: 380 },
-  card: { width: "100%", maxWidth: 420, backgroundColor: C.surface, borderRadius: 16, borderWidth: 1, borderColor: C.border || "#2a2c4a", padding: 18, marginBottom: 18, gap: 14 },
+  card: { width: "100%", maxWidth: 420, backgroundColor: C.card, borderRadius: 16, borderWidth: 1, borderColor: C.border, padding: 18, marginBottom: 18, gap: 14 },
   cardRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   bullet: { width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   bulletText: { fontFamily: "Inter_700Bold", fontSize: 13 },
   cardText: { color: C.text, fontFamily: "Inter_400Regular", fontSize: 13.5, lineHeight: 20, flex: 1 },
-  emailBox: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8, paddingHorizontal: 14, backgroundColor: C.surface, borderRadius: 10, borderWidth: 1, borderColor: C.border || "#2a2c4a", marginBottom: 24 },
+  emailBox: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8, paddingHorizontal: 14, backgroundColor: C.card, borderRadius: 10, borderWidth: 1, borderColor: C.border, marginBottom: 24 },
   emailText: { color: C.text, fontSize: 13, fontFamily: "Inter_500Medium" },
   primaryBtn: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: C.lavender, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 28 },
   primaryBtnText: { color: C.bg, fontSize: 15, fontFamily: "Inter_600SemiBold" },

@@ -883,11 +883,23 @@ export default function AuthScreen() {
         </View>
 
         {/* Mode toggle */}
-        <View style={S.modeToggle}>
-          <TouchableOpacity style={[S.modeBtn, mode === "login" && { backgroundColor: LAVENDER }]} onPress={() => switchMode("login")}>
+        <View style={S.modeToggle} accessibilityRole="tablist">
+          <TouchableOpacity
+            style={[S.modeBtn, mode === "login" && { backgroundColor: LAVENDER }]}
+            onPress={() => switchMode("login")}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: mode === "login" }}
+            accessibilityLabel={t("login")}
+          >
             <Text style={[S.modeBtnText, { color: mode === "login" ? C.bg : C.textMuted }]}>{t("login")}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[S.modeBtn, mode === "register" && { backgroundColor: LAVENDER }]} onPress={() => switchMode("register")}>
+          <TouchableOpacity
+            style={[S.modeBtn, mode === "register" && { backgroundColor: LAVENDER }]}
+            onPress={() => switchMode("register")}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: mode === "register" }}
+            accessibilityLabel={t("register")}
+          >
             <Text style={[S.modeBtnText, { color: mode === "register" ? C.bg : C.textMuted }]}>{t("register")}</Text>
           </TouchableOpacity>
         </View>
@@ -951,7 +963,7 @@ export default function AuthScreen() {
         <View style={[M.root, { paddingTop: insets.top + 16 }]}>
           <View style={M.header}>
             <Text style={M.title}>{lang === "fr" ? "Type d'activité" : "Business type"}</Text>
-            <TouchableOpacity onPress={() => setBusinessTypeModal(false)} style={M.closeBtn}>
+            <TouchableOpacity onPress={() => setBusinessTypeModal(false)} style={M.closeBtn} accessibilityLabel={lang === "fr" ? "Fermer" : "Close"} accessibilityRole="button">
               <Ionicons name="close" size={22} color={C.textMuted} />
             </TouchableOpacity>
           </View>
@@ -960,9 +972,16 @@ export default function AuthScreen() {
               const selected = businessType === bt.key;
               const label    = lang === "fr" ? bt.labelFr : bt.labelEn;
               return (
-                <TouchableOpacity key={bt.key} style={[M.item, selected && { backgroundColor: C.gold + "12" }]}
-                  onPress={() => { setBusinessType(bt.key); setFieldErrors(e => ({ ...e, businessType: "" })); setBusinessTypeModal(false); }} activeOpacity={0.7}>
-                  <Text style={[M.cityName, selected && { color: C.gold }]}>{label}</Text>
+                <TouchableOpacity
+                  key={bt.key}
+                  style={[M.item, selected && { backgroundColor: C.gold + "12" }]}
+                  onPress={() => { setBusinessType(bt.key); setFieldErrors(e => ({ ...e, businessType: "" })); setBusinessTypeModal(false); }}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={label}
+                  accessibilityState={{ selected }}
+                >
+                  <Text style={[M.cityName, { flex: 1 }, selected && { color: C.gold }]}>{label}</Text>
                   {selected && <Ionicons name="checkmark-circle" size={20} color={C.gold} />}
                 </TouchableOpacity>
               );
@@ -975,7 +994,7 @@ export default function AuthScreen() {
         <View style={[M.root, { paddingTop: insets.top + 16 }]}>
           <View style={M.header}>
             <Text style={M.title}>{lang === "fr" ? "Choisir un pays" : "Choose a country"}</Text>
-            <TouchableOpacity onPress={() => setCountryModalVisible(false)} style={M.closeBtn}>
+            <TouchableOpacity onPress={() => setCountryModalVisible(false)} style={M.closeBtn} accessibilityLabel={lang === "fr" ? "Fermer" : "Close"} accessibilityRole="button">
               <Ionicons name="close" size={22} color={C.textMuted} />
             </TouchableOpacity>
           </View>
@@ -983,8 +1002,15 @@ export default function AuthScreen() {
             {configCountries.map(c => {
               const selected = country === c.name;
               return (
-                <TouchableOpacity key={c.code} style={[M.item, selected && { backgroundColor: C.gold + "12" }]}
-                  onPress={() => { if (c.name !== country) { setCountry(c.name); setCity(""); setLatitude(""); setLongitude(""); } setCountryModalVisible(false); }} activeOpacity={0.7}>
+                <TouchableOpacity
+                  key={c.code}
+                  style={[M.item, selected && { backgroundColor: C.gold + "12" }]}
+                  onPress={() => { if (c.name !== country) { setCountry(c.name); setCity(""); setLatitude(""); setLongitude(""); } setCountryModalVisible(false); }}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${c.emoji} ${c.name}`}
+                  accessibilityState={{ selected }}
+                >
                   <Text style={M.emoji}>{c.emoji}</Text>
                   <Text style={[M.cityName, { flex: 1 }, selected && { color: C.gold }]}>{c.name}</Text>
                   {selected && <Ionicons name="checkmark-circle" size={20} color={C.gold} />}
@@ -999,7 +1025,7 @@ export default function AuthScreen() {
         <View style={[M.root, { paddingTop: insets.top + 16 }]}>
           <View style={M.header}>
             <Text style={M.title}>{lang === "fr" ? `Ville (${country})` : `City (${country})`}</Text>
-            <TouchableOpacity onPress={() => setCityModalVisible(false)} style={M.closeBtn}>
+            <TouchableOpacity onPress={() => setCityModalVisible(false)} style={M.closeBtn} accessibilityLabel={lang === "fr" ? "Fermer" : "Close"} accessibilityRole="button">
               <Ionicons name="close" size={22} color={C.textMuted} />
             </TouchableOpacity>
           </View>
@@ -1009,16 +1035,19 @@ export default function AuthScreen() {
               .filter((c, i, arr) => arr.findIndex(x => x.name === c.name) === i)
               .map(c => {
                 const selected = city === c.name;
+                const cityLabel = `${c.emoji ? c.emoji + " " : ""}${c.name}`;
                 return (
-                  <TouchableOpacity key={c.slug} style={[M.item, selected && { backgroundColor: C.gold + "12" }]}
-                    onPress={() => { handleSelectCity(c); setFieldErrors(e => ({ ...e, city: "" })); }} activeOpacity={0.7}>
+                  <TouchableOpacity
+                    key={c.slug}
+                    style={[M.item, selected && { backgroundColor: C.gold + "12" }]}
+                    onPress={() => { handleSelectCity(c); setFieldErrors(e => ({ ...e, city: "" })); }}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel={cityLabel}
+                    accessibilityState={{ selected }}
+                  >
                     <Text style={M.emoji}>{c.emoji}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[M.cityName, selected && { color: C.gold }]}>{c.name}</Text>
-                      <Text style={M.coords}>
-                        {c.latitude != null ? c.latitude.toFixed(4) : "—"}, {c.longitude != null ? c.longitude.toFixed(4) : "—"}
-                      </Text>
-                    </View>
+                    <Text style={[M.cityName, { flex: 1 }, selected && { color: C.gold }]}>{c.name}</Text>
                     {selected && <Ionicons name="checkmark-circle" size={20} color={C.gold} />}
                   </TouchableOpacity>
                 );
@@ -1120,5 +1149,4 @@ const makeModalStyles = (C: ColorPalette) => StyleSheet.create({
   item:    { flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: C.border, gap: 12 },
   emoji:   { fontSize: 20 },
   cityName: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.text },
-  coords:  { fontSize: 11, fontFamily: "Inter_400Regular", color: C.textMuted, marginTop: 2 },
 });

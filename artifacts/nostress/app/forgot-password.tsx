@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   KeyboardAvoidingView,
   Linking,
   Platform,
@@ -43,6 +44,20 @@ export default function ForgotPasswordScreen() {
 
   const cleanEmail = email.trim().toLowerCase();
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail);
+
+  // Success entrance animation
+  const successAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (sent) {
+      successAnim.setValue(0);
+      Animated.spring(successAnim, {
+        toValue: 1,
+        tension: 52,
+        friction: 7,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [sent]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // cleanup timer on unmount
   useEffect(() => () => { if (cooldownRef.current) clearInterval(cooldownRef.current); }, []);
@@ -144,7 +159,12 @@ export default function ForgotPasswordScreen() {
         style={[styles.root, { paddingTop: insets.top }]}
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backBtn}
+            accessibilityLabel={lang === "fr" ? "Retour" : "Back"}
+            accessibilityRole="button"
+          >
             <Ionicons name="chevron-back" size={24} color={C.text} />
           </TouchableOpacity>
           <Text style={styles.title}>
@@ -157,14 +177,16 @@ export default function ForgotPasswordScreen() {
           contentContainerStyle={[styles.content, { alignItems: "center", paddingTop: 32 }]}
           keyboardShouldPersistTaps="handled"
         >
-          {/* mail icon */}
-          <View style={[styles.successIconWrap, { backgroundColor: C.lavender + "25" }]}>
-            <Ionicons name="mail" size={40} color={C.lavender} />
-          </View>
+          {/* mail icon — spring entrance */}
+          <Animated.View style={{ transform: [{ scale: successAnim }], opacity: successAnim }}>
+            <View style={[styles.successIconWrap, { backgroundColor: C.lavender + "25" }]}>
+              <Ionicons name="mail" size={40} color={C.lavender} />
+            </View>
+          </Animated.View>
 
-          <Text style={styles.successTitle}>
+          <Animated.Text style={[styles.successTitle, { opacity: successAnim }]}>
             {lang === "fr" ? "Code envoyé !" : "Code sent!"}
-          </Text>
+          </Animated.Text>
 
           <Text style={styles.successText}>
             {lang === "fr"
@@ -217,7 +239,11 @@ export default function ForgotPasswordScreen() {
                   : `Resend (${resendCooldown}s)`}
               </Text>
             ) : (
-              <TouchableOpacity onPress={handleResend} accessibilityLabel="Renvoyer">
+              <TouchableOpacity
+                onPress={handleResend}
+                accessibilityLabel={lang === "fr" ? "Renvoyer le code" : "Resend code"}
+                accessibilityRole="button"
+              >
                 <Text style={styles.resendLink}>
                   {lang === "fr" ? "Renvoyer" : "Resend"}
                 </Text>
@@ -236,7 +262,12 @@ export default function ForgotPasswordScreen() {
       style={[styles.root, { paddingTop: insets.top }]}
     >
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          accessibilityLabel={lang === "fr" ? "Retour" : "Back"}
+          accessibilityRole="button"
+        >
           <Ionicons name="chevron-back" size={24} color={C.text} />
         </TouchableOpacity>
         <Text style={styles.title}>
