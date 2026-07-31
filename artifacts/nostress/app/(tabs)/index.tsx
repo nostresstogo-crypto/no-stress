@@ -20,6 +20,7 @@ import { router, useFocusEffect } from "expo-router";
 import { safePush } from "@/lib/navigation";
 
 import { useT, useApp, useColors } from "@/context/AppContext";
+import { useLowDataMode } from "@/context/NetworkContext";
 import { ColorPalette } from "@/constants/colors";
 import { parseDateLocal } from "@/lib/formatDate";
 import {
@@ -154,41 +155,66 @@ export default function HomeScreen() {
   const C = useColors();
   const { lang, selectedCity, setSelectedCity, selectedCategory, setSelectedCategory, configEventCategories, unreadCount } = useApp();
   const insets = useSafeAreaInsets();
+  const lowData = useLowDataMode();
   const [refreshing, setRefreshing]       = useState(false);
-  const [loading, setLoading]             = useState(true);
-  const [apiEvents, setApiEvents]         = useState<ApiEvent[]>([]);
-  const [apiVenues, setApiVenues]         = useState<any[]>([]);
-  const [popularEvents, setPopularEvents] = useState<any[]>([]);
-  const [popularVenues, setPopularVenues] = useState<any[]>([]);
-  const [filterOpen, setFilterOpen]       = useState(false);
-  const [filters, setFilters]             = useState(DEFAULT_FILTERS);
-  const [draftFilters, setDraftFilters]   = useState(DEFAULT_FILTERS);
+  // Chargement progressif — chaque section a son propre état
+  const [heroLoading, setHeroLoading]         = useState(true);
+  const [popularLoading, setPopularLoading]   = useState(true);
+  const [venueLoading, setVenueLoading]       = useState(true);
+  const [allLoading, setAllLoading]           = useState(true);
+  const [apiEvents, setApiEvents]             = useState<ApiEvent[]>([]);
+  const [apiVenues, setApiVenues]             = useState<any[]>([]);
+  const [popularEvents, setPopularEvents]     = useState<any[]>([]);
+  const [popularVenues, setPopularVenues]     = useState<any[]>([]);
+  const [filterOpen, setFilterOpen]           = useState(false);
+  const [filters, setFilters]                 = useState(DEFAULT_FILTERS);
+  const [draftFilters, setDraftFilters]       = useState(DEFAULT_FILTERS);
+  // Pagination de "Tous les événements"
+  const PAGE_SIZE = 15;
+  const [visibleCount, setVisibleCount]       = useState(PAGE_SIZE);
+
+  // Commodité : vrai quand toutes les sections ont fini
+  const loading = heroLoading && popularLoading && allLoading;
 
   // Fade-in animation for sections
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const greeting = useMemo(() => getGreeting(lang), [lang]);
 
+  // Chargement progressif — chaque endpoint révèle sa section dès qu'il répond
   const loadEvents = useCallback(async () => {
-    try {
-      const [r, rv, rpe, rpv] = await Promise.all([
-        fetch(`${API_BASE}/events`),
-        fetch(`${API_BASE}/venues`),
-        fetch(`${API_BASE}/events/popular`),
-        fetch(`${API_BASE}/venues/popular`),
-      ]);
-      if (r.ok)   { const d = await r.json();   setApiEvents(Array.isArray(d?.events) ? d.events : []); }
-      if (rv.ok)  { const d = await rv.json();  setApiVenues(Array.isArray(d?.venues) ? d.venues : []); }
-      if (rpe.ok) { const d = await rpe.json(); setPopularEvents(Array.isArray(d?.events) ? d.events : []); }
-      if (rpv.ok) { const d = await rpv.json(); setPopularVenues(Array.isArray(d?.venues) ? d.venues : []); }
-    } catch {}
+    const allP = fetch(`${API_BASE}/events`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { setApiEvents(Array.isArray(d?.events) ? d.events : []); })
+      .catch(() => setApiEvents([]))
+      .finally(() => setAllLoading(false));
+
+    const venuesP = fetch(`${API_BASE}/venues`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { setApiVenues(Array.isArray(d?.venues) ? d.venues : []); })
+      .catch(() => setApiVenues([]));
+
+    const popularEventsP = fetch(`${API_BASE}/events/popular`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { setPopularEvents(Array.isArray(d?.events) ? d.events : []); })
+      .catch(() => setPopularEvents([]))
+      .finally(() => setHeroLoading(false));
+
+    const popularVenuesP = fetch(`${API_BASE}/venues/popular`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { setPopularVenues(Array.isArray(d?.venues) ? d.venues : []); })
+      .catch(() => setPopularVenues([]))
+      .finally(() => { setVenueLoading(false); setPopularLoading(false); });
+
+    await Promise.allSettled([allP, venuesP, popularEventsP, popularVenuesP]);
   }, []);
 
   const initialLoad = useCallback(async () => {
-    setLoading(true);
+    setHeroLoading(true); setPopularLoading(true);
+    setVenueLoading(true); setAllLoading(true);
+    setVisibleCount(PAGE_SIZE);
     await loadEvents();
-    setLoading(false);
-    Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
+    Animated.timing(fadeAnim, { toValue: 1, duration: 350, useNativeDriver: true }).start();
   }, [loadEvents]);
 
   useEffect(() => { initialLoad(); }, [initialLoad]);
@@ -201,6 +227,7 @@ export default function HomeScreen() {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
+    setVisibleCount(PAGE_SIZE);
     loadEvents().finally(() => setRefreshing(false));
   }, [loadEvents]);
 
@@ -377,7 +404,7 @@ export default function HomeScreen() {
       >
         {/* ── Hero Carousel ── */}
         <View style={s.carouselWrap}>
-          {loading ? (
+          {heroLoading ? (
             <SkeletonCard C={C} width={SCREEN_W - 32} height={290} />
           ) : (
             <PremiumHeroCarousel events={carouselEvents} lang={lang} />
@@ -387,7 +414,7 @@ export default function HomeScreen() {
         <Animated.View style={{ opacity: fadeAnim }}>
 
           {/* ── À ne pas manquer ── */}
-          {(loading || popularEvents.length > 0) && (
+          {(popularLoading || popularEvents.length > 0) && (
             <View style={s.section}>
               <SectionHeader
                 title={lang === "fr" ? "À ne pas manquer" : "Not to be missed"}
@@ -396,14 +423,14 @@ export default function HomeScreen() {
                 icon={<Ionicons name="flame" size={17} color={C.gold} />}
                 C={C}
               />
-              {loading ? (
+              {popularLoading ? (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.hList}>
                   {[0, 1, 2].map((i) => <SkeletonCard key={i} C={C} width={260} height={230} />)}
                 </ScrollView>
               ) : (
                 <FlatList
                   horizontal
-                  data={popularEvents.slice(0, 8).map((e: any) => ({
+                  data={popularEvents.slice(0, lowData ? 5 : 8).map((e: any) => ({
                     id: String(e.id),
                     title: e.title, titleFr: e.titleFr,
                     category: e.category, date: e.date, time: e.time,
@@ -412,6 +439,10 @@ export default function HomeScreen() {
                   keyExtractor={(e) => "pop_" + e.id}
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={s.hList}
+                  removeClippedSubviews
+                  maxToRenderPerBatch={4}
+                  initialNumToRender={3}
+                  windowSize={5}
                   renderItem={({ item }) => (
                     <EventCard
                       event={item}
@@ -425,7 +456,7 @@ export default function HomeScreen() {
           )}
 
           {/* ── Prochainement ── */}
-          {(loading || upcomingEvents.length > 0) && (
+          {(allLoading || upcomingEvents.length > 0) && (
             <View style={s.section}>
               <SectionHeader
                 title={lang === "fr" ? "Prochainement" : "Coming soon"}
@@ -434,13 +465,13 @@ export default function HomeScreen() {
                 icon={<Ionicons name="calendar-outline" size={16} color={C.lavender} />}
                 C={C}
               />
-              {loading ? (
+              {allLoading ? (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.hList}>
                   {[0, 1, 2].map((i) => <SkeletonCard key={i} C={C} width={200} height={190} />)}
                 </ScrollView>
               ) : (
                 <View style={s.vList}>
-                  {upcomingEvents.map((item) => (
+                  {upcomingEvents.slice(0, lowData ? 5 : 8).map((item) => (
                     <EventCard
                       key={"up_" + item.id}
                       event={item}
@@ -454,7 +485,7 @@ export default function HomeScreen() {
           )}
 
           {/* ── Lieux tendance ── */}
-          {(loading || popularVenues.length > 0) && (
+          {(venueLoading || popularVenues.length > 0) && (
             <View style={s.section}>
               <SectionHeader
                 title={lang === "fr" ? "Lieux tendance" : "Trending venues"}
@@ -463,17 +494,21 @@ export default function HomeScreen() {
                 icon={<Ionicons name="location" size={16} color={C.gold} />}
                 C={C}
               />
-              {loading ? (
+              {venueLoading ? (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.hList}>
                   {[0, 1, 2].map((i) => <SkeletonCard key={i} C={C} width={190} height={175} />)}
                 </ScrollView>
               ) : (
                 <FlatList
                   horizontal
-                  data={popularVenues}
+                  data={popularVenues.slice(0, lowData ? 5 : 10)}
                   keyExtractor={(v) => "pv_" + String(v.id)}
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={s.hList}
+                  removeClippedSubviews
+                  maxToRenderPerBatch={4}
+                  initialNumToRender={3}
+                  windowSize={5}
                   renderItem={({ item }) => (
                     <VenueCard
                       venue={{
@@ -505,7 +540,7 @@ export default function HomeScreen() {
                 C={C}
               />
               <View style={s.vList}>
-                {filteredEvents.map((event) => (
+                {filteredEvents.slice(0, visibleCount).map((event) => (
                   <EventCard
                     key={event.id}
                     event={event}
@@ -513,11 +548,25 @@ export default function HomeScreen() {
                   />
                 ))}
               </View>
+              {filteredEvents.length > visibleCount && (
+                <TouchableOpacity
+                  style={[s.loadMore, { backgroundColor: C.card, borderColor: C.border }]}
+                  onPress={() => setVisibleCount((n) => n + PAGE_SIZE)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[s.loadMoreText, { color: C.lavender }]}>
+                    {lang === "fr"
+                      ? `Charger ${Math.min(PAGE_SIZE, filteredEvents.length - visibleCount)} de plus`
+                      : `Load ${Math.min(PAGE_SIZE, filteredEvents.length - visibleCount)} more`}
+                  </Text>
+                  <Ionicons name="chevron-down" size={16} color={C.lavender} />
+                </TouchableOpacity>
+              )}
             </View>
           )}
 
           {/* ── Empty state ── */}
-          {!loading && filteredEvents.length === 0 && (
+          {!allLoading && filteredEvents.length === 0 && (
             <View style={s.empty}>
               <View style={[s.emptyIconWrap, { backgroundColor: C.card2 }]}>
                 <Ionicons name="search-outline" size={32} color={C.textMuted} />
@@ -694,6 +743,10 @@ const s = StyleSheet.create({
   hList: { gap: 12, paddingHorizontal: 20 },
   vList: { paddingHorizontal: 20, gap: 0 },
   dot: { width: 8, height: 8, borderRadius: 4 },
+
+  /* Charger plus */
+  loadMore: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginHorizontal: 20, marginTop: 12, paddingVertical: 14, borderRadius: 14, borderWidth: 1 },
+  loadMoreText: { fontFamily: Fonts.semiBold, fontSize: FontSize.sm },
 
   /* Empty */
   empty: { alignItems: "center", paddingHorizontal: 32, paddingVertical: 48, gap: 12 },
