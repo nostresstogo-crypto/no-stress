@@ -411,7 +411,11 @@ export default function AccountScreen() {
           <Text style={styles.profileName}>{user.name}</Text>
           <Text style={styles.profileEmail}>{user.email}</Text>
           <View style={styles.roleBadge}>
-            <Text style={styles.roleText}>{user.role}</Text>
+            <Text style={styles.roleText}>
+              {user.role === "structure"
+                ? (lang === "fr" ? "Partenaire" : "Partner")
+                : (lang === "fr" ? "Utilisateur" : "User")}
+            </Text>
           </View>
         </View>
             <Ionicons name="chevron-forward" size={22} color={C.textMuted} />
@@ -668,10 +672,31 @@ export default function AccountScreen() {
       </View>
 
       {/* Logout */}
-      <TouchableOpacity style={styles.logoutBtn} onPress={logout}>
+      <TouchableOpacity
+        style={styles.logoutBtn}
+        onPress={() => {
+          const isFr = lang === "fr";
+          if (Platform.OS === "web") {
+            const ok = typeof window !== "undefined" && window.confirm(isFr ? "Déconnexion — Êtes-vous sûr ?" : "Log out — Are you sure?");
+            if (ok) logout();
+            return;
+          }
+          Alert.alert(
+            isFr ? "Déconnexion" : "Log out",
+            isFr ? "Êtes-vous sûr ?" : "Are you sure?",
+            [
+              { text: isFr ? "Annuler" : "Cancel", style: "cancel" },
+              { text: isFr ? "Déconnecter" : "Log out", style: "destructive", onPress: logout },
+            ],
+          );
+        }}
+      >
         <Ionicons name="log-out-outline" size={20} color={C.error} />
         <Text style={styles.logoutText}>{t("logout")}</Text>
       </TouchableOpacity>
+
+      {/* Séparateur entre déconnexion et suppression */}
+      <View style={{ height: 1, backgroundColor: C.border, marginVertical: 8 }} />
 
       {/* Delete Account — traitement in-app, pas de redirection externe */}
       <TouchableOpacity
