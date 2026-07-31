@@ -9,12 +9,12 @@
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "primaryColor": "#FFD700",
-    "description": "NoStress — Discover the best events, bars, restaurants, clubs and lounges across Africa. Concerts, festivals, parties and more — find what's happening near you and save your favourites.",
+    "description": "NoStress \u2014 Discover the best events, bars, restaurants, clubs and lounges across Africa. Concerts, festivals, parties and more \u2014 find what's happening near you and save your favourites.",
     "privacy": "public",
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0E1120"
+      "backgroundColor": "#F5F3FC"
     },
     "ios": {
       "supportsTablet": false,

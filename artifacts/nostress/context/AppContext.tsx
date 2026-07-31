@@ -209,7 +209,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [hasOnboarded, setHasOnboardedState] = useState<boolean>(false);
   const [appReady, setAppReady] = useState<boolean>(false);
   const [myEvents, setMyEvents] = useState<MyEvent[]>([]);
-  const [themeMode, setThemeModeState] = useState<ThemeMode>("dark");
+  const [themeMode, setThemeModeState] = useState<ThemeMode>("light");
   const [locationNotificationsEnabled, setLocationNotificationsEnabledState] = useState<boolean>(true);
   const [apiEvents, setApiEvents] = useState<ApiEvent[]>([]);
   const notifiedCityRef = useRef<string>("");

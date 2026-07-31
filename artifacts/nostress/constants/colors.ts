@@ -3,40 +3,62 @@ export const TOGO_GREEN  = "#006A4E";
 export const TOGO_YELLOW = "#FFCD00";
 export const TOGO_RED    = "#D21034";
 
-/* ── Dark theme (default) — midnight lavender, luxe & chaleureux ── */
-const DARK = {
-  bg:          "#161A33",  // bleu nuit avec teinte lavande, moins corbeau
-  card:        "#1F2447",  // surface élevée, contraste doux
-  card2:       "#2A2F58",  // surface imbriquée, bien différenciée
-  border:      "#3A3F6B",  // liseré plus visible sur fond plus clair
-  lavender:    "#B5A8F0",
-  lavenderDim: "#8C7FD8",
-  gold:        "#E5C46B",
-  goldDim:     "#B89A4D",
-  text:        "#F2EFFA",
-  textMuted:   "#A6A3C4",  // contraste rééquilibré pour le nouveau bg
-  success:     "#3FBE7A",
-  error:       "#E26B6B",
-  white:       "#FFFFFF",
-  isDark:      true,
-};
-
-/* ── Light theme — soft pearl + champagne, premium & airy ─── */
+/* ── Light theme — pearl lavender, premium & lumineux ──────── */
 const LIGHT = {
-  bg:          "#FBFAFE",  // soft pearl, very subtle lavender tint
-  card:        "#FFFFFF",  // pure white cards pop on the bg
-  card2:       "#F4F1FB",  // gentle lavender-pearl for nested surfaces
-  border:      "#E8E5F4",  // soft, low-contrast hairline
-  lavender:    "#6E5BD0",  // richer, more saturated primary
-  lavenderDim: "#4F3FAE",  // deep accent for hover/pressed
-  gold:        "#A07A14",  // warm bronze-champagne, readable as text on light surfaces (~5:1)
-  goldDim:     "#7E5F0E",
-  text:        "#1A1830",  // deep ink, easier on eyes than pure black
-  textMuted:   "#7B7898",  // balanced muted with adequate contrast
-  success:     "#1F9D5A",
-  error:       "#D14343",
+  /* Backgrounds */
+  bg:          "#F5F3FC",  // pearl with lavender tint — riche, pas blanc pur
+  card:        "#FFFFFF",  // cartes blanches qui se démarquent du fond
+  card2:       "#EDE8FA",  // surface imbriquée lavande douce
+  card3:       "#F9F7FE",  // surface glass ultra-légère
+  /* Borders */
+  border:      "#DDD8F0",  // liseré lavande discret
+  /* Primary */
+  lavender:    "#6650D8",  // violet profond & saturé — principal
+  lavenderDim: "#4A3BB8",  // pressé / actif
+  /* Accent */
+  gold:        "#9A7010",  // ambre chaud — réservé aux éléments importants
+  goldDim:     "#7A5A0C",
+  /* Text */
+  text:        "#12102A",  // encre profonde, très lisible
+  textMuted:   "#6E6A8C",  // secondaire, contraste suffisant
+  /* Status */
+  success:     "#1A9452",
+  error:       "#C83B3B",
+  warning:     "#C97A15",
+  /* Utility */
+  overlay:     "rgba(8,6,24,0.46)",
+  shadow:      "#1A1530",
   white:       "#FFFFFF",
   isDark:      false,
+};
+
+/* ── Dark theme — bleu nuit profond, luxe & vibrant ─────────── */
+const DARK = {
+  /* Backgrounds */
+  bg:          "#0C0F22",  // navy profond — pas noir pur
+  card:        "#141830",  // surface élevée
+  card2:       "#1A1F3C",  // imbriqué
+  card3:       "#21274A",  // encore plus élevé / glass
+  /* Borders */
+  border:      "#2C3260",  // visible mais discret
+  /* Primary */
+  lavender:    "#A898EC",  // violet lumineux et maîtrisé
+  lavenderDim: "#8070D4",
+  /* Accent */
+  gold:        "#DEB85C",  // or chaud, élégant
+  goldDim:     "#B08C3A",
+  /* Text */
+  text:        "#EDE9F8",  // blanc cassé lavande
+  textMuted:   "#9490B8",  // secondaire équilibré
+  /* Status */
+  success:     "#36B870",
+  error:       "#E06060",
+  warning:     "#E0A030",
+  /* Utility */
+  overlay:     "rgba(4,3,14,0.62)",
+  shadow:      "#000000",
+  white:       "#FFFFFF",
+  isDark:      true,
 };
 
 /* Static dark export kept for non-component usage (StyleSheet outside render) */
