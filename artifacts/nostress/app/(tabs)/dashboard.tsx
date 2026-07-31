@@ -58,11 +58,12 @@ type EventStatusFilter = "all" | "pending" | "approved" | "rejected";
 
 export default function DashboardScreen() {
   const t = useT();
-  const { user, lang, myEvents, setUser, addNotification, updateMyEvent, removeMyEvent, syncMyEventsStatus, syncMyEventsFromBackend, refreshApiEvents, authFetch, token, configCities, configVenueTypes, configCountries } = useApp();
+  const { user, lang, myEvents, setUser, addNotification, updateMyEvent, removeMyEvent, syncMyEventsStatus, syncMyEventsFromBackend, refreshApiEvents, authFetch, token, configCities, configVenueTypes, configCountries, unreadCount } = useApp();
   const insets = useSafeAreaInsets();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
-  const statStyles = useMemo(() => makeStatStyles(C), [C]);
+  // statStyles conservé pour éviter toute rupture si référencé ailleurs
+  const _statStyles = useMemo(() => makeStatStyles(C), [C]);
 
   const [tab, setTab] = useState<DashTab>("events");
   const [eventStatusFilter, setEventStatusFilter] = useState<EventStatusFilter>("all");
@@ -622,7 +623,7 @@ export default function DashboardScreen() {
   }
 
   /* ── Partner or Admin ── */
-  const activePlan = MOCK_SUBSCRIPTION_PLANS[0]; // Free plan by default
+  const activePlan = MOCK_SUBSCRIPTION_PLANS[0];
 
   const tabLabels: Record<DashTab, string> = {
     events: t("myEvents"),
@@ -630,38 +631,149 @@ export default function DashboardScreen() {
     plan: t("myPlan"),
   };
 
+  const tabIcons: Record<DashTab, string> = {
+    events: "calendar-outline",
+    venues: "business-outline",
+    plan:   "star-outline",
+  };
+
+  // Statistiques dérivées des vraies données
+  const approvedEventsCount = useMemo(() => myEvents.filter(e => e.status === "approved").length, [myEvents]);
+  const pendingEventsCount  = useMemo(() => myEvents.filter(e => e.status === "pending").length, [myEvents]);
+
+  // Salutation selon l'heure
+  const dashGreeting = useMemo(() => {
+    const h = new Date().getHours();
+    if (lang === "fr") {
+      if (h < 5)  return "Bonne nuit";
+      if (h < 12) return "Bonjour";
+      if (h < 18) return "Bon après-midi";
+      return "Bonsoir";
+    }
+    if (h < 5)  return "Good night";
+    if (h < 12) return "Good morning";
+    if (h < 18) return "Good afternoon";
+    return "Good evening";
+  }, [lang]);
+
+  // Actions rapides — toutes fonctionnelles, toutes routées
+  const quickActions = useMemo(() => [
+    { icon: "add-circle",         label: lang === "fr" ? "Créer"       : "Create",     onPress: () => safePush("/create-event"),   primary: true  },
+    { icon: "calendar-outline",   label: lang === "fr" ? "Événements"  : "Events",     onPress: () => setTab("events"),            primary: false },
+    { icon: "business-outline",   label: lang === "fr" ? "Lieux"       : "Venues",     onPress: () => setTab("venues"),            primary: false },
+    { icon: "notifications-outline", label: lang === "fr" ? "Notifs"  : "Notifs",     onPress: () => safePush("/notifications"),  primary: false },
+    { icon: "person-circle-outline", label: lang === "fr" ? "Profil"  : "Profile",    onPress: () => safePush("/edit-profile"),   primary: false },
+  ], [lang, setTab]);
+
+  const avatarInitial = (user.name || "?").trim()[0]?.toUpperCase() ?? "?";
+
   return (
     <View style={styles.root}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: topInset + 12 }]}>
-        <View style={styles.headerTop}>
-          <View>
-            <Text style={styles.headerSub}>{t("dashboard")}</Text>
-            <Text style={styles.headerName}>{user.name}</Text>
+
+      {/* ── Premium Header ─────────────────────────────────── */}
+      <View style={[styles.header, { paddingTop: topInset + 14 }]}>
+
+        {/* Ligne 1 : avatar + salutation/nom + badge rôle + notifs */}
+        <View style={styles.headerRow}>
+          <View style={[styles.headerAvatar, { backgroundColor: C.lavender + "22" }]}>
+            <Text style={[styles.headerAvatarText, { color: C.lavender }]}>{avatarInitial}</Text>
           </View>
-          <View style={[styles.planBadge, {
-            backgroundColor: user.role === "admin" ? C.error + "22" : C.gold + "22",
-            borderColor: user.role === "admin" ? C.error : C.gold,
-          }]}>
-            <Ionicons
-              name={user.role === "admin" ? "shield" : "star"}
-              size={12}
-              color={user.role === "admin" ? C.error : C.gold}
+          <View style={styles.headerMeta}>
+            <Text style={styles.headerGreeting}>{dashGreeting}</Text>
+            <Text style={styles.headerName} numberOfLines={1}>{user.name}</Text>
+          </View>
+          <View style={styles.headerRight}>
+            <View style={[
+              styles.roleBadge,
+              { backgroundColor: user.role === "admin" ? C.error + "18" : C.gold + "18",
+                borderColor:     user.role === "admin" ? C.error + "55" : C.gold + "55" },
+            ]}>
+              <Ionicons
+                name={user.role === "admin" ? "shield-checkmark" : "star"}
+                size={10}
+                color={user.role === "admin" ? C.error : C.gold}
+              />
+              <Text style={[styles.roleBadgeText, { color: user.role === "admin" ? C.error : C.gold }]}>
+                {user.role === "admin" ? "Admin" : activePlan.name}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.notifBtn, { backgroundColor: C.card, borderColor: C.border }]}
+              onPress={() => safePush("/notifications")}
+              hitSlop={8}
+              accessibilityLabel={lang === "fr" ? "Notifications" : "Notifications"}
+            >
+              <Ionicons
+                name="notifications-outline"
+                size={17}
+                color={unreadCount > 0 ? C.lavender : C.textMuted}
+              />
+              {unreadCount > 0 && (
+                <View style={[styles.notifDot, { backgroundColor: C.error }]} />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Stats 2 × 2 — chiffres réels uniquement */}
+        <View style={styles.statsGrid}>
+          <View style={styles.statsRow}>
+            <PremiumStatCard
+              icon="calendar" value={myEvents.length}
+              label={lang === "fr" ? "Événements" : "Events"}
+              color={C.lavender} C={C} onPress={() => setTab("events")}
             />
-            <Text style={[styles.planBadgeText, { color: user.role === "admin" ? C.error : C.gold }]}>
-              {user.role === "admin" ? "Admin" : activePlan.name}
-            </Text>
+            <PremiumStatCard
+              icon="business" value={myVenues.length}
+              label={lang === "fr" ? "Lieux" : "Venues"}
+              color={C.gold} C={C} onPress={() => setTab("venues")}
+            />
+          </View>
+          <View style={styles.statsRow}>
+            <PremiumStatCard
+              icon="checkmark-circle" value={approvedEventsCount}
+              label={lang === "fr" ? "Approuvés" : "Approved"}
+              color={C.success} C={C}
+            />
+            <PremiumStatCard
+              icon="hourglass-outline" value={pendingEventsCount}
+              label={lang === "fr" ? "En attente" : "Pending"}
+              color="#F59E0B" C={C}
+            />
           </View>
         </View>
 
-        {/* Stats */}
-        <View style={styles.statsRow}>
-          <StatCard icon="calendar" value={myEvents.length} label={t("myEvents")} color={C.lavender} statStyles={statStyles} />
-          <StatCard icon="business" value={myVenues.length} label={t("myVenues")} color={C.gold} statStyles={statStyles} />
-          <StatCard icon="people" value={0} label="Participants" color={C.success} statStyles={statStyles} />
-        </View>
+        {/* Actions rapides */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.quickActionsRow}
+        >
+          {quickActions.map((qa) => (
+            <TouchableOpacity
+              key={qa.label}
+              style={[
+                styles.quickAction,
+                qa.primary
+                  ? { backgroundColor: C.lavender, borderColor: C.lavender }
+                  : { backgroundColor: C.card, borderColor: C.border },
+              ]}
+              onPress={qa.onPress}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name={qa.icon as any}
+                size={16}
+                color={qa.primary ? "#fff" : C.lavender}
+              />
+              <Text style={[styles.quickActionText, { color: qa.primary ? "#fff" : C.text }]}>
+                {qa.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
-        {/* Tabs */}
+        {/* Tabs avec icônes */}
         <View style={styles.tabs}>
           {(["events", "venues", "plan"] as DashTab[]).map((dt) => (
             <TouchableOpacity
@@ -669,6 +781,11 @@ export default function DashboardScreen() {
               style={[styles.tabBtn, tab === dt && styles.tabBtnActive]}
               onPress={() => setTab(dt)}
             >
+              <Ionicons
+                name={tabIcons[dt] as any}
+                size={13}
+                color={tab === dt ? C.lavender : C.textMuted}
+              />
               <Text style={[styles.tabText, tab === dt && styles.tabTextActive]}>
                 {tabLabels[dt]}
               </Text>
@@ -916,40 +1033,49 @@ export default function DashboardScreen() {
                 // Auto-approbation : on peut éditer/annuler tant que l'event est dans le futur et pas déjà annulé.
                 const canEdit = !isPast && !isCancelled;
                 const canCancel = !isPast && !isCancelled && event.status === "approved";
+                const statusColor = getStatusColor(event.status, C);
+                const statusIcon = isCancelled ? "close-circle" : event.status === "approved" ? "checkmark-circle" : event.status === "rejected" ? "alert-circle" : "time";
                 return (
-                  <View key={event.id} style={[styles.eventRow, { flexDirection: "column", alignItems: "stretch", gap: 0 }]}>
-                    <View style={styles.eventInfo}>
-                      <Text style={styles.eventTitle} numberOfLines={2}>
-                        {lang === "fr" && event.titleFr ? event.titleFr : event.titleEn || event.titleFr}
-                      </Text>
-                      <Text style={styles.eventMeta}>
-                        {formatDateLocalized(event.date, lang)}{event.time ? ` · ${event.time}` : ""} · {event.city}
-                      </Text>
-                      {event.createdAt ? (
-                        <Text style={[styles.eventMeta, { fontSize: 11, opacity: 0.7, marginTop: 2 }]}>
-                          {lang === "fr" ? "Posté le " : "Posted on "}
-                          {formatDateTimeLocalized(event.createdAt, lang)}
+                  <View
+                    key={event.id}
+                    style={[
+                      styles.eventRow,
+                      { flexDirection: "column", alignItems: "stretch", gap: 0,
+                        borderLeftWidth: 3, borderLeftColor: statusColor },
+                    ]}
+                  >
+                    {/* Info row — icône statut + titre + meta */}
+                    <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
+                      <View style={{
+                        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                        backgroundColor: statusColor + "18",
+                        alignItems: "center", justifyContent: "center", marginTop: 1,
+                      }}>
+                        <Ionicons name={statusIcon as any} size={17} color={statusColor} />
+                      </View>
+                      <View style={[styles.eventInfo, { flex: 1, gap: 2 }]}>
+                        <Text style={[styles.eventTitle, { fontSize: 13 }]} numberOfLines={1}>
+                          {lang === "fr" && event.titleFr ? event.titleFr : event.titleEn || event.titleFr}
                         </Text>
-                      ) : null}
-                      {/* Event price hidden by product decision. */}
-                      <View style={{ flexDirection: "row", gap: 6, marginTop: 8, flexWrap: "wrap" }}>
-                        <View style={[
-                          styles.statusBadge,
-                          { backgroundColor: getStatusColor(event.status, C) + "22", borderColor: getStatusColor(event.status, C) }
-                        ]}>
-                          <Text style={[styles.statusText, { color: getStatusColor(event.status, C) }]}>
-                            {isCancelled
-                              ? (lang === "fr" ? "Annulé" : "Cancelled")
-                              : t(event.status as "pending" | "approved" | "rejected")}
-                          </Text>
-                        </View>
-                        {isPast && !isCancelled && (
-                          <View style={[styles.statusBadge, { backgroundColor: C.textMuted + "22", borderColor: C.textMuted }]}>
-                            <Text style={[styles.statusText, { color: C.textMuted }]}>
-                              {lang === "fr" ? "Passé" : "Past"}
+                        <Text style={styles.eventMeta}>
+                          {formatDateLocalized(event.date, lang)}{event.time ? ` · ${event.time}` : ""} · {event.city}
+                        </Text>
+                        <View style={{ flexDirection: "row", gap: 5, marginTop: 5, flexWrap: "wrap", alignItems: "center" }}>
+                          <View style={[styles.statusBadge, { backgroundColor: statusColor + "18", borderColor: statusColor + "55" }]}>
+                            <Text style={[styles.statusText, { color: statusColor }]}>
+                              {isCancelled
+                                ? (lang === "fr" ? "Annulé" : "Cancelled")
+                                : t(event.status as "pending" | "approved" | "rejected")}
                             </Text>
                           </View>
-                        )}
+                          {isPast && !isCancelled && (
+                            <View style={[styles.statusBadge, { backgroundColor: C.textMuted + "18", borderColor: C.textMuted + "44" }]}>
+                              <Text style={[styles.statusText, { color: C.textMuted }]}>
+                                {lang === "fr" ? "Passé" : "Past"}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
                       </View>
                     </View>
 
@@ -1433,13 +1559,41 @@ export default function DashboardScreen() {
   );
 }
 
-function StatCard({ icon, value, label, color, statStyles }: { icon: string; value: number; label: string; color: string; statStyles: ReturnType<typeof makeStatStyles> }) {
+function PremiumStatCard({
+  icon, value, label, color, C, onPress,
+}: {
+  icon: string; value: number; label: string; color: string;
+  C: ColorPalette; onPress?: () => void;
+}) {
+  const Wrapper: any = onPress ? TouchableOpacity : View;
   return (
-    <View style={statStyles.card}>
-      <Ionicons name={icon as any} size={20} color={color} />
-      <Text style={statStyles.value}>{value}</Text>
-      <Text style={statStyles.label}>{label}</Text>
-    </View>
+    <Wrapper
+      style={{
+        flex: 1,
+        backgroundColor: C.card,
+        borderRadius: 14,
+        borderWidth: 1,
+        borderColor: C.border,
+        padding: 13,
+        gap: 4,
+        activeOpacity: 0.8,
+      }}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: color + "18", alignItems: "center", justifyContent: "center" }}>
+          <Ionicons name={icon as any} size={15} color={color} />
+        </View>
+        {onPress && <Ionicons name="chevron-forward" size={12} color={C.textMuted} />}
+      </View>
+      <Text style={{ fontSize: 22, fontFamily: "Inter_700Bold", color: C.text, marginTop: 2 }}>
+        {value}
+      </Text>
+      <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: C.textMuted, lineHeight: 15 }}>
+        {label}
+      </Text>
+    </Wrapper>
   );
 }
 
@@ -1451,28 +1605,11 @@ function getStatusColor(status: string, C: ColorPalette): string {
   }
 }
 
-const makeStatStyles = (C: ColorPalette) => StyleSheet.create({
-  card: {
-    flex: 1,
-    backgroundColor: C.card,
-    borderRadius: 12,
-    padding: 12,
-    alignItems: "center",
-    gap: 4,
-    borderWidth: 1,
-    borderColor: C.border,
-  },
-  value: {
-    fontSize: 22,
-    fontFamily: "Inter_700Bold",
-    color: C.text,
-  },
-  label: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    color: C.textMuted,
-    textAlign: "center",
-  },
+// makeStatStyles conservé pour compatibilité éventuelle mais non utilisé dans le nouveau design
+const makeStatStyles = (_C: ColorPalette) => StyleSheet.create({
+  card: { flex: 1 },
+  value: {},
+  label: {},
 });
 
 const makeStyles = (C: ColorPalette) => StyleSheet.create({
@@ -1535,47 +1672,111 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
     color: C.lavender,
   },
 
-  /* Header */
+  /* ── Premium Header ── */
   header: {
     backgroundColor: C.bg,
     paddingHorizontal: 20,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
+    paddingBottom: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: C.border,
     gap: 14,
   },
-  headerTop: {
+  /* Ligne 1 : avatar + meta + badge + notifs */
+  headerRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
+    alignItems: "center",
+    gap: 12,
   },
-  headerSub: {
-    fontSize: 13,
+  headerAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  headerAvatarText: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+  },
+  headerMeta: {
+    flex: 1,
+    gap: 1,
+    minWidth: 0,
+  },
+  headerGreeting: {
+    fontSize: 11,
     fontFamily: "Inter_400Regular",
     color: C.textMuted,
+    letterSpacing: 0.3,
   },
   headerName: {
-    fontSize: 24,
+    fontSize: 18,
     fontFamily: "Inter_700Bold",
     color: C.text,
   },
-  planBadge: {
+  headerRight: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
+    gap: 8,
+    flexShrink: 0,
+  },
+  roleBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
     borderWidth: 1,
   },
-  planBadgeText: {
-    fontSize: 12,
+  roleBadgeText: {
+    fontSize: 11,
     fontFamily: "Inter_600SemiBold",
+  },
+  notifBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+  },
+  notifDot: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+  },
+  /* Stats 2×2 */
+  statsGrid: {
+    gap: 8,
   },
   statsRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: 8,
   },
+  /* Quick actions */
+  quickActionsRow: {
+    gap: 8,
+    paddingRight: 4,
+  },
+  quickAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  quickActionText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+  },
+  /* Tabs */
   tabs: {
     flexDirection: "row",
     backgroundColor: C.card,
@@ -1584,17 +1785,20 @@ const makeStyles = (C: ColorPalette) => StyleSheet.create({
     borderColor: C.border,
     padding: 4,
     gap: 4,
-    marginBottom: 4,
+    marginBottom: 2,
   },
   tabBtn: {
     flex: 1,
-    paddingVertical: 8,
+    flexDirection: "row",
+    paddingVertical: 7,
     borderRadius: 8,
     alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
   },
   tabBtnActive: { backgroundColor: C.card2 },
   tabText: {
-    fontSize: 12,
+    fontSize: 11,
     fontFamily: "Inter_500Medium",
     color: C.textMuted,
   },
