@@ -23,6 +23,7 @@ import { API_BASE } from "@/lib/apiBase";
 interface PartnerPublic {
   id: string;
   businessName: string;
+  displayName: string | null;
   businessType: string;
   city: string;
   description: string | null;
@@ -187,11 +188,11 @@ export default function PartnerPublicPage() {
       <View style={styles.hero}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
           <View style={styles.avatarBig}>
-            <Text style={styles.avatarText}>{partner.businessName.charAt(0).toUpperCase()}</Text>
+            <Text style={styles.avatarText}>{(partner.displayName || partner.businessName).charAt(0).toUpperCase()}</Text>
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.type}>{partner.businessType}</Text>
-            <Text style={styles.name}>{partner.businessName}</Text>
+            <Text style={styles.name}>{partner.displayName || partner.businessName}</Text>
             <View style={styles.metaRow}>
               <Ionicons name="location-outline" size={14} color={C.textMuted} />
               <Text style={styles.meta}>{partner.city}</Text>

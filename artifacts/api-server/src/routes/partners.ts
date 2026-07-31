@@ -396,6 +396,7 @@ router.get("/partners/:id/public", async (req, res) => {
     partner: {
       id: String(partner.id),
       businessName: partner.businessName,
+      displayName: partner.displayName ?? null,
       businessType: partner.businessType,
       city: partner.city,
       description: partner.description,
