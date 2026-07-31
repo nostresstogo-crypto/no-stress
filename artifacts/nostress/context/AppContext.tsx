@@ -133,6 +133,7 @@ interface AppContextValue {
   setRefreshToken: (token: string | null) => void;
   setSession: (token: string | null, refreshToken: string | null) => void;
   authFetch: (url: string, init?: RequestInit) => Promise<Response>;
+  refreshPartnerProfile: () => Promise<void>;
   favorites: string[];
   toggleFavorite: (eventId: string) => void;
   isFavorite: (eventId: string) => boolean;
@@ -891,6 +892,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       user, setUser,
       token, setToken,
       refreshToken, setRefreshToken, setSession, authFetch,
+      refreshPartnerProfile,
       favorites, toggleFavorite, isFavorite,
       favoriteVenues, toggleFavoriteVenue, isFavoriteVenue, syncFavoritesFromBackend,
       notifications, addNotification, markAllRead, removeNotification, unreadCount,
@@ -912,6 +914,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       user, setUser,
       token, setToken,
       refreshToken, setRefreshToken, setSession, authFetch,
+      refreshPartnerProfile,
       favorites, toggleFavorite, isFavorite,
       favoriteVenues, toggleFavoriteVenue, isFavoriteVenue, syncFavoritesFromBackend,
       notifications, addNotification, markAllRead, removeNotification, unreadCount,

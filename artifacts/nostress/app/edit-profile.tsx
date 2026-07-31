@@ -49,7 +49,7 @@ export default function EditProfileScreen() {
   const t = useT();
   const C = useColors();
   const insets = useSafeAreaInsets();
-  const { user, setUser, authFetch, lang, logout } = useApp();
+  const { user, setUser, authFetch, lang, logout, refreshPartnerProfile } = useApp();
   const styles = useMemo(() => makeStyles(C), [C]);
 
   const isPartner = user?.role === "structure";
@@ -137,21 +137,23 @@ export default function EditProfileScreen() {
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.error || "Erreur");
-      const updated = data.user || data.partner;
-      if (updated) {
-        await setUser({
-          ...user,
-          name: updated.name || updated.contactName || user.name,
-          phone: updated.phone || user.phone,
-          ...(updated.profileImage ? { avatarUrl: updated.profileImage } : {}),
-          ...(isPartner
-            ? { businessName: updated.businessName, city: updated.city, displayName: updated.displayName ?? null }
-            : {
-                firstName: updated.firstName ?? firstName,
-                lastName: updated.lastName ?? lastName,
-                gender: updated.gender ?? gender,
-              }),
-        } as any);
+      if (isPartner) {
+        // Re-fetch from GET /partners/me so the same field-mapping logic
+        // used by the AppState resume refresh is applied consistently.
+        await refreshPartnerProfile();
+      } else {
+        const updated = data.user;
+        if (updated) {
+          await setUser({
+            ...user,
+            name: updated.name || user.name,
+            phone: updated.phone || user.phone,
+            ...(updated.profileImage ? { avatarUrl: updated.profileImage } : {}),
+            firstName: updated.firstName ?? firstName,
+            lastName: updated.lastName ?? lastName,
+            gender: updated.gender ?? gender,
+          } as any);
+        }
       }
       Alert.alert(t("profileUpdated"));
     } catch (e: any) {
