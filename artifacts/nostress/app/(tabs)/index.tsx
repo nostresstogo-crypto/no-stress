@@ -26,9 +26,10 @@ import { parseDateLocal } from "@/lib/formatDate";
 import {
   Fonts, FontSize, LetterSpacing,
 } from "@/constants/typography";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CategoryPill } from "@/components/CategoryPill";
 import { CategoryKey } from "@/constants/data";
-import { CitySelector } from "@/components/CitySelector";
+import { LocationPickerModal } from "@/components/LocationPickerModal";
 import { EventCard } from "@/components/EventCard";
 import { VenueCard } from "@/components/VenueCard";
 import { PremiumHeroCarousel } from "@/components/home/PremiumHeroCarousel";
@@ -153,7 +154,7 @@ const fc = StyleSheet.create({
 export default function HomeScreen() {
   const t = useT();
   const C = useColors();
-  const { lang, selectedCity, setSelectedCity, selectedCategory, setSelectedCategory, configEventCategories, unreadCount } = useApp();
+  const { lang, selectedCity, setSelectedCity, selectedCategory, setSelectedCategory, configEventCategories, configCities, unreadCount } = useApp();
   const insets = useSafeAreaInsets();
   const lowData = useLowDataMode();
   const [refreshing, setRefreshing]       = useState(false);
@@ -172,6 +173,9 @@ export default function HomeScreen() {
   // Pagination de "Tous les événements"
   const PAGE_SIZE = 15;
   const [visibleCount, setVisibleCount]       = useState(PAGE_SIZE);
+  // Localisation
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
+  const [usingGPS, setUsingGPS]               = useState(false);
 
   // Commodité : vrai quand toutes les sections ont fini
   const loading = heroLoading && popularLoading && allLoading;
@@ -180,6 +184,24 @@ export default function HomeScreen() {
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const greeting = useMemo(() => getGreeting(lang), [lang]);
+
+  // Nom affiché de la ville sélectionnée (slug → name)
+  const selectedCityName = useMemo(() => {
+    if (!selectedCity) return null;
+    const found = configCities.find((c) => c.slug === selectedCity);
+    return found?.name ?? selectedCity;
+  }, [selectedCity, configCities]);
+
+  const locationLabel = usingGPS
+    ? (lang === "fr" ? "Ma position" : "My location")
+    : selectedCityName ?? (lang === "fr" ? "Choisir une localisation" : "Choose a location");
+
+  // Persistance GPS mode
+  useEffect(() => {
+    AsyncStorage.getItem("ns_using_gps")
+      .then((v) => { if (v === "true") setUsingGPS(true); })
+      .catch(() => {});
+  }, []);
 
   // Chargement progressif — chaque endpoint révèle sa section dès qu'il répond
   const loadEvents = useCallback(async () => {
@@ -320,13 +342,80 @@ export default function HomeScreen() {
       {/* ── Fixed header ─────────────────────────────────────────────────── */}
       <View style={[s.header, { paddingTop: topInset + 8, backgroundColor: C.bg, borderBottomColor: C.border }]}>
 
-        {/* Row 1: greeting + city + favorites */}
+        {/* Row 1: salutation + localisation | recherche + filtres + favoris + notifs */}
         <View style={s.headerTop}>
           <View style={s.greetingCol}>
             <Text style={[s.greeting, { color: C.textMuted }]}>{greeting}</Text>
-            <CitySelector value={selectedCity} onChange={setSelectedCity} />
+            {/* Bouton localisation premium */}
+            <TouchableOpacity
+              style={[
+                s.locationBtn,
+                {
+                  backgroundColor: C.card,
+                  borderColor: selectedCity || usingGPS ? C.lavender : C.border,
+                },
+              ]}
+              onPress={() => setShowLocationPicker(true)}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel={lang === "fr" ? "Choisir une localisation" : "Choose a location"}
+              hitSlop={4}
+            >
+              <Ionicons
+                name="location"
+                size={13}
+                color={selectedCity || usingGPS ? C.lavender : C.gold}
+              />
+              <Text
+                style={[
+                  s.locationBtnText,
+                  { color: selectedCity || usingGPS ? C.lavender : C.text },
+                ]}
+                numberOfLines={1}
+              >
+                {locationLabel}
+              </Text>
+              <Ionicons name="chevron-down" size={11} color={C.textMuted} />
+            </TouchableOpacity>
           </View>
+
           <View style={s.headerActions}>
+            {/* Recherche */}
+            <TouchableOpacity
+              onPress={() => safePush("/search")}
+              style={[s.headerActionBtn, { backgroundColor: C.card, borderColor: C.border }]}
+              accessibilityLabel={lang === "fr" ? "Rechercher" : "Search"}
+              accessibilityRole="button"
+              hitSlop={8}
+            >
+              <Ionicons name="search-outline" size={18} color={C.textMuted} />
+            </TouchableOpacity>
+            {/* Filtres */}
+            <TouchableOpacity
+              onPress={openFilters}
+              style={[
+                s.headerActionBtn,
+                {
+                  backgroundColor: activeFilterCount > 0 ? C.lavender + "15" : C.card,
+                  borderColor: activeFilterCount > 0 ? C.lavender : C.border,
+                },
+              ]}
+              accessibilityLabel={lang === "fr" ? "Filtres" : "Filters"}
+              accessibilityRole="button"
+              hitSlop={8}
+            >
+              <Ionicons
+                name="options-outline"
+                size={18}
+                color={activeFilterCount > 0 ? C.lavender : C.textMuted}
+              />
+              {activeFilterCount > 0 && (
+                <View style={[s.headerBadge, { backgroundColor: C.lavender }]}>
+                  <Text style={s.headerBadgeText}>{activeFilterCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+            {/* Favoris */}
             <TouchableOpacity
               onPress={() => safePush("/favorites")}
               style={[s.headerActionBtn, { backgroundColor: C.card, borderColor: C.border }]}
@@ -334,8 +423,9 @@ export default function HomeScreen() {
               accessibilityRole="button"
               hitSlop={8}
             >
-              <Ionicons name="heart-outline" size={20} color={C.lavender} />
+              <Ionicons name="heart-outline" size={18} color={C.lavender} />
             </TouchableOpacity>
+            {/* Notifications */}
             <TouchableOpacity
               onPress={() => safePush("/notifications")}
               style={[s.headerActionBtn, { backgroundColor: C.card, borderColor: C.border }]}
@@ -343,7 +433,11 @@ export default function HomeScreen() {
               accessibilityRole="button"
               hitSlop={8}
             >
-              <Ionicons name="notifications-outline" size={20} color={unreadCount > 0 ? C.lavender : C.textMuted} />
+              <Ionicons
+                name="notifications-outline"
+                size={18}
+                color={unreadCount > 0 ? C.lavender : C.textMuted}
+              />
               {unreadCount > 0 && (
                 <View style={[s.headerBadge, { backgroundColor: C.error }]}>
                   <Text style={s.headerBadgeText}>{unreadCount > 9 ? "9+" : String(unreadCount)}</Text>
@@ -352,48 +446,28 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </View>
-
-        {/* Row 2: search bar */}
-        <TouchableOpacity
-          style={[s.searchBar, { backgroundColor: C.card, borderColor: C.border }]}
-          onPress={() => router.push("/search")}
-          activeOpacity={0.8}
-          accessibilityRole="search"
-          accessibilityLabel={lang === "fr" ? "Rechercher" : "Search"}
-        >
-          <Ionicons name="search-outline" size={18} color={C.textMuted} />
-          <Text style={[s.searchText, { color: C.textMuted }]}>
-            {lang === "fr" ? "Trouver une sortie, un lieu…" : "Find an event, a place…"}
-          </Text>
-          <TouchableOpacity
-            onPress={openFilters}
-            style={[s.filterPill, { backgroundColor: activeFilterCount > 0 ? C.lavender : C.card2, borderColor: activeFilterCount > 0 ? C.lavender : C.border }]}
-            hitSlop={8}
-            accessibilityLabel={lang === "fr" ? "Filtres" : "Filters"}
-          >
-            <Ionicons name="options-outline" size={15} color={activeFilterCount > 0 ? "#fff" : C.textMuted} />
-            {activeFilterCount > 0 ? (
-              <Text style={s.filterCount}>{activeFilterCount}</Text>
-            ) : null}
-          </TouchableOpacity>
-        </TouchableOpacity>
-
-        {/* Row 3: categories */}
-        <ScrollView
-          horizontal showsHorizontalScrollIndicator={false}
-          contentContainerStyle={s.catList}
-        >
-          <CategoryPill categoryKey="" selected={!selectedCategory} onPress={() => setSelectedCategory("")} />
-          {configEventCategories.map((cat) => (
-            <CategoryPill
-              key={cat.key}
-              categoryKey={cat.key as CategoryKey}
-              selected={selectedCategory === cat.key}
-              onPress={() => setSelectedCategory(selectedCategory === cat.key ? "" : cat.key as CategoryKey)}
-            />
-          ))}
-        </ScrollView>
       </View>
+
+      {/* ── Location picker modal (Phase 1C) ──────────────────────────────── */}
+      <LocationPickerModal
+        visible={showLocationPicker}
+        onClose={() => setShowLocationPicker(false)}
+        onSelectCity={(slug, _name) => {
+          setSelectedCity(slug);
+          setUsingGPS(false);
+          AsyncStorage.setItem("ns_using_gps", "false").catch(() => {});
+          setShowLocationPicker(false);
+        }}
+        onSelectGPS={(slug, _name) => {
+          setSelectedCity(slug);
+          setUsingGPS(true);
+          AsyncStorage.setItem("ns_using_gps", "true").catch(() => {});
+          setShowLocationPicker(false);
+        }}
+        currentCity={selectedCity}
+        usingGPS={usingGPS}
+        lang={lang}
+      />
 
       {/* ── Scrollable body ──────────────────────────────────────────────── */}
       <ScrollView
@@ -684,8 +758,23 @@ const s = StyleSheet.create({
   },
   headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
   headerActionBtn: {
-    width: 40, height: 40, borderRadius: 20, borderWidth: 1,
+    width: 36, height: 36, borderRadius: 18, borderWidth: 1,
     alignItems: "center", justifyContent: "center",
+  },
+  locationBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    maxWidth: 180,
+  },
+  locationBtnText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    flexShrink: 1,
   },
   headerBadge: {
     position: "absolute", top: -3, right: -3,

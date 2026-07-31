@@ -570,7 +570,7 @@ export default function VenueDetailScreen() {
                   </View>
                 ))
               )}
-              {!!apiNumId && !(user?.role === "structure" && apiVenue?.partnerId === user?.id) && (
+              {!!apiNumId && !(user?.role === "structure" && (apiVenue as any)?.partnerId === user?.id) && (
                 <>
                   <TouchableOpacity
                     onPress={() => {
