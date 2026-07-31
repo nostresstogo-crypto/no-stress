@@ -128,6 +128,19 @@ function makeStyles(C: ColorPalette) {
     listRightActions: { flexDirection: "row", alignItems: "center" },
     listHeartBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
 
+    // ── favorite heart button ─────────────────────────────────────────────
+    heartBtn: {
+      width: 30, height: 30,
+      borderRadius: 15,
+      backgroundColor: "rgba(0,0,0,0.30)",
+      alignItems: "center", justifyContent: "center",
+    },
+    heartBtnLight: {
+      backgroundColor: "rgba(255,255,255,0.12)",
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.18)",
+    },
+
     // ── venueFeatured (large featured card, used in grid / top spot) ──────
     featuredCard: {
       borderRadius: 20, overflow: "hidden",
