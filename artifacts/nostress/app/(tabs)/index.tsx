@@ -14,8 +14,6 @@ import {
   Platform,
   RefreshControl,
 } from "react-native";
-import { Image } from "expo-image";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
@@ -26,17 +24,14 @@ import { ColorPalette } from "@/constants/colors";
 import { parseDateLocal } from "@/lib/formatDate";
 import {
   Fonts, FontSize, LetterSpacing,
-  caption, bodySmall, bodyMedium, labelLarge, labelMedium,
-  headingMedium, headingSmall,
 } from "@/constants/typography";
 import { CategoryPill } from "@/components/CategoryPill";
 import { CategoryKey } from "@/constants/data";
 import { CitySelector } from "@/components/CitySelector";
 import { EventCard } from "@/components/EventCard";
+import { VenueCard } from "@/components/VenueCard";
 import { PremiumHeroCarousel } from "@/components/home/PremiumHeroCarousel";
-import { HomeEventCard } from "@/components/home/HomeEventCard";
 import { API_BASE } from "@/lib/apiBase";
-import { thumbUrl } from "@/lib/imageUrl";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type ApiEvent = {
@@ -133,52 +128,6 @@ const sh = StyleSheet.create({
   seeAll: { fontFamily: Fonts.semiBold, fontSize: FontSize.sm, letterSpacing: LetterSpacing.wide },
 });
 
-// ─── Venue card inline (premium) ──────────────────────────────────────────────
-function PremiumVenueCard({ item, onPress, C }: { item: any; onPress: () => void; C: ColorPalette }) {
-  const imgUri = thumbUrl(item.imageUrl, 220, 140) ?? item.imageUrl ?? null;
-  return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.88}
-      style={[vc.card, { backgroundColor: C.card, borderColor: C.border }]}>
-      <View style={vc.imgWrap}>
-        {imgUri ? (
-          <Image source={{ uri: imgUri }} style={StyleSheet.absoluteFill} contentFit="cover" cachePolicy="disk" transition={200} />
-        ) : (
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: C.card2, alignItems: "center", justifyContent: "center" }]}>
-            <Ionicons name="business-outline" size={28} color={C.textMuted} />
-          </View>
-        )}
-        <LinearGradient
-          colors={["transparent", "rgba(8,6,22,0.6)"]}
-          style={StyleSheet.absoluteFill}
-        />
-        {item.type ? (
-          <View style={[vc.badge, { backgroundColor: C.lavender + "28", borderColor: C.lavender + "50" }]}>
-            <Text style={[vc.badgeText, { color: C.lavender }]}>{item.type.toUpperCase()}</Text>
-          </View>
-        ) : null}
-      </View>
-      <View style={vc.info}>
-        <Text numberOfLines={1} style={[vc.name, { color: C.text }]}>{item.name}</Text>
-        {item.city ? (
-          <View style={vc.metaRow}>
-            <Ionicons name="location-outline" size={11} color={C.textMuted} />
-            <Text numberOfLines={1} style={[vc.meta, { color: C.textMuted }]}>{item.city}</Text>
-          </View>
-        ) : null}
-      </View>
-    </TouchableOpacity>
-  );
-}
-const vc = StyleSheet.create({
-  card: { width: 190, borderRadius: 18, overflow: "hidden", borderWidth: 1 },
-  imgWrap: { height: 130, position: "relative" },
-  badge: { position: "absolute", top: 10, left: 10, borderRadius: 20, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 3 },
-  badgeText: { ...caption, letterSpacing: LetterSpacing.widest },
-  info: { padding: 11, gap: 4 },
-  name: { fontFamily: Fonts.semiBold, fontSize: FontSize.base, letterSpacing: LetterSpacing.tight },
-  metaRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  meta: { ...bodySmall, flexShrink: 1 },
-});
 
 // ─── Filter chip ──────────────────────────────────────────────────────────────
 function Chip({ label, active, onPress, C }: { label: string; active: boolean; onPress: () => void; C: ColorPalette }) {
@@ -344,12 +293,21 @@ export default function HomeScreen() {
       {/* ── Fixed header ─────────────────────────────────────────────────── */}
       <View style={[s.header, { paddingTop: topInset + 8, backgroundColor: C.bg, borderBottomColor: C.border }]}>
 
-        {/* Row 1: greeting + city */}
+        {/* Row 1: greeting + city + favorites */}
         <View style={s.headerTop}>
           <View style={s.greetingCol}>
             <Text style={[s.greeting, { color: C.textMuted }]}>{greeting}</Text>
             <CitySelector value={selectedCity} onChange={setSelectedCity} />
           </View>
+          <TouchableOpacity
+            onPress={() => safePush("/favorites")}
+            style={[s.favHeaderBtn, { backgroundColor: C.card, borderColor: C.border }]}
+            accessibilityLabel={lang === "fr" ? "Mes favoris" : "My favorites"}
+            accessibilityRole="button"
+            hitSlop={8}
+          >
+            <Ionicons name="heart-outline" size={20} color={C.lavender} />
+          </TouchableOpacity>
         </View>
 
         {/* Row 2: search bar */}
@@ -439,9 +397,9 @@ export default function HomeScreen() {
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={s.hList}
                   renderItem={({ item }) => (
-                    <HomeEventCard
+                    <EventCard
                       event={item}
-                      variant="featured"
+                      variant="horizontal"
                       onPress={() => safePush(`/event/${item.id}`)}
                     />
                   )}
@@ -465,24 +423,16 @@ export default function HomeScreen() {
                   {[0, 1, 2].map((i) => <SkeletonCard key={i} C={C} width={200} height={190} />)}
                 </ScrollView>
               ) : (
-                <FlatList
-                  horizontal
-                  data={upcomingEvents.map((e) => ({
-                    id: e.id, title: e.title, titleFr: e.titleFr,
-                    category: e.category, date: e.date, time: e.time,
-                    venue: e.venue, city: e.city, imageUrl: e.imageUrl,
-                  }))}
-                  keyExtractor={(e) => "up_" + e.id}
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={s.hList}
-                  renderItem={({ item }) => (
-                    <HomeEventCard
+                <View style={s.vList}>
+                  {upcomingEvents.map((item) => (
+                    <EventCard
+                      key={"up_" + item.id}
                       event={item}
-                      variant="compact"
+                      variant="homeCompact"
                       onPress={() => safePush(`/event/${item.id}`)}
                     />
-                  )}
-                />
+                  ))}
+                </View>
               )}
             </View>
           )}
@@ -509,10 +459,20 @@ export default function HomeScreen() {
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={s.hList}
                   renderItem={({ item }) => (
-                    <PremiumVenueCard
-                      item={item}
+                    <VenueCard
+                      venue={{
+                        id: String(item.id),
+                        name: item.name || "",
+                        type: item.type || "",
+                        city: item.city || "",
+                        address: item.address,
+                        imageUrl: item.imageUrl,
+                        blurhash: item.blurhash ?? null,
+                        description: item.description,
+                        isVerified: !!item.isVerified,
+                      }}
+                      variant="homePremium"
                       onPress={() => safePush(`/venue/api_${item.id}`)}
-                      C={C}
                     />
                   )}
                 />
@@ -656,6 +616,14 @@ const s = StyleSheet.create({
     fontFamily: Fonts.medium,
     fontSize: FontSize.sm,
     letterSpacing: LetterSpacing.wide,
+  },
+  favHeaderBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   /* Search bar */

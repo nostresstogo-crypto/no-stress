@@ -17,7 +17,6 @@ import { router, useFocusEffect } from "expo-router";
 import { safePush } from "@/lib/navigation";
 
 import { useT, useApp, useColors } from "@/context/AppContext";
-import { EventCard } from "@/components/EventCard";
 import { ColorPalette } from "@/constants/colors";
 import { LANG_LABELS, type Lang } from "@/constants/i18n";
 import { formatDateTimeLocalized } from "@/lib/formatDate";
@@ -26,7 +25,7 @@ import { API_BASE } from "@/lib/apiBase";
 const SUPPORT_WHATSAPP = "+22872770767";
 const SUPPORT_WHATSAPP_URL = `https://wa.me/${SUPPORT_WHATSAPP.replace(/[^0-9]/g, "")}?text=${encodeURIComponent("Bonjour NoStress, j'ai besoin d'aide.")}`;
 
-type Tab = "favorites" | "notifications";
+type Tab = "notifications";
 
 const DELETION_REASONS = [
   { key: "not_useful", labelFr: "Je n'utilise plus l'application", labelEn: "I no longer use the app" },
@@ -240,9 +239,9 @@ function makeStyles(C: ColorPalette) {
 export default function AccountScreen() {
   const t = useT();
   const C = useColors();
-  const { user, lang, setLang, logout, favorites, favoriteVenues, notifications, markAllRead, removeNotification, unreadCount, isDark, themeMode, setThemeMode, locationNotificationsEnabled, setLocationNotificationsEnabled, selectedCity, nearbyEventsCount, apiEvents, refreshApiEvents, syncMyEventsFromBackend } = useApp();
+  const { user, lang, setLang, logout, notifications, markAllRead, removeNotification, unreadCount, isDark, themeMode, setThemeMode, locationNotificationsEnabled, setLocationNotificationsEnabled, selectedCity, nearbyEventsCount, refreshApiEvents, syncMyEventsFromBackend } = useApp();
   const insets = useSafeAreaInsets();
-  const [tab, setTab] = useState<Tab>("favorites");
+  const [tab, setTab] = useState<Tab>("notifications");
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const styles = useMemo(() => makeStyles(C), [C]);
 
@@ -255,10 +254,6 @@ export default function AccountScreen() {
   }, [user]));
 
   const [deletionLoading, setDeletionLoading] = useState(false);
-
-  const FAV_PAGE_SIZE = 3;
-  const [favEventPage, setFavEventPage] = useState(0);
-  const [favVenuePage, setFavVenuePage] = useState(0);
 
   const handleDeleteAccount = () => {
     if (!user) return;
@@ -319,54 +314,6 @@ export default function AccountScreen() {
     ]);
   };
 
-  const favoriteEvents = apiEvents
-    .filter((e) => favorites.includes(String(e.id)))
-    .map((e) => ({
-      id: String(e.id),
-      title: e.title || e.titleFr || "",
-      titleFr: e.titleFr || e.title || "",
-      date: e.date,
-      time: e.time || "",
-      venue: e.venue || "",
-      city: e.city || "",
-      category: e.category || "",
-      imageUrl: e.imageUrl,
-      blurhash: (e as any).blurhash ?? null,
-      price: typeof e.price === "number" ? e.price : 0,
-      status: e.status || "approved",
-    }));
-
-  const [venueNameCache, setVenueNameCache] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (favoriteVenues.length === 0) return;
-    const idsToFetch = favoriteVenues.filter((vid) => {
-      const numId = vid.startsWith("api_") ? vid.slice(4) : vid;
-      return !venueNameCache[numId];
-    });
-    if (idsToFetch.length === 0) return;
-    Promise.all(
-      idsToFetch.map(async (vid) => {
-        const numId = vid.startsWith("api_") ? vid.slice(4) : vid;
-        try {
-          const r = await fetch(`${API_BASE}/venues/${numId}`);
-          if (!r.ok) return null;
-          const data = await r.json();
-          return [numId, data.name || ""] as [string, string];
-        } catch {
-          return null;
-        }
-      })
-    ).then((results) => {
-      const map: Record<string, string> = {};
-      for (const result of results) {
-        if (result && result[1]) map[result[0]] = result[1];
-      }
-      if (Object.keys(map).length > 0) {
-        setVenueNameCache((prev) => ({ ...prev, ...map }));
-      }
-    });
-  }, [favoriteVenues]);
 
   if (!user) {
     return (
@@ -664,26 +611,17 @@ export default function AccountScreen() {
         )}
       </View>
 
-      {/* Tabs */}
+      {/* Tab: Notifications */}
       <View style={styles.tabs}>
         <TouchableOpacity
-          style={[styles.tabBtn, tab === "favorites" && styles.tabBtnActive]}
-          onPress={() => setTab("favorites")}
+          style={[styles.tabBtn, styles.tabBtnActive]}
+          onPress={() => markAllRead()}
         >
-          <Ionicons name="heart" size={16} color={tab === "favorites" ? C.lavender : C.textMuted} />
-          <Text style={[styles.tabText, tab === "favorites" && styles.tabTextActive]}>
-            {t("favorites")}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tabBtn, tab === "notifications" && styles.tabBtnActive]}
-          onPress={() => { setTab("notifications"); markAllRead(); }}
-        >
-          <Ionicons name="notifications" size={16} color={tab === "notifications" ? C.lavender : C.textMuted} />
-          <Text style={[styles.tabText, tab === "notifications" && styles.tabTextActive]}>
+          <Ionicons name="notifications" size={16} color={C.lavender} />
+          <Text style={[styles.tabText, styles.tabTextActive]}>
             {t("notifications")}
           </Text>
-          {unreadCount > 0 && tab !== "notifications" && (
+          {unreadCount > 0 && (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>{unreadCount}</Text>
             </View>
@@ -691,90 +629,7 @@ export default function AccountScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Tab content */}
-      {tab === "favorites" ? (
-        favoriteEvents.length > 0 || favoriteVenues.length > 0 ? (
-          <>
-            {/* Événements favoris paginés */}
-            {favoriteEvents.slice(favEventPage * FAV_PAGE_SIZE, (favEventPage + 1) * FAV_PAGE_SIZE).map((e) => (
-              <EventCard key={e.id} event={e} onPress={() => safePush(`/event/${e.id}`)} />
-            ))}
-            {favoriteEvents.length > FAV_PAGE_SIZE && (
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginVertical: 6 }}>
-                <TouchableOpacity
-                  onPress={() => setFavEventPage((p) => Math.max(0, p - 1))}
-                  disabled={favEventPage === 0}
-                  style={{ padding: 6, opacity: favEventPage === 0 ? 0.3 : 1 }}
-                >
-                  <Ionicons name="chevron-back" size={20} color={C.lavender} />
-                </TouchableOpacity>
-                <Text style={{ fontSize: 12, color: C.textMuted, fontFamily: "Inter_400Regular" }}>
-                  {favEventPage + 1} / {Math.ceil(favoriteEvents.length / FAV_PAGE_SIZE)}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => setFavEventPage((p) => Math.min(Math.ceil(favoriteEvents.length / FAV_PAGE_SIZE) - 1, p + 1))}
-                  disabled={favEventPage >= Math.ceil(favoriteEvents.length / FAV_PAGE_SIZE) - 1}
-                  style={{ padding: 6, opacity: favEventPage >= Math.ceil(favoriteEvents.length / FAV_PAGE_SIZE) - 1 ? 0.3 : 1 }}
-                >
-                  <Ionicons name="chevron-forward" size={20} color={C.lavender} />
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* Lieux favoris paginés */}
-            {favoriteVenues.length > 0 && (
-              <>
-                <Text style={{ fontSize: 14, fontFamily: "Inter_700Bold", color: C.text, marginTop: 8 }}>
-                  {t("favoriteVenues")}
-                </Text>
-                {favoriteVenues.slice(favVenuePage * FAV_PAGE_SIZE, (favVenuePage + 1) * FAV_PAGE_SIZE).map((vid) => {
-                  const numId = vid.startsWith("api_") ? vid.slice(4) : vid;
-                  const navId = vid.startsWith("api_") ? vid : `api_${vid}`;
-                  const displayName = venueNameCache[numId]
-                    || (lang === "fr" ? `Lieu #${numId}` : `Venue #${numId}`);
-                  return (
-                    <TouchableOpacity
-                      key={`fv_${vid}`}
-                      style={[styles.notifCard, { alignItems: "center" }]}
-                      onPress={() => safePush(`/venue/${navId}`)}
-                    >
-                      <Ionicons name="location" size={20} color={C.lavender} />
-                      <Text style={[styles.notifTitle, { flex: 1 }]}>{displayName}</Text>
-                      <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
-                    </TouchableOpacity>
-                  );
-                })}
-                {favoriteVenues.length > FAV_PAGE_SIZE && (
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginVertical: 6 }}>
-                    <TouchableOpacity
-                      onPress={() => setFavVenuePage((p) => Math.max(0, p - 1))}
-                      disabled={favVenuePage === 0}
-                      style={{ padding: 6, opacity: favVenuePage === 0 ? 0.3 : 1 }}
-                    >
-                      <Ionicons name="chevron-back" size={20} color={C.lavender} />
-                    </TouchableOpacity>
-                    <Text style={{ fontSize: 12, color: C.textMuted, fontFamily: "Inter_400Regular" }}>
-                      {favVenuePage + 1} / {Math.ceil(favoriteVenues.length / FAV_PAGE_SIZE)}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => setFavVenuePage((p) => Math.min(Math.ceil(favoriteVenues.length / FAV_PAGE_SIZE) - 1, p + 1))}
-                      disabled={favVenuePage >= Math.ceil(favoriteVenues.length / FAV_PAGE_SIZE) - 1}
-                      style={{ padding: 6, opacity: favVenuePage >= Math.ceil(favoriteVenues.length / FAV_PAGE_SIZE) - 1 ? 0.3 : 1 }}
-                    >
-                      <Ionicons name="chevron-forward" size={20} color={C.lavender} />
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </>
-            )}
-          </>
-        ) : (
-          <View style={styles.empty}>
-            <Ionicons name="heart-outline" size={48} color={C.border} />
-            <Text style={styles.emptyText}>{t("noFavorites")}</Text>
-          </View>
-        )
-      ) : (
+      {(
         notifications.length > 0 ? (
           notifications.map((n) => (
             <View key={n.id} style={[styles.notifCard, !n.read && styles.notifUnread]}>
