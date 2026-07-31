@@ -71,7 +71,7 @@ router.post("/feedback", upload.array("screenshots", 5), async (req, res) => {
     return res.status(502).json({ error: "Le service de messagerie est temporairement indisponible. Veuillez réessayer plus tard." });
   }
 
-  res.status(201).json({ message: "Feedback envoyé avec succès. Merci pour votre retour !" });
+  return res.status(201).json({ message: "Feedback envoyé avec succès. Merci pour votre retour !" });
 });
 
 export default router;

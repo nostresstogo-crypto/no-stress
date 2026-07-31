@@ -153,7 +153,7 @@ ensureConfigSeeded();
 
 router.get("/config/countries", async (_req, res) => {
   const rows = await db.select().from(countriesTable).orderBy(asc(countriesTable.name));
-  res.json({ countries: rows });
+  return res.json({ countries: rows });
 });
 
 router.get("/config/cities", async (req, res) => {
@@ -178,17 +178,17 @@ router.get("/config/cities", async (req, res) => {
     ? await query.where(eq(citiesTable.countryId, countryId))
     : await query;
 
-  res.json({ cities: rows });
+  return res.json({ cities: rows });
 });
 
 router.get("/config/event-categories", async (_req, res) => {
   const rows = await db.select().from(eventCategoriesTable).orderBy(asc(eventCategoriesTable.sortOrder), asc(eventCategoriesTable.labelFr));
-  res.json({ eventCategories: rows });
+  return res.json({ eventCategories: rows });
 });
 
 router.get("/config/venue-types", async (_req, res) => {
   const rows = await db.select().from(venueTypesTable).orderBy(asc(venueTypesTable.sortOrder), asc(venueTypesTable.labelFr));
-  res.json({ venueTypes: rows });
+  return res.json({ venueTypes: rows });
 });
 
 // ─── Admin CRUD — Countries ────────────────────────────────────────────────────
@@ -198,7 +198,7 @@ router.post("/admin/config/countries", requireAdmin, async (req, res) => {
   if (!code || !name) return res.status(400).json({ error: "code et name requis." });
   try {
     const [row] = await db.insert(countriesTable).values({ code: String(code).toUpperCase().trim(), name: String(name).trim(), emoji: emoji || "🌍" }).returning();
-    res.status(201).json({ country: row });
+    return res.status(201).json({ country: row });
   } catch (e: any) {
     if (e?.code === "23505") return res.status(409).json({ error: "Ce code pays existe déjà." });
     throw e;
@@ -215,7 +215,7 @@ router.patch("/admin/config/countries/:id", requireAdmin, async (req, res) => {
   if (!Object.keys(patch).length) return res.status(400).json({ error: "Aucun champ à modifier." });
   const [row] = await db.update(countriesTable).set(patch).where(eq(countriesTable.id, id)).returning();
   if (!row) return res.status(404).json({ error: "Pays introuvable." });
-  res.json({ country: row });
+  return res.json({ country: row });
 });
 
 router.delete("/admin/config/countries/:id", requireAdmin, async (req, res) => {
@@ -230,7 +230,7 @@ router.delete("/admin/config/countries/:id", requireAdmin, async (req, res) => {
   }
   const [deleted] = await db.delete(countriesTable).where(eq(countriesTable.id, id)).returning();
   if (!deleted) return res.status(404).json({ error: "Pays introuvable." });
-  res.json({ deleted });
+  return res.json({ deleted });
 });
 
 // ─── Admin CRUD — Cities ───────────────────────────────────────────────────────
@@ -247,7 +247,7 @@ router.post("/admin/config/cities", requireAdmin, async (req, res) => {
       latitude: latitude != null ? Number(latitude) : null,
       longitude: longitude != null ? Number(longitude) : null,
     }).returning();
-    res.status(201).json({ city: row });
+    return res.status(201).json({ city: row });
   } catch (e: any) {
     if (e?.code === "23505") return res.status(409).json({ error: "Ce slug de ville existe déjà." });
     throw e;
@@ -267,7 +267,7 @@ router.patch("/admin/config/cities/:id", requireAdmin, async (req, res) => {
   if (!Object.keys(patch).length) return res.status(400).json({ error: "Aucun champ à modifier." });
   const [row] = await db.update(citiesTable).set(patch).where(eq(citiesTable.id, id)).returning();
   if (!row) return res.status(404).json({ error: "Ville introuvable." });
-  res.json({ city: row });
+  return res.json({ city: row });
 });
 
 router.delete("/admin/config/cities/:id", requireAdmin, async (req, res) => {
@@ -292,7 +292,7 @@ router.delete("/admin/config/cities/:id", requireAdmin, async (req, res) => {
     });
   }
   const [deleted] = await db.delete(citiesTable).where(eq(citiesTable.id, id)).returning();
-  res.json({ deleted });
+  return res.json({ deleted });
 });
 
 // ─── Admin CRUD — Event Categories ────────────────────────────────────────────
@@ -309,7 +309,7 @@ router.post("/admin/config/event-categories", requireAdmin, async (req, res) => 
       color: color || "#9B8FE8",
       sortOrder: sortOrder != null ? Number(sortOrder) : 0,
     }).returning();
-    res.status(201).json({ eventCategory: row });
+    return res.status(201).json({ eventCategory: row });
   } catch (e: any) {
     if (e?.code === "23505") return res.status(409).json({ error: "Cette clé de catégorie existe déjà." });
     throw e;
@@ -329,7 +329,7 @@ router.patch("/admin/config/event-categories/:id", requireAdmin, async (req, res
   if (!Object.keys(patch).length) return res.status(400).json({ error: "Aucun champ à modifier." });
   const [row] = await db.update(eventCategoriesTable).set(patch).where(eq(eventCategoriesTable.id, id)).returning();
   if (!row) return res.status(404).json({ error: "Catégorie introuvable." });
-  res.json({ eventCategory: row });
+  return res.json({ eventCategory: row });
 });
 
 router.delete("/admin/config/event-categories/:id", requireAdmin, async (req, res) => {
@@ -344,7 +344,7 @@ router.delete("/admin/config/event-categories/:id", requireAdmin, async (req, re
     return res.status(409).json({ error: `Suppression impossible : ${evCount.count} événement(s) utilisent la catégorie « ${catRow.labelFr} ».` });
   }
   const [deleted] = await db.delete(eventCategoriesTable).where(eq(eventCategoriesTable.id, id)).returning();
-  res.json({ deleted });
+  return res.json({ deleted });
 });
 
 // ─── Admin CRUD — Venue Types ──────────────────────────────────────────────────
@@ -360,7 +360,7 @@ router.post("/admin/config/venue-types", requireAdmin, async (req, res) => {
       icon: icon || "business",
       sortOrder: sortOrder != null ? Number(sortOrder) : 0,
     }).returning();
-    res.status(201).json({ venueType: row });
+    return res.status(201).json({ venueType: row });
   } catch (e: any) {
     if (e?.code === "23505") return res.status(409).json({ error: "Cette clé de type de lieu existe déjà." });
     throw e;
@@ -379,7 +379,7 @@ router.patch("/admin/config/venue-types/:id", requireAdmin, async (req, res) => 
   if (!Object.keys(patch).length) return res.status(400).json({ error: "Aucun champ à modifier." });
   const [row] = await db.update(venueTypesTable).set(patch).where(eq(venueTypesTable.id, id)).returning();
   if (!row) return res.status(404).json({ error: "Type de lieu introuvable." });
-  res.json({ venueType: row });
+  return res.json({ venueType: row });
 });
 
 router.delete("/admin/config/venue-types/:id", requireAdmin, async (req, res) => {
@@ -394,7 +394,7 @@ router.delete("/admin/config/venue-types/:id", requireAdmin, async (req, res) =>
     return res.status(409).json({ error: `Suppression impossible : ${vCount.count} lieu(x) utilisent le type « ${vtRow.labelFr} ».` });
   }
   const [deleted] = await db.delete(venueTypesTable).where(eq(venueTypesTable.id, id)).returning();
-  res.json({ deleted });
+  return res.json({ deleted });
 });
 
 export default router;

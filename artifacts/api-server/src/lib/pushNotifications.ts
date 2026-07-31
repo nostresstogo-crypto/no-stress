@@ -152,7 +152,7 @@ async function userIdsFavoritingItem(
     .select({ userId: favoritesTable.userId })
     .from(favoritesTable)
     .where(and(eq(favoritesTable.itemType, itemType), eq(favoritesTable.itemId, itemId)));
-  return Array.from(new Set(rows.map((r) => r.userId)));
+  return Array.from(new Set(rows.map((r) => r.userId).filter((id): id is number => id !== null)));
 }
 
 function buildMessages(

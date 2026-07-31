@@ -44,10 +44,10 @@ router.post("/storage/uploads/request-url", async (req: Request, res: Response) 
   try {
     const uploadURL = await objectStorageService.getObjectEntityUploadURL();
     const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
-    res.json({ uploadURL, objectPath, metadata: { name, size, contentType } });
+    return res.json({ uploadURL, objectPath, metadata: { name, size, contentType } });
   } catch (error) {
     (req as any).log?.error({ err: error }, "Error generating upload URL");
-    res.status(500).json({ error: "Failed to generate upload URL" });
+    return res.status(500).json({ error: "Failed to generate upload URL" });
   }
 });
 
@@ -190,13 +190,13 @@ router.get("/storage/transform", async (req: Request, res: Response) => {
     Object.entries(TRANSFORM_CACHE_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
     res.setHeader("Content-Type", "image/webp");
     res.setHeader("Vary", "Accept");
-    res.status(200).send(output);
+    return res.status(200).send(output);
   } catch (error) {
     if (error instanceof ObjectNotFoundError) {
       return res.status(404).json({ error: "Object not found" });
     }
     (req as any).log?.error({ err: error }, "Error transforming image");
-    res.status(500).json({ error: "Failed to transform image" });
+    return res.status(500).json({ error: "Failed to transform image" });
   }
 });
 
@@ -212,10 +212,13 @@ router.get("/storage/public-objects/*filePath", async (req: Request, res: Respon
     Object.entries(IMAGE_CACHE_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
     if (response.body) {
       Readable.fromWeb(response.body as any).pipe(res);
-    } else res.end();
+    } else {
+      res.end();
+    }
+    return;
   } catch (error) {
     (req as any).log?.error({ err: error }, "Error serving public object");
-    res.status(500).json({ error: "Failed to serve public object" });
+    return res.status(500).json({ error: "Failed to serve public object" });
   }
 });
 
@@ -231,13 +234,16 @@ router.get("/storage/objects/*path", async (req: Request, res: Response) => {
     Object.entries(IMAGE_CACHE_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
     if (response.body) {
       Readable.fromWeb(response.body as any).pipe(res);
-    } else res.end();
+    } else {
+      res.end();
+    }
+    return;
   } catch (error) {
     if (error instanceof ObjectNotFoundError) {
       return res.status(404).json({ error: "Object not found" });
     }
     (req as any).log?.error({ err: error }, "Error serving object");
-    res.status(500).json({ error: "Failed to serve object" });
+    return res.status(500).json({ error: "Failed to serve object" });
   }
 });
 

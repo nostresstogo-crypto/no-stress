@@ -156,7 +156,7 @@ export function requireAuth(req: any, res: Response, next: NextFunction) {
     return res.status(401).json({ error: "Session expirée ou invalide." });
   }
   req.auth = payload;
-  next();
+  return next();
 }
 
 // Rate limiter — Redis-backed if REDIS_URL is set (multi-instance safe),
@@ -239,7 +239,7 @@ export function rateLimit(opts: { windowMs: number; max: number; key?: string })
       res.setHeader("Retry-After", String(result.retryAfter));
       return res.status(429).json({ error: `Trop de tentatives. Réessayez dans ${result.retryAfter}s.` });
     }
-    next();
+    return next();
   };
 }
 

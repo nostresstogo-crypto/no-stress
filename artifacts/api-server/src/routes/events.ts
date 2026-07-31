@@ -125,7 +125,7 @@ router.get("/events", async (req, res) => {
     });
   }
 
-  res.json({ events: rows.map(serialize), total: rows.length, page: Number(page), limit: Number(limit) });
+  return res.json({ events: rows.map(serialize), total: rows.length, page: Number(page), limit: Number(limit) });
 });
 
 router.get("/events/popular", async (req, res) => {
@@ -150,7 +150,7 @@ router.get("/events/popular", async (req, res) => {
     if (cb !== ca) return cb - ca;
     return a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
   });
-  res.json({ events: sorted.slice(0, 10).map(serialize) });
+  return res.json({ events: sorted.slice(0, 10).map(serialize) });
 });
 
 router.get("/events/:id", async (req, res) => {
@@ -170,7 +170,7 @@ router.get("/events/:id", async (req, res) => {
       return res.status(404).json({ error: "Événement introuvable." });
     }
   }
-  res.json(serialize(event));
+  return res.json(serialize(event));
 });
 
 // ── Partner-owned events ─────────────────────────────────────────────────
@@ -181,7 +181,7 @@ router.get("/partners/me/events", requireAuth, async (req: any, res) => {
   const conds: any[] = [eq(eventsTable.partnerId, partnerId)];
   if (status) conds.push(eq(eventsTable.status, String(status)));
   const rows = await db.select().from(eventsTable).where(and(...conds));
-  res.json({ events: rows.map(serialize), total: rows.length });
+  return res.json({ events: rows.map(serialize), total: rows.length });
 });
 
 router.post("/partners/me/events", requireAuth, async (req: any, res) => {
@@ -245,12 +245,13 @@ router.post("/partners/me/events", requireAuth, async (req: any, res) => {
   res.status(201).json(serialize(event));
 
   // Notify admin about the auto-approved event (best-effort, after response)
-  db.select().from(partnersTable).where(eq(partnersTable.id, partnerId)).then(([p]) => {
+  db.select().from(partnersTable).where(eq(partnersTable.id, partnerId!)).then(([p]) => {
     if (p) sendNewEventAdminNotification(event, venue, p).catch(() => {});
   }).catch(() => {});
 
   // Push : nouvel évènement → users qui ont mis ce lieu en favori
   notifyVenueNewEvent(event.id).catch(() => {});
+  return;
 });
 
 router.patch("/partners/me/events/:id", requireAuth, async (req: any, res) => {
@@ -307,13 +308,13 @@ router.patch("/partners/me/events/:id", requireAuth, async (req: any, res) => {
   // Auto-approbation : les événements édités restent visibles immédiatement.
   allowed.status = "approved";
   const [event] = await db.update(eventsTable).set(allowed).where(eq(eventsTable.id, id)).returning();
-  res.json(serialize(event));
 
   // Push : modification → users qui ont mis cet event en favori
   const changedFields = Object.keys(allowed).filter((k) => k !== "status");
   if (changedFields.length > 0) {
     notifyEventUpdated(event.id, changedFields).catch(() => {});
   }
+  return res.json(serialize(event));
 });
 
 router.delete("/partners/me/events/:id", requireAuth, async (req: any, res) => {
@@ -329,7 +330,7 @@ router.delete("/partners/me/events/:id", requireAuth, async (req: any, res) => {
     return res.status(409).json({ error: "Impossible de supprimer un événement passé." });
   }
   await db.update(eventsTable).set({ status: "archived" }).where(eq(eventsTable.id, id));
-  res.json({ success: true });
+  return res.json({ success: true });
 });
 
 // ── Admin moderation ──────────────────────────────────────────────────────
@@ -349,7 +350,7 @@ router.post("/admin/events/:id/approve", requireAdmin, async (req: any, res) => 
       status: "approved",
     }).catch(() => {});
   }
-  res.json(serialize(event));
+  return res.json(serialize(event));
 });
 
 router.post("/admin/events/:id/reject", requireAdmin, async (req: any, res) => {
@@ -368,7 +369,7 @@ router.post("/admin/events/:id/reject", requireAdmin, async (req: any, res) => {
       reason,
     }).catch(() => {});
   }
-  res.json(serialize(event));
+  return res.json(serialize(event));
 });
 
 export default router;

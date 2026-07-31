@@ -8,7 +8,7 @@ router.post("/tickets", (req, res) => {
     return res.status(400).json({ error: "All fields are required" });
   }
   const transactionId = `TXN_${Date.now()}`;
-  res.status(201).json({
+  return res.status(201).json({
     transactionId,
     status: "success",
     ticket: {

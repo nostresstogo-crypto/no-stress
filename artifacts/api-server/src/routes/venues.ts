@@ -105,7 +105,7 @@ router.get("/venues", async (req, res) => {
     );
   }
 
-  res.json({ venues: rows.map(serialize), total: rows.length });
+  return res.json({ venues: rows.map(serialize), total: rows.length });
 });
 
 router.get("/venues/popular", async (req, res) => {
@@ -124,7 +124,7 @@ router.get("/venues/popular", async (req, res) => {
     .groupBy(favoritesTable.itemId);
   const countMap = new Map(favCounts.map((r) => [r.itemId, r.count]));
   const sorted = [...allVenues].sort((a, b) => (countMap.get(b.id) || 0) - (countMap.get(a.id) || 0));
-  res.json({ venues: sorted.slice(0, 10).map(serialize) });
+  return res.json({ venues: sorted.slice(0, 10).map(serialize) });
 });
 
 router.get("/venues/:id", async (req, res) => {
@@ -141,7 +141,7 @@ router.get("/venues/:id", async (req, res) => {
     }
   }
   const specs = await db.select().from(venueSpecialtiesTable).where(eq(venueSpecialtiesTable.venueId, id));
-  res.json({ ...serialize(v), specialties: specs.map(serializeSpecialty) });
+  return res.json({ ...serialize(v), specialties: specs.map(serializeSpecialty) });
 });
 
 // ── Partner-owned venues (auth required) ───────────────────────────────────
@@ -152,7 +152,7 @@ router.get("/partners/me/venues", requireAuth, async (req: any, res) => {
   const conds: any[] = [eq(venuesTable.partnerId, partnerId)];
   if (status) conds.push(eq(venuesTable.status, String(status)));
   const rows = await db.select().from(venuesTable).where(and(...conds));
-  res.json({ venues: rows.map(serialize), total: rows.length });
+  return res.json({ venues: rows.map(serialize), total: rows.length });
 });
 
 router.post("/partners/me/venues", requireAuth, async (req: any, res) => {
@@ -194,9 +194,10 @@ router.post("/partners/me/venues", requireAuth, async (req: any, res) => {
   res.status(201).json(serialize(v));
 
   // Notification admin (best-effort, hors réponse)
-  db.select().from(partnersTable).where(eq(partnersTable.id, partnerId)).then(([p]) => {
+  db.select().from(partnersTable).where(eq(partnersTable.id, partnerId!)).then(([p]) => {
     if (p) sendNewVenueAdminNotification(v, p).catch(() => {});
   }).catch(() => {});
+  return;
 });
 
 router.patch("/partners/me/venues/:id", requireAuth, async (req: any, res) => {
@@ -232,7 +233,6 @@ router.patch("/partners/me/venues/:id", requireAuth, async (req: any, res) => {
     allowed.rejectionReason = null;
   }
   const [v] = await db.update(venuesTable).set(allowed).where(eq(venuesTable.id, id)).returning();
-  res.json(serialize(v));
 
   const changedFields = Object.keys(allowed).filter(
     (k) => k !== "status" && k !== "rejectionReason",
@@ -241,7 +241,7 @@ router.patch("/partners/me/venues/:id", requireAuth, async (req: any, res) => {
   // Notify admin (best-effort, hors réponse) uniquement quand un lieu déjà approuvé
   // bascule à pending : c'est ce cas qui demande une nouvelle action de modération.
   if (triggersRevalidation) {
-    db.select().from(partnersTable).where(eq(partnersTable.id, partnerId)).then(([p]) => {
+    db.select().from(partnersTable).where(eq(partnersTable.id, partnerId!)).then(([p]) => {
       if (p) sendVenueUpdatedAdminNotification(v, p, changedFields).catch(() => {});
     }).catch(() => {});
   }
@@ -250,6 +250,8 @@ router.patch("/partners/me/venues/:id", requireAuth, async (req: any, res) => {
   if (changedFields.length > 0) {
     notifyVenueUpdated(v.id, changedFields).catch(() => {});
   }
+
+  return res.json(serialize(v));
 });
 
 router.patch("/partners/me/venues/:id/location", requireAuth, async (req: any, res) => {
@@ -272,7 +274,7 @@ router.patch("/partners/me/venues/:id/location", requireAuth, async (req: any, r
     .set({ latitude: lat, longitude: lng })
     .where(eq(venuesTable.id, id))
     .returning();
-  res.json(serialize(v));
+  return res.json(serialize(v));
 });
 
 router.delete("/partners/me/venues/:id", requireAuth, async (req: any, res) => {
@@ -296,7 +298,7 @@ router.delete("/partners/me/venues/:id", requireAuth, async (req: any, res) => {
     });
   }
   await db.delete(venuesTable).where(eq(venuesTable.id, id));
-  res.json({ success: true });
+  return res.json({ success: true });
 });
 
 // ── Admin moderation ──────────────────────────────────────────────────────
@@ -328,7 +330,7 @@ router.get("/admin/venues", requireAdmin, async (req: any, res) => {
     partnerName: r.partnerBusinessName || r.partnerContactName || null,
     partnerEmail: r.partnerEmail || null,
   }));
-  res.json({ venues, total: venues.length });
+  return res.json({ venues, total: venues.length });
 });
 
 router.post("/admin/venues/:id/approve", requireAdmin, async (req: any, res) => {
@@ -347,7 +349,7 @@ router.post("/admin/venues/:id/approve", requireAdmin, async (req: any, res) => 
       .where(eq(partnersTable.id, v.partnerId))
       .then(([p]) => {
         if (p?.email) {
-          return sendVenueApprovedEmail(p.email, p.contactName, v.name);
+          sendVenueApprovedEmail(p.email, p.contactName, v.name).catch(() => {});
         }
       })
       .catch((err) => console.error("[admin][venue-approve] notify failed:", err));
@@ -359,7 +361,7 @@ router.post("/admin/venues/:id/approve", requireAdmin, async (req: any, res) => 
       status: "approved",
     }).catch(() => {});
   }
-  res.json(serialize(v));
+  return res.json(serialize(v));
 });
 
 router.post("/admin/venues/:id/reject", requireAdmin, async (req: any, res) => {
@@ -381,7 +383,7 @@ router.post("/admin/venues/:id/reject", requireAdmin, async (req: any, res) => {
       .where(eq(partnersTable.id, v.partnerId))
       .then(([p]) => {
         if (p?.email) {
-          return sendVenueRejectedEmail(p.email, p.contactName, v.name, reason);
+          sendVenueRejectedEmail(p.email, p.contactName, v.name, reason).catch(() => {});
         }
       })
       .catch((err) => console.error("[admin][venue-reject] notify failed:", err));
@@ -394,7 +396,7 @@ router.post("/admin/venues/:id/reject", requireAdmin, async (req: any, res) => {
       reason,
     }).catch(() => {});
   }
-  res.json(serialize(v));
+  return res.json(serialize(v));
 });
 
 // ── Specialties (menu items / signature dishes) ────────────────────────────
@@ -412,7 +414,7 @@ router.get("/partners/me/venues/:id/specialties", requireAuth, async (req: any, 
     return res.status(404).json({ error: "Lieu introuvable." });
   }
   const rows = await db.select().from(venueSpecialtiesTable).where(eq(venueSpecialtiesTable.venueId, id));
-  res.json({ specialties: rows.map(serializeSpecialty), total: rows.length });
+  return res.json({ specialties: rows.map(serializeSpecialty), total: rows.length });
 });
 
 router.post("/partners/me/venues/:id/specialties", requireAuth, async (req: any, res) => {
@@ -440,7 +442,7 @@ router.post("/partners/me/venues/:id/specialties", requireAuth, async (req: any,
       price: priceNum,
     })
     .returning();
-  res.status(201).json(serializeSpecialty(s));
+  return res.status(201).json(serializeSpecialty(s));
 });
 
 router.patch("/partners/me/venues/:id/specialties/:specId", requireAuth, async (req: any, res) => {
@@ -477,7 +479,7 @@ router.patch("/partners/me/venues/:id/specialties/:specId", requireAuth, async (
     .where(and(eq(venueSpecialtiesTable.id, specId), eq(venueSpecialtiesTable.venueId, id)))
     .returning();
   if (!s) return res.status(404).json({ error: "Spécialité introuvable." });
-  res.json(serializeSpecialty(s));
+  return res.json(serializeSpecialty(s));
 });
 
 router.delete("/partners/me/venues/:id/specialties/:specId", requireAuth, async (req: any, res) => {
@@ -491,7 +493,7 @@ router.delete("/partners/me/venues/:id/specialties/:specId", requireAuth, async 
   await db
     .delete(venueSpecialtiesTable)
     .where(and(eq(venueSpecialtiesTable.id, specId), eq(venueSpecialtiesTable.venueId, id)));
-  res.json({ success: true });
+  return res.json({ success: true });
 });
 
 export default router;

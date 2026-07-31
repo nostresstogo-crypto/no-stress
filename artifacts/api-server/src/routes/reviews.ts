@@ -57,7 +57,7 @@ router.get("/reviews", async (req, res) => {
   const avgRating =
     total > 0 ? Math.round((rows.reduce((s, r) => s + r.rating, 0) / total) * 10) / 10 : null;
 
-  res.json({ reviews: rows.map(serializeReview), total, avgRating });
+  return res.json({ reviews: rows.map(serializeReview), total, avgRating });
 });
 
 // POST /reviews — create review (authenticated user or partner)
@@ -144,7 +144,7 @@ router.post("/reviews", requireAuth, async (req: any, res) => {
 
   res.status(201).json({ review: serializeReview(review) });
 
-  // Notifier tous les admins — fire-and-forget
+  // Notifier tous les admins — fire-and-forget (after response)
   const authorType = userId != null ? "user" : "partner";
   const authorId = (userId ?? partnerId)!;
   const masterEmail = process.env.ADMIN_EMAIL || "nostresstogo@gmail.com";
@@ -154,7 +154,7 @@ router.post("/reviews", requireAuth, async (req: any, res) => {
     itemId: review.itemId,
     rating: review.rating,
     comment: review.comment ?? null,
-    authorType,
+    authorType: authorType as "user" | "partner",
     authorId,
   };
   db.select({ email: adminsTable.email }).from(adminsTable)
@@ -165,6 +165,7 @@ router.post("/reviews", requireAuth, async (req: any, res) => {
       await Promise.all([...emails].map((email) => sendAdminNewReviewEmail(email, reviewPayload)));
     })
     .catch((err) => console.error("[review-notify] admin email failed:", err));
+  return;
 });
 
 export default router;

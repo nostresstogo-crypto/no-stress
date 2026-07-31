@@ -77,7 +77,8 @@ router.post("/openai/chat", async (req, res) => {
     const safeLang = lang === "en" ? "en" : "fr";
 
     if (!message || typeof message !== "string") {
-      return res.status(400).json({ error: "message requis" });
+      res.status(400).json({ error: "message requis" });
+      return;
     }
 
     const cityName = city ? city.split(",")[0].trim() : null;
@@ -98,7 +99,7 @@ router.post("/openai/chat", async (req, res) => {
             .where(
               and(
                 eq(eventsTable.status, "approved"),
-                gte(eventsTable.date, today),
+                gte(eventsTable.date, today.toISOString().slice(0, 10)),
                 ilike(eventsTable.city, `%${cityName}%`)
               )
             )

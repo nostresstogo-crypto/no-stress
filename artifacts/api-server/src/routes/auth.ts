@@ -84,7 +84,7 @@ router.post("/auth/forgot-password", forgotLimiter, async (req, res) => {
   const expires = verificationCodeExpiry();
   await db
     .update(usersTable)
-    .set({ verificationCode: code, verificationCodeExpires: expires, updatedAt: new Date() })
+    .set({ verificationCode: code, verificationCodeExpires: expires })
     .where(eq(usersTable.id, user.id));
 
   const displayName = user.name || user.firstName || "Utilisateur";
@@ -124,7 +124,7 @@ router.post("/auth/reset-password", resetLimiter, async (req, res) => {
   const passwordHash = await hashPassword(newPassword);
   await db
     .update(usersTable)
-    .set({ passwordHash, verificationCode: null, verificationCodeExpires: null, updatedAt: new Date() })
+    .set({ passwordHash, verificationCode: null, verificationCodeExpires: null })
     .where(eq(usersTable.id, user.id));
 
   // Revoke all active sessions — use the correct subject format (u_<id>).
@@ -255,7 +255,7 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
   const sub = `u_${user.id}`;
   const token = signToken({ sub, email: user.email, role: user.role as any });
   const refreshToken = await issueRefreshToken(sub, req.headers["user-agent"] as string | undefined);
-  res.json({ token, refreshToken, user: publicUser(user) });
+  return res.json({ token, refreshToken, user: publicUser(user) });
 });
 
 router.post("/auth/register", registerLimiter, async (req, res) => {
@@ -321,7 +321,7 @@ router.post("/auth/register", registerLimiter, async (req, res) => {
       verificationCodeExpires: verificationCodeExpiry(),
     });
   // No token issued — user must verify email first.
-  res.status(201).json({
+  return res.status(201).json({
     pendingVerification: true,
     email,
     message: "Code de vérification envoyé par email.",
@@ -365,7 +365,7 @@ router.post("/auth/refresh", refreshLimiter, async (req, res) => {
     return res.status(400).json({ error: "Sujet inconnu." });
   }
   const token = signToken({ sub, email, role });
-  res.json({ token, refreshToken: rotated.refreshToken });
+  return res.json({ token, refreshToken: rotated.refreshToken });
 });
 
 router.post("/auth/logout", async (req, res) => {
@@ -373,7 +373,7 @@ router.post("/auth/logout", async (req, res) => {
   if (refreshToken && typeof refreshToken === "string") {
     await revokeRefreshToken(refreshToken);
   }
-  res.json({ message: "Déconnexion réussie." });
+  return res.json({ message: "Déconnexion réussie." });
 });
 
 // Public verify-email endpoint (no auth) — verifies code by email and issues a session for users.
@@ -412,8 +412,8 @@ router.post("/auth/verify-email", verifyLimiter, async (req, res) => {
   const sub = `u_${updated.id}`;
   const token = signToken({ sub, email: updated.email, role: updated.role as any });
   const refreshToken = await issueRefreshToken(sub, req.headers["user-agent"] as string | undefined);
-  res.json({ message: "Email vérifié.", token, refreshToken, user: publicUser(updated) });
   sendWelcomeEmail(updated.email, updated.name).catch(() => {});
+  return res.json({ message: "Email vérifié.", token, refreshToken, user: publicUser(updated) });
 });
 
 router.post("/auth/resend-verification", resendLimiter, async (req, res) => {
@@ -427,8 +427,8 @@ router.post("/auth/resend-verification", resendLimiter, async (req, res) => {
     .update(usersTable)
     .set({ verificationCode: code, verificationCodeExpires: verificationCodeExpiry() })
     .where(eq(usersTable.id, user.id));
-  res.json({ message: "Code envoyé." });
   sendVerificationCodeEmail(user.email, user.name, code).catch(() => {});
+  return res.json({ message: "Code envoyé." });
 });
 
 router.delete("/admin/users/:id", requireAdmin, async (req: any, res) => {
@@ -443,7 +443,7 @@ router.delete("/admin/users/:id", requireAdmin, async (req: any, res) => {
   const deleteReason = reason || "Compte jugé frauduleux ou non conforme.";
   await db.delete(usersTable).where(eq(usersTable.id, numericId));
   sendAccountDeletedEmail(target.email, target.name, deleteReason).catch(() => {});
-  res.json({ message: "Compte utilisateur supprimé. Email d'avertissement envoyé.", deleted: publicUser(target) });
+  return res.json({ message: "Compte utilisateur supprimé. Email d'avertissement envoyé.", deleted: publicUser(target) });
 });
 
 export default router;

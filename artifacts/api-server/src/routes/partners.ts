@@ -115,7 +115,7 @@ router.get("/partners", async (req, res) => {
   const rows = status
     ? await db.select().from(partnersTable).where(eq(partnersTable.status, String(status)))
     : await db.select().from(partnersTable);
-  res.json(rows.map(serializePartner));
+  return res.json(rows.map(serializePartner));
 });
 
 router.get("/partners/status", async (req, res) => {
@@ -127,7 +127,7 @@ router.get("/partners/status", async (req, res) => {
   if (!partner) {
     return res.status(404).json({ error: "Partenaire introuvable." });
   }
-  res.json({
+  return res.json({
     status: partner.status,
     rejectionReason: partner.rejectionReason ?? null,
     businessName: partner.businessName,
@@ -143,7 +143,7 @@ router.get("/partners/approved-map", async (_req, res) => {
     .select()
     .from(partnersTable)
     .where(and(eq(partnersTable.status, "approved"), gt(partnersTable.subscriptionUntil, new Date())));
-  res.json(
+  return res.json(
     approved
       .filter((p) => p.latitude != null && p.longitude != null)
       .map((p) => ({
@@ -244,7 +244,8 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
         status: "pending",
       });
     }
-    res.status(200).json({
+    sendVerificationCodeEmail(email, contactName, code).catch(() => {});
+    return res.status(200).json({
       message: "Nouveau code de vérification envoyé par email.",
       pendingVerification: true,
       email,
@@ -327,12 +328,12 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
                 status: "pending",
               });
             }
+            sendVerificationCodeEmail(email, contactName, code).catch(() => {});
             res.status(200).json({
               message: "Nouveau code de vérification envoyé par email.",
               pendingVerification: true,
               email,
             });
-            sendVerificationCodeEmail(email, contactName, code).catch(() => {});
             return;
           }
         }
@@ -356,6 +357,7 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
   if (isNewRegistration) {
     sendPartnerRegistrationEmailToAdmin(partner.id, email, contactName, businessName, businessType, city, phone).catch(() => {});
   }
+  return;
 });
 
 const partnerVerifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: "partner-verify" });
@@ -390,15 +392,15 @@ router.post("/partners/verify-email", partnerVerifyLimiter, async (req, res) => 
     .set({ emailVerified: new Date(), verificationCode: null, verificationCodeExpires: null, updatedAt: new Date() })
     .where(eq(partnersTable.id, partner.id))
     .returning();
-  res.json({
+  // Notify partner + admin only after email verification (avoids spam from fake registrations)
+  sendPartnerRegistrationEmailToPartner(updated.email, updated.contactName, updated.businessName).catch(() => {});
+  return res.json({
     message: "Email vérifié. Votre compte est en attente d'approbation par l'administrateur.",
     verified: true,
     needsApproval: true,
     partnerStatus: updated.status,
     email: updated.email,
   });
-  // Notify partner + admin only after email verification (avoids spam from fake registrations)
-  sendPartnerRegistrationEmailToPartner(updated.email, updated.contactName, updated.businessName).catch(() => {});
 });
 
 router.post("/partners/forgot-password", partnerForgotLimiter, handlePartnerForgotPassword);
@@ -415,14 +417,14 @@ router.post("/partners/resend-verification", partnerResendLimiter, async (req, r
     .update(partnersTable)
     .set({ verificationCode: code, verificationCodeExpires: verificationCodeExpiry(), updatedAt: new Date() })
     .where(eq(partnersTable.id, partner.id));
-  res.json({ message: "Code envoyé." });
   sendVerificationCodeEmail(partner.email, partner.contactName, code).catch(() => {});
+  return res.json({ message: "Code envoyé." });
 });
 
 // Deprecated: partner-level GPS location has been removed.
 // Locations are now defined per venue via /partners/me/venues/:id/location.
 router.patch("/partners/me/location", requireAuth, async (_req, res) => {
-  res.status(410).json({
+  return res.status(410).json({
     error: "Endpoint déprécié. Définissez la position de chaque lieu individuellement.",
   });
 });
@@ -432,7 +434,7 @@ router.get("/partners/:id", async (req, res) => {
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Partenaire introuvable." });
   const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.id, id));
   if (!partner) return res.status(404).json({ error: "Partenaire introuvable." });
-  res.json(serializePartner(partner));
+  return res.json(serializePartner(partner));
 });
 
 router.get("/partners/:id/public", async (req, res) => {
@@ -461,7 +463,7 @@ router.get("/partners/:id/public", async (req, res) => {
         gte(eventsTable.date, archiveCutoff),
       ),
     );
-  res.json({
+  return res.json({
     partner: {
       id: String(partner.id),
       businessName: partner.businessName,
@@ -521,10 +523,10 @@ router.post("/admin/partners/:id/approve", requireAdmin, async (req: any, res) =
   // the partner locked out silently.
   try {
     await sendPartnerApprovalEmail(partner.email, partner.contactName, partner.businessName, newPassword);
-    res.json({ message: "Partenaire approuvé avec succès.", partner: serializePartner(partner) });
+    return res.json({ message: "Partenaire approuvé avec succès.", partner: serializePartner(partner) });
   } catch (err: any) {
     console.error("[partners.approve] email send failed:", err?.message || err);
-    res.status(207).json({
+    return res.status(207).json({
       message: "Partenaire approuvé, mais l'envoi de l'email d'identifiants a échoué. Utilisez 'Renvoyer les identifiants' pour relancer.",
       emailError: true,
       partner: serializePartner(partner),
@@ -554,7 +556,7 @@ router.post("/admin/partners/:id/extend-subscription", requireSuperAdmin, async 
     .set({ subscriptionUntil: newUntil, updatedAt: new Date() })
     .where(eq(partnersTable.id, id))
     .returning();
-  res.json({
+  return res.json({
     message: `Abonnement étendu de ${months} mois. Nouvelle date d'expiration : ${newUntil.toLocaleDateString("fr-FR")}.`,
     partner: serializePartner(updated),
   });
@@ -608,7 +610,7 @@ router.patch("/admin/partners/:id/subscription", requireSuperAdmin, async (req: 
     .where(eq(partnersTable.id, id))
     .returning();
 
-  res.json({
+  return res.json({
     message: `Abonnement mis à jour. Expiration : ${untilDate.toLocaleDateString("fr-FR")}.`,
     partner: serializePartner(updated),
   });
@@ -641,10 +643,10 @@ router.post("/admin/partners/:id/resend-credentials", requireAdmin, async (req: 
     .where(and(eq(refreshTokensTable.subject, sub), isNull(refreshTokensTable.revokedAt)));
   try {
     await sendPartnerApprovalEmail(partner.email, partner.contactName, partner.businessName, newPassword);
-    res.json({ message: "Nouveaux identifiants envoyés par email." });
+    return res.json({ message: "Nouveaux identifiants envoyés par email." });
   } catch (err: any) {
     console.error("[partners.resend-credentials] email send failed:", err?.message || err);
-    res.status(502).json({ error: "Échec de l'envoi de l'email. Vérifiez la configuration SMTP." });
+    return res.status(502).json({ error: "Échec de l'envoi de l'email. Vérifiez la configuration SMTP." });
   }
 });
 
@@ -659,8 +661,8 @@ router.post("/admin/partners/:id/reject", requireSuperAdmin, async (req: any, re
     .where(eq(partnersTable.id, id))
     .returning();
   if (!partner) return res.status(404).json({ error: "Partenaire introuvable." });
-  res.json({ message: "Partenaire rejeté.", partner: serializePartner(partner) });
   sendPartnerRejectionEmail(partner.email, partner.contactName, partner.businessName, rejectionReason).catch(() => {});
+  return res.json({ message: "Partenaire rejeté.", partner: serializePartner(partner) });
 });
 
 router.get("/admin/events", requireAdmin, async (_req: any, res) => {
@@ -686,7 +688,7 @@ router.get("/admin/events", requireAdmin, async (_req: any, res) => {
     d.setUTCDate(d.getUTCDate() - 30);
     return d.toISOString().slice(0, 10);
   })();
-  res.json(
+  return res.json(
     rows.map((e) => ({
       id: String(e.id),
       partnerId: e.partnerId != null ? String(e.partnerId) : "",
@@ -725,7 +727,7 @@ router.delete("/admin/events/:id", requireSuperAdmin, async (req: any, res) => {
   if (partner?.email) {
     sendPublicationWarningEmail(partner.email, partner.businessName, deleted.title, deleteReason).catch(() => {});
   }
-  res.json({ message: "Publication supprimée et avertissement envoyé au partenaire.", notification: autoMessage, deleted: { ...deleted, id: String(deleted.id) } });
+  return res.json({ message: "Publication supprimée et avertissement envoyé au partenaire.", notification: autoMessage, deleted: { ...deleted, id: String(deleted.id) } });
 });
 
 router.delete("/admin/partners/:id", requireSuperAdmin, async (req: any, res) => {
@@ -737,7 +739,7 @@ router.delete("/admin/partners/:id", requireSuperAdmin, async (req: any, res) =>
   const { reason } = req.body || {};
   const deleteReason = reason || "Compte jugé frauduleux ou non conforme.";
   sendAccountDeletedEmail(deleted.email, deleted.contactName || deleted.businessName, deleteReason).catch(() => {});
-  res.json({ message: `Compte partenaire supprimé. ${eventsRemoved[0]?.count ?? 0} publication(s) retirée(s). Email d'avertissement envoyé.`, deleted: serializePartner(deleted) });
+  return res.json({ message: `Compte partenaire supprimé. ${eventsRemoved[0]?.count ?? 0} publication(s) retirée(s). Email d'avertissement envoyé.`, deleted: serializePartner(deleted) });
 });
 
 router.get("/admin/registrations/stats", requireAdmin, async (req: any, res) => {
@@ -805,7 +807,7 @@ router.get("/admin/registrations/stats", requireAdmin, async (req: any, res) => 
     }
   }
 
-  res.json({ partnerCount, clientCount, total: partnerCount + clientCount, buckets });
+  return res.json({ partnerCount, clientCount, total: partnerCount + clientCount, buckets });
 });
 
 export default router;

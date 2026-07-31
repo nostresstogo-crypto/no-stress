@@ -1218,6 +1218,7 @@ export async function sendTesterFeedbackEmail(
     ? `<p style="margin:12px 0 0;color:#b0b2cc;font-size:13px;">📎 ${screenshots.length} capture${screenshots.length > 1 ? "s" : ""} d'écran jointe${screenshots.length > 1 ? "s" : ""} en pièce jointe.</p>`
     : "";
 
+  if (!transporter) throw new Error("Email transporter not initialized");
   await transporter.sendMail({
     from: FROM_EMAIL,
     to: "tamekloes@gmail.com",

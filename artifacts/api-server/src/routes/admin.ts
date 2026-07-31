@@ -147,7 +147,7 @@ router.post("/admin/login", adminLoginLimiter, async (req, res) => {
   const sub = `a_${admin.id}`;
   const token = signToken({ sub, email: admin.email, role: "admin", adminRole: admin.role } as any);
   const refreshToken = await issueRefreshToken(sub, req.headers["user-agent"] as string | undefined);
-  res.json({ token, refreshToken, admin: { id: String(admin.id), name: admin.name, firstName: admin.firstName, email: admin.email, role: admin.role } });
+  return res.json({ token, refreshToken, admin: { id: String(admin.id), name: admin.name, firstName: admin.firstName, email: admin.email, role: admin.role } });
 });
 
 router.post("/admin/logout", async (req, res) => {
@@ -155,7 +155,7 @@ router.post("/admin/logout", async (req, res) => {
   if (refreshToken && typeof refreshToken === "string") {
     await revokeRefreshToken(refreshToken);
   }
-  res.json({ message: "Déconnexion réussie." });
+  return res.json({ message: "Déconnexion réussie." });
 });
 
 router.get("/admin/me", requireAdmin, async (req: any, res) => {
@@ -170,7 +170,7 @@ router.get("/admin/me", requireAdmin, async (req: any, res) => {
   if (!row) {
     return res.status(404).json({ error: "Admin introuvable." });
   }
-  res.json({ admin: { adminId: String(row.id), name: row.name, firstName: row.firstName, email: row.email, role: row.role } });
+  return res.json({ admin: { adminId: String(row.id), name: row.name, firstName: row.firstName, email: row.email, role: row.role } });
 });
 
 router.post("/admin/change-password", requireAdmin, async (req: any, res) => {
@@ -203,7 +203,7 @@ router.post("/admin/change-password", requireAdmin, async (req: any, res) => {
   const passwordHash = await hashPassword(newPassword);
   await db.update(adminsTable).set({ passwordHash }).where(eq(adminsTable.id, id));
   console.log(`[admin] Password changed via UI for id=${id} email=${JSON.stringify(admin.email)}`);
-  res.json({ message: "Mot de passe modifié avec succès." });
+  return res.json({ message: "Mot de passe modifié avec succès." });
 });
 
 router.get("/admin/stats", requireAdmin, async (_req, res) => {
@@ -232,7 +232,7 @@ router.get("/admin/stats", requireAdmin, async (_req, res) => {
   const [venueStats] = await db
     .select({ total: sql<number>`count(*)::int` })
     .from(venuesTable);
-  res.json({
+  return res.json({
     pendingPartners: partnerStats?.pending ?? 0,
     approvedPartners: partnerStats?.approved ?? 0,
     rejectedPartners: partnerStats?.rejected ?? 0,
@@ -250,7 +250,7 @@ router.get("/admin/managers", requireSuperAdmin, async (_req, res) => {
     .select({ id: adminsTable.id, name: adminsTable.name, firstName: adminsTable.firstName, email: adminsTable.email, createdAt: adminsTable.createdAt })
     .from(adminsTable)
     .where(eq(adminsTable.role, "gestionnaire"));
-  res.json({ managers: managers.map((m) => ({ ...m, id: String(m.id) })) });
+  return res.json({ managers: managers.map((m) => ({ ...m, id: String(m.id) })) });
 });
 
 router.post("/admin/managers", requireSuperAdmin, async (req, res) => {
@@ -281,7 +281,7 @@ router.post("/admin/managers", requireSuperAdmin, async (req, res) => {
     password,
     adminUrl,
   }).catch((e) => console.error("[admin] Failed to send manager credentials email:", e));
-  res.status(201).json({ manager: { ...created, id: String(created.id) } });
+  return res.status(201).json({ manager: { ...created, id: String(created.id) } });
 });
 
 router.post("/admin/managers/:id/reset-password", requireSuperAdmin, async (req, res) => {
@@ -301,7 +301,7 @@ router.post("/admin/managers/:id/reset-password", requireSuperAdmin, async (req,
     firstName: manager.firstName ?? "",
     password,
   }).catch((e) => console.error("[admin] Failed to send manager password reset email:", e));
-  res.json({ message: "Mot de passe réinitialisé et envoyé par email au gestionnaire." });
+  return res.json({ message: "Mot de passe réinitialisé et envoyé par email au gestionnaire." });
 });
 
 router.delete("/admin/managers/:id", requireSuperAdmin, async (req, res) => {
@@ -314,7 +314,7 @@ router.delete("/admin/managers/:id", requireSuperAdmin, async (req, res) => {
   if (!deleted) return res.status(404).json({ error: "Gestionnaire introuvable." });
   // Révoquer immédiatement tous les refresh tokens du gestionnaire supprimé
   await revokeAllForSubject(`a_${id}`);
-  res.json({ message: "Compte gestionnaire supprimé.", deleted: { id: String(deleted.id), email: deleted.email } });
+  return res.json({ message: "Compte gestionnaire supprimé.", deleted: { id: String(deleted.id), email: deleted.email } });
 });
 
 // ── User management ──────────────────────────────────────────────────────────
@@ -355,7 +355,7 @@ router.get("/admin/users", requireAdmin, async (req, res) => {
     .orderBy(desc(usersTable.createdAt))
     .limit(limit)
     .offset(offset);
-  res.json({ users: users.map((u) => ({ ...u, id: String(u.id) })), total, page, limit });
+  return res.json({ users: users.map((u) => ({ ...u, id: String(u.id) })), total, page, limit });
 });
 
 router.put("/admin/users/:id/suspend", requireSuperAdmin, async (req, res) => {
@@ -380,7 +380,7 @@ router.put("/admin/users/:id/suspend", requireSuperAdmin, async (req, res) => {
   sendUserSuspendedEmail(user.email, user.name || "Utilisateur", reason.trim(), untilDate).catch(
     (e) => console.error("[admin] Suspension email failed:", e),
   );
-  res.json({ user: { ...updated, id: String(updated.id) } });
+  return res.json({ user: { ...updated, id: String(updated.id) } });
 });
 
 router.put("/admin/users/:id/ban", requireSuperAdmin, async (req, res) => {
@@ -400,7 +400,7 @@ router.put("/admin/users/:id/ban", requireSuperAdmin, async (req, res) => {
   sendUserBannedEmail(user.email, user.name || "Utilisateur", reason.trim()).catch(
     (e) => console.error("[admin] Ban email failed:", e),
   );
-  res.json({ user: { ...updated, id: String(updated.id) } });
+  return res.json({ user: { ...updated, id: String(updated.id) } });
 });
 
 router.put("/admin/users/:id/reactivate", requireSuperAdmin, async (req, res) => {
@@ -418,7 +418,7 @@ router.put("/admin/users/:id/reactivate", requireSuperAdmin, async (req, res) =>
       (e) => console.error("[admin] Reactivation email failed:", e),
     );
   }
-  res.json({ user: { ...updated, id: String(updated.id) } });
+  return res.json({ user: { ...updated, id: String(updated.id) } });
 });
 
 // ── Partner account management ────────────────────────────────────────────────
@@ -465,7 +465,7 @@ router.get("/admin/partner-accounts", requireAdmin, async (req, res) => {
     .orderBy(desc(partnersTable.createdAt))
     .limit(limit)
     .offset(offset);
-  res.json({ partners: rows.map((p) => ({ ...p, id: String(p.id) })), total, page, limit });
+  return res.json({ partners: rows.map((p) => ({ ...p, id: String(p.id) })), total, page, limit });
 });
 
 router.put("/admin/partners/:id/suspend", requireSuperAdmin, async (req, res) => {
@@ -490,7 +490,7 @@ router.put("/admin/partners/:id/suspend", requireSuperAdmin, async (req, res) =>
   sendPartnerSuspendedEmail(partner.email, partner.contactName, reason.trim(), untilDate).catch(
     (e) => console.error("[admin] Partner suspension email failed:", e),
   );
-  res.json({ partner: { ...updated, id: String((updated as any).id) } });
+  return res.json({ partner: { ...updated, id: String((updated as any).id) } });
 });
 
 router.put("/admin/partners/:id/ban", requireSuperAdmin, async (req, res) => {
@@ -510,7 +510,7 @@ router.put("/admin/partners/:id/ban", requireSuperAdmin, async (req, res) => {
   sendPartnerBannedEmail(partner.email, partner.contactName, reason.trim()).catch(
     (e) => console.error("[admin] Partner ban email failed:", e),
   );
-  res.json({ partner: { ...updated, id: String((updated as any).id) } });
+  return res.json({ partner: { ...updated, id: String((updated as any).id) } });
 });
 
 router.put("/admin/partners/:id/reactivate", requireSuperAdmin, async (req, res) => {
@@ -529,7 +529,7 @@ router.put("/admin/partners/:id/reactivate", requireSuperAdmin, async (req, res)
   sendPartnerReactivatedEmail(partner.email, partner.contactName).catch(
     (e) => console.error("[admin] Partner reactivation email failed:", e),
   );
-  res.json({ partner: { ...updated, id: String((updated as any).id) } });
+  return res.json({ partner: { ...updated, id: String((updated as any).id) } });
 });
 
 // ── Reviews moderation ────────────────────────────────────────────────────────
@@ -661,7 +661,7 @@ router.get("/admin/reviews", requireAdmin, async (req, res) => {
     };
   });
 
-  res.json({ reviews: enriched, total, page, limit });
+  return res.json({ reviews: enriched, total, page, limit });
 });
 
 router.put("/admin/reviews/:id/approve", requireAdmin, async (req: any, res) => {
@@ -674,7 +674,6 @@ router.put("/admin/reviews/:id/approve", requireAdmin, async (req: any, res) => 
     .where(eq(reviewsTable.id, id))
     .returning();
   if (!updated) return res.status(404).json({ error: "Avis introuvable." });
-  res.json({ review: { ...updated, id: String(updated.id) } });
 
   // Push + email notifications — fire-and-forget
   notifyReviewModerationUser({
@@ -763,6 +762,8 @@ router.put("/admin/reviews/:id/approve", requireAdmin, async (req: any, res) => 
       console.error("[review-email] approve enrichment failed:", err);
     }
   })();
+
+  return res.json({ review: { ...updated, id: String(updated.id) } });
 });
 
 router.put("/admin/reviews/:id/reject", requireAdmin, async (req: any, res) => {
@@ -775,7 +776,6 @@ router.put("/admin/reviews/:id/reject", requireAdmin, async (req: any, res) => {
     .where(eq(reviewsTable.id, id))
     .returning();
   if (!updated) return res.status(404).json({ error: "Avis introuvable." });
-  res.json({ review: { ...updated, id: String(updated.id) } });
 
   // Push notification — fire-and-forget
   notifyReviewModerationUser({
@@ -827,6 +827,8 @@ router.put("/admin/reviews/:id/reject", requireAdmin, async (req: any, res) => {
       console.error("[review-email] reject enrichment failed:", err);
     }
   })();
+
+  return res.json({ review: { ...updated, id: String(updated.id) } });
 });
 
 router.delete("/admin/reviews/:id", requireAdmin, async (req, res) => {
@@ -834,7 +836,7 @@ router.delete("/admin/reviews/:id", requireAdmin, async (req, res) => {
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Avis introuvable." });
   const [deleted] = await db.delete(reviewsTable).where(eq(reviewsTable.id, id)).returning();
   if (!deleted) return res.status(404).json({ error: "Avis introuvable." });
-  res.json({ message: "Avis supprimé.", deleted: { ...deleted, id: String(deleted.id) } });
+  return res.json({ message: "Avis supprimé.", deleted: { ...deleted, id: String(deleted.id) } });
 });
 
 export { requireAdmin, requireSuperAdmin };

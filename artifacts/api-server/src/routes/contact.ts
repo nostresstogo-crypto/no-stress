@@ -95,7 +95,7 @@ router.post("/contact", async (req, res) => {
     console.warn("[CONTACT] Confirmation email failed (non-fatal):", err);
   }
 
-  res.status(201).json({
+  return res.status(201).json({
     message: "Votre message a bien été envoyé. Nous vous répondrons dans les plus brefs délais.",
     id: entry.id,
   });

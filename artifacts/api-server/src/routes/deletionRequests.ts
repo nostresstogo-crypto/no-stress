@@ -62,17 +62,17 @@ router.post("/account/deletion-request", async (req, res) => {
     throw err;
   }
 
-  res.status(201).json({
-    message: "Votre demande de suppression a bien été reçue. Elle sera traitée dans un délai maximum de 30 jours.",
-    requestId: String(request.id),
-  });
-
   const matched = userId
     ? ({ kind: "user", id: userId } as const)
     : partnerId
       ? ({ kind: "partner", id: partnerId } as const)
       : null;
   sendDeletionRequestAdminNotification(email, name, accountType, reason, matched).catch(() => {});
+
+  return res.status(201).json({
+    message: "Votre demande de suppression a bien été reçue. Elle sera traitée dans un délai maximum de 30 jours.",
+    requestId: String(request.id),
+  });
 });
 
 router.get("/admin/deletion-requests", requireAdmin, async (req, res) => {
@@ -81,7 +81,7 @@ router.get("/admin/deletion-requests", requireAdmin, async (req, res) => {
     ? await db.select().from(deletionRequestsTable).where(eq(deletionRequestsTable.status, String(status)))
     : await db.select().from(deletionRequestsTable);
   rows.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  res.json(rows.map(serialize));
+  return res.json(rows.map(serialize));
 });
 
 router.post("/admin/deletion-requests/:id/process", requireSuperAdmin, async (req, res) => {
@@ -93,7 +93,7 @@ router.post("/admin/deletion-requests/:id/process", requireSuperAdmin, async (re
     .where(eq(deletionRequestsTable.id, id))
     .returning();
   if (!request) return res.status(404).json({ error: "Demande introuvable." });
-  res.json({ message: "Demande marquée comme traitée.", request: serialize(request) });
+  return res.json({ message: "Demande marquée comme traitée.", request: serialize(request) });
 });
 
 /**
@@ -192,12 +192,12 @@ router.post("/admin/deletion-requests/:id/delete-account", requireSuperAdmin, as
     return res.status(409).json({ error: "Cette demande vient d'être traitée par un autre administrateur." });
   }
 
-  res.json({
+  sendDeletionConfirmedEmail(result.email, result.name).catch(() => {});
+
+  return res.json({
     message: `Compte ${result.kind === "partner" ? "partenaire" : "utilisateur"} supprimé. Toutes les données liées ont été effacées.`,
     deleted: { kind: result.kind, id: String(result.id) },
   });
-
-  sendDeletionConfirmedEmail(result.email, result.name).catch(() => {});
 });
 
 class HttpError extends Error {

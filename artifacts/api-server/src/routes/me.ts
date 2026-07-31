@@ -116,7 +116,7 @@ router.patch("/users/me", requireAuth, async (req: any, res) => {
     .where(eq(usersTable.id, id))
     .returning();
   if (!updated) return res.status(404).json({ error: "Compte introuvable." });
-  res.json({ user: publicUser(updated) });
+  return res.json({ user: publicUser(updated) });
 });
 
 router.post("/users/me/change-password", requireAuth, async (req: any, res) => {
@@ -137,7 +137,7 @@ router.post("/users/me/change-password", requireAuth, async (req: any, res) => {
   await db.update(usersTable).set({ passwordHash: newHash }).where(eq(usersTable.id, id));
   // Invalidate all other sessions; current refresh token is also revoked, mobile must re-login.
   await revokeAllForSubject(`u_${id}`);
-  res.json({ message: "Mot de passe modifié. Reconnectez-vous." });
+  return res.json({ message: "Mot de passe modifié. Reconnectez-vous." });
 });
 
 // ── Partner profile ─────────────────────────────────────────────────────────
@@ -146,7 +146,7 @@ router.get("/partners/me", requireAuth, async (req: any, res) => {
   if (id == null) return res.status(403).json({ error: "Réservé aux partenaires." });
   const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.id, id));
   if (!partner) return res.status(404).json({ error: "Compte introuvable." });
-  res.json({ partner: publicPartner(partner) });
+  return res.json({ partner: publicPartner(partner) });
 });
 
 router.patch("/partners/me", requireAuth, async (req: any, res) => {
@@ -175,7 +175,7 @@ router.patch("/partners/me", requireAuth, async (req: any, res) => {
     .where(eq(partnersTable.id, id))
     .returning();
   if (!updated) return res.status(404).json({ error: "Compte introuvable." });
-  res.json({ partner: publicPartner(updated) });
+  return res.json({ partner: publicPartner(updated) });
 });
 
 router.post("/partners/me/change-password", requireAuth, async (req: any, res) => {
@@ -199,7 +199,7 @@ router.post("/partners/me/change-password", requireAuth, async (req: any, res) =
     .set({ passwordHash: newHash, updatedAt: new Date() })
     .where(eq(partnersTable.id, id));
   await revokeAllForSubject(`p_${id}`);
-  res.json({ message: "Mot de passe modifié. Reconnectez-vous." });
+  return res.json({ message: "Mot de passe modifié. Reconnectez-vous." });
 });
 
 // ── Favorites (users + partners) ────────────────────────────────────────────
@@ -218,7 +218,7 @@ router.get("/me/favorites", requireAuth, async (req: any, res) => {
   const rows = await db.select().from(favoritesTable).where(eq(favoritesTable.userId, id));
   const events = rows.filter((r) => r.itemType === "event").map((r) => String(r.itemId));
   const venues = rows.filter((r) => r.itemType === "venue").map((r) => String(r.itemId));
-  res.json({ events, venues });
+  return res.json({ events, venues });
 });
 
 router.post("/me/favorites", requireAuth, async (req: any, res) => {
@@ -237,7 +237,7 @@ router.post("/me/favorites", requireAuth, async (req: any, res) => {
     .insert(favoritesTable)
     .values({ userId: id, itemType: item.itemType, itemId: item.itemId })
     .onConflictDoNothing();
-  res.json({ ok: true });
+  return res.json({ ok: true });
 });
 
 router.delete("/me/favorites", requireAuth, async (req: any, res) => {
@@ -255,7 +255,7 @@ router.delete("/me/favorites", requireAuth, async (req: any, res) => {
       eq(favoritesTable.itemType, itemType),
       eq(favoritesTable.itemId, itemId),
     ));
-  res.json({ ok: true });
+  return res.json({ ok: true });
 });
 
 // ── Favorites partenaires ────────────────────────────────────────────────────
@@ -265,7 +265,7 @@ router.get("/partners/me/favorites", requireAuth, async (req: any, res) => {
   const rows = await db.select().from(favoritesTable).where(eq(favoritesTable.partnerId, id));
   const events = rows.filter((r) => r.itemType === "event").map((r) => String(r.itemId));
   const venues = rows.filter((r) => r.itemType === "venue").map((r) => String(r.itemId));
-  res.json({ events, venues });
+  return res.json({ events, venues });
 });
 
 router.post("/partners/me/favorites", requireAuth, async (req: any, res) => {
@@ -286,7 +286,7 @@ router.post("/partners/me/favorites", requireAuth, async (req: any, res) => {
     .insert(favoritesTable)
     .values({ partnerId: id, itemType: item.itemType, itemId: item.itemId })
     .onConflictDoNothing();
-  res.json({ ok: true });
+  return res.json({ ok: true });
 });
 
 router.delete("/partners/me/favorites", requireAuth, async (req: any, res) => {
@@ -304,7 +304,7 @@ router.delete("/partners/me/favorites", requireAuth, async (req: any, res) => {
       eq(favoritesTable.itemType, itemType),
       eq(favoritesTable.itemId, itemId),
     ));
-  res.json({ ok: true });
+  return res.json({ ok: true });
 });
 
 // ── Partner stats (real data only) ─────────────────────────────────────────

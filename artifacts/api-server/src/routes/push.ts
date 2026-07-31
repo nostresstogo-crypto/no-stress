@@ -42,10 +42,10 @@ router.post("/push/register", pushLimiter, async (req, res) => {
       userId,
       partnerId,
     });
-    res.json({ ok: true });
+    return res.json({ ok: true });
   } catch (err: any) {
     console.error("[push/register]", err);
-    res.status(400).json({ error: err?.message || "failed" });
+    return res.status(400).json({ error: err?.message || "failed" });
   }
 });
 
@@ -56,10 +56,10 @@ router.post("/push/unregister", async (req, res) => {
       return res.status(400).json({ error: "token required" });
     }
     await deletePushToken(token);
-    res.json({ ok: true });
+    return res.json({ ok: true });
   } catch (err: any) {
     console.error("[push/unregister]", err);
-    res.status(400).json({ error: err?.message || "failed" });
+    return res.status(400).json({ error: err?.message || "failed" });
   }
 });
 
