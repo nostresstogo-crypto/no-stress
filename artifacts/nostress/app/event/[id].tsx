@@ -27,6 +27,7 @@ import { formatDateLocalized } from "@/lib/formatDate";
 import { API_BASE } from "@/lib/apiBase";
 import ReportButton from "@/components/ReportButton";
 import ReviewModal from "@/components/ReviewModal";
+import { NavigationOptionsSheet } from "@/components/common/NavigationOptionsSheet";
 
 const { width: SW, height: SH } = Dimensions.get("window");
 const HERO_H = SH * 0.38;
@@ -50,6 +51,7 @@ export default function EventDetailScreen() {
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [reviewSuccess, setReviewSuccess] = useState(false);
+  const [navSheetVisible, setNavSheetVisible] = useState(false);
 
   const carouselRef = useRef<FlatList>(null);
   const lightboxRef = useRef<FlatList>(null);
@@ -459,35 +461,7 @@ export default function EventDetailScreen() {
                 borderRadius: 12,
                 paddingVertical: 12,
               }}
-              onPress={() => {
-                const lat = venueDetails?.latitude ?? event.latitude;
-                const lng = venueDetails?.longitude ?? event.longitude;
-                const queryText = [
-                  venueDetails?.name || event.venue,
-                  venueDetails?.address,
-                  event.city,
-                  venueDetails?.country || "Togo",
-                ].filter(Boolean).join(", ");
-                const query = encodeURIComponent(queryText);
-                const hasCoords = lat != null && lng != null && Number.isFinite(Number(lat)) && Number.isFinite(Number(lng));
-                let url: string;
-                if (hasCoords) {
-                  url = Platform.select({
-                    ios: `maps:0,0?q=${query}&ll=${lat},${lng}`,
-                    android: `geo:${lat},${lng}?q=${lat},${lng}(${encodeURIComponent(venueDetails?.name || event.venue || "")})`,
-                    default: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
-                  }) as string;
-                } else {
-                  url = Platform.select({
-                    ios: `maps:0,0?q=${query}`,
-                    android: `geo:0,0?q=${query}`,
-                    default: `https://www.google.com/maps/search/?api=1&query=${query}`,
-                  }) as string;
-                }
-                Linking.openURL(url).catch(() => {
-                  Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
-                });
-              }}
+              onPress={() => setNavSheetVisible(true)}
             >
               <Ionicons name="navigate" size={18} color={C.bg} />
               <Text style={{ color: C.bg, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
@@ -618,6 +592,19 @@ export default function EventDetailScreen() {
       </ScrollView>
 
       {/* Ticket purchase bar hidden by product decision (ticketing disabled). */}
+
+      <NavigationOptionsSheet
+        visible={navSheetVisible}
+        onClose={() => setNavSheetVisible(false)}
+        venue={{
+          name: venueDetails?.name || event.venue || "",
+          address: venueDetails?.address,
+          city: event.city,
+          latitude: venueDetails?.latitude ?? event.latitude ?? null,
+          longitude: venueDetails?.longitude ?? event.longitude ?? null,
+        }}
+        lang={lang as "fr" | "en"}
+      />
 
       <ReviewModal
         visible={reviewModalOpen}
