@@ -90,8 +90,7 @@ function makeStyles(C: ColorPalette) {
     premiumMeta: { fontFamily: Fonts.regular, fontSize: FontSize.xs, color: "rgba(255,255,255,0.75)" },
     premiumVerified: {
       position: "absolute", top: 10, right: 10,
-      backgroundColor: "rgba(0,0,0,0.35)", borderRadius: 12,
-      width: 24, height: 24, alignItems: "center", justifyContent: "center",
+      padding: 4, alignItems: "center", justifyContent: "center",
     },
 
     // ── venueList (full-width premium list item) ──────────────────────────
