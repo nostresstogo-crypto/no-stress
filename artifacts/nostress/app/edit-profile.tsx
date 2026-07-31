@@ -57,6 +57,7 @@ export default function EditProfileScreen() {
   const [name, setName] = useState(user?.name || "");
   const [phone, setPhone] = useState(user?.phone || "");
   const [businessName, setBusinessName] = useState((user as any)?.businessName || "");
+  const [displayName, setDisplayName] = useState<string>((user as any)?.displayName || "");
   const rawCity: string = (user as any)?.city || "";
   const [city, setCity] = useState(rawCity.includes(",") ? rawCity.split(",")[0].trim() : rawCity);
   const [profileImage, setProfileImage] = useState<string | null>(user?.avatarUrl || (user as any)?.profileImage || null);
@@ -116,7 +117,7 @@ export default function EditProfileScreen() {
     try {
       const url = isPartner ? `${API_BASE}/partners/me` : `${API_BASE}/users/me`;
       const body: any = isPartner
-        ? { contactName: businessName.trim(), businessName: businessName.trim(), phone: phone.trim(), city: city.trim(), profileImage }
+        ? { contactName: businessName.trim(), businessName: businessName.trim(), phone: phone.trim(), city: city.trim(), profileImage, displayName: displayName.trim() || null }
         : {
             firstName: firstName.trim() || undefined,
             lastName: lastName.trim() || undefined,
@@ -144,7 +145,7 @@ export default function EditProfileScreen() {
           phone: updated.phone || user.phone,
           ...(updated.profileImage ? { avatarUrl: updated.profileImage } : {}),
           ...(isPartner
-            ? { businessName: updated.businessName, city: updated.city }
+            ? { businessName: updated.businessName, city: updated.city, displayName: updated.displayName ?? null }
             : {
                 firstName: updated.firstName ?? firstName,
                 lastName: updated.lastName ?? lastName,
@@ -259,6 +260,19 @@ export default function EditProfileScreen() {
             <View>
               <Text style={styles.label}>{lang === "fr" ? "Nom de la structure" : "Business name"}</Text>
               <TextInput value={businessName} onChangeText={setBusinessName} style={styles.input} placeholderTextColor={C.textMuted} />
+            </View>
+          )}
+          {isPartner && (
+            <View>
+              <Text style={styles.label}>{lang === "fr" ? "Nom d'affichage" : "Display name"}</Text>
+              <TextInput
+                value={displayName}
+                onChangeText={setDisplayName}
+                style={styles.input}
+                placeholderTextColor={C.textMuted}
+                placeholder={lang === "fr" ? "Nom court pour l'en-tête (optionnel)" : "Short name for the header (optional)"}
+                maxLength={30}
+              />
             </View>
           )}
           <View>

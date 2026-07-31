@@ -174,6 +174,7 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
         id: String(partner.id),
         email: partner.email,
         name: partner.contactName || partner.businessName,
+        displayName: partner.displayName ?? null,
         phone: partner.phone,
         role: "structure",
         favorites: [],

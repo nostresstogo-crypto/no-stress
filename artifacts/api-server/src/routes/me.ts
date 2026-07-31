@@ -65,6 +65,7 @@ function publicPartner(p: typeof partnersTable.$inferSelect) {
     rejectionReason: p.rejectionReason ?? null,
     profileImage: p.profileImage ?? null,
     emailVerified: !!p.emailVerified,
+    displayName: p.displayName ?? null,
     subscription: (() => {
       const until = p.subscriptionUntil ? new Date(p.subscriptionUntil) : null;
       const start = p.subscriptionStart ? new Date(p.subscriptionStart) : null;
@@ -144,7 +145,7 @@ router.patch("/partners/me", requireAuth, async (req: any, res) => {
   const id = partnerIdFromAuth(req.auth);
   if (id == null) return res.status(403).json({ error: "Réservé aux partenaires." });
   const allowed: any = {};
-  for (const k of ["contactName", "businessName", "businessType", "phone", "city", "description", "websiteUrl", "profileImage"]) {
+  for (const k of ["contactName", "businessName", "businessType", "phone", "city", "description", "websiteUrl", "profileImage", "displayName"]) {
     if (k in req.body) {
       const v = req.body[k];
       allowed[k] = typeof v === "string" ? v.trim() || null : v;

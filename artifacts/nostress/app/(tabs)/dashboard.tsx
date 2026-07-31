@@ -706,7 +706,7 @@ export default function DashboardScreen() {
           </View>
           <View style={styles.headerMeta}>
             <Text style={styles.headerGreeting}>{dashGreeting}</Text>
-            <Text style={styles.headerName} numberOfLines={1} ellipsizeMode="tail">{user.name}</Text>
+            <Text style={styles.headerName} numberOfLines={1} ellipsizeMode="tail">{(user as any).displayName || user.name}</Text>
           </View>
           <View style={styles.headerRight}>
             <View style={[
