@@ -110,6 +110,8 @@ interface User {
   partnerStatus?: "pending" | "approved" | "rejected";
   partnerRejectionReason?: string;
   emailVerified?: boolean;
+  subscriptionUntil?: string | null;
+  subscriptionStart?: string | null;
 }
 
 interface Notification {
@@ -570,6 +572,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           partnerStatus: p.status ?? prev.partnerStatus,
           partnerRejectionReason: p.rejectionReason ?? prev.partnerRejectionReason,
           emailVerified: p.emailVerified ?? prev.emailVerified,
+          subscriptionUntil: p.subscription?.subscriptionUntil !== undefined ? p.subscription.subscriptionUntil : prev.subscriptionUntil,
+          subscriptionStart: p.subscription?.subscriptionStart !== undefined ? p.subscription.subscriptionStart : prev.subscriptionStart,
         };
         AsyncStorage.setItem(KEYS.user, JSON.stringify(updated)).catch(() => {});
         return updated;

@@ -261,6 +261,37 @@ function partnerStatusColor(status?: string): { bg: string; text: string } {
   }
 }
 
+type SubscriptionState = "active" | "expiring_soon" | "expired" | "none";
+
+function subscriptionState(subscriptionUntil?: string | null): SubscriptionState {
+  if (!subscriptionUntil) return "none";
+  const until = new Date(subscriptionUntil);
+  const now = new Date();
+  if (until < now) return "expired";
+  const diffMs = until.getTime() - now.getTime();
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  if (diffDays <= 7) return "expiring_soon";
+  return "active";
+}
+
+function subscriptionPillColors(state: SubscriptionState): { bg: string; text: string } {
+  switch (state) {
+    case "active":        return { bg: "#27ae6020", text: "#27ae60" };
+    case "expiring_soon": return { bg: "#f0a83020", text: "#f0a830" };
+    case "expired":       return { bg: "#e0525220", text: "#e05252" };
+    default:              return { bg: "#80808020", text: "#808080" };
+  }
+}
+
+function formatSubscriptionDate(iso: string, fr: boolean): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString(fr ? "fr-FR" : "en-US", { day: "numeric", month: "long", year: "numeric" });
+  } catch {
+    return iso;
+  }
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AccountScreen() {
@@ -668,6 +699,44 @@ export default function AccountScreen() {
               {user.partnerRejectionReason}
             </Text>
           )}
+
+          {/* ── Subscription expiry ─────────────────────────────────────── */}
+          {user.subscriptionUntil != null && (() => {
+            const subState = subscriptionState(user.subscriptionUntil);
+            const pillColors = subscriptionPillColors(subState);
+            const pillLabel = {
+              active:        fr ? "Actif"           : "Active",
+              expiring_soon: fr ? "Expire bientôt"  : "Expiring soon",
+              expired:       fr ? "Expiré"           : "Expired",
+              none:          "",
+            }[subState];
+            const expiryLabel = {
+              active:        fr ? "Abonnement valide jusqu'au" : "Subscription valid until",
+              expiring_soon: fr ? "Expire le"                  : "Expires on",
+              expired:       fr ? "Expiré le"                  : "Expired on",
+              none:          "",
+            }[subState];
+            return (
+              <View style={{ marginTop: 10, gap: 4 }}>
+                <View style={styles.partnerCardRow}>
+                  <Ionicons name="card-outline" size={14} color={C.textMuted} />
+                  <Text style={styles.partnerCardLabel}>
+                    {fr ? "Abonnement" : "Subscription"}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  <View style={[styles.partnerStatusBadge, { backgroundColor: pillColors.bg }]}>
+                    <Text style={[styles.partnerStatusText, { color: pillColors.text }]}>
+                      {pillLabel}
+                    </Text>
+                  </View>
+                  <Text style={[styles.partnerCardLabel, { fontSize: 12 }]}>
+                    {expiryLabel} {formatSubscriptionDate(user.subscriptionUntil!, fr)}
+                  </Text>
+                </View>
+              </View>
+            );
+          })()}
         </View>
       )}
 
