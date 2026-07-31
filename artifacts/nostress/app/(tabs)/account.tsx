@@ -45,7 +45,7 @@ const SUPPORT_WHATSAPP_URL = `https://wa.me/22872770767?text=${encodeURIComponen
 function makeStyles(C: ColorPalette) {
   return StyleSheet.create({
     root: { flex: 1, backgroundColor: C.bg },
-    content: { paddingHorizontal: 20, gap: 14 },
+    content: { paddingHorizontal: 14, gap: 12 },
 
     // ── Guest ────────────────────────────────────────────────────────────────
     authPrompt: {
@@ -948,6 +948,21 @@ export default function AccountScreen() {
       {/* ── Section : Assistance ───────────────────────────────────────────── */}
       <Text style={styles.sectionHeader}>{fr ? "Assistance" : "Support"}</Text>
       <View style={styles.card}>
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() => safePush("/ai-assistant")}
+          accessibilityLabel={fr ? "Assistant IA" : "AI Assistant"}
+          accessibilityRole="button"
+        >
+          <View style={[styles.iconWrap, { backgroundColor: "#5A46C018" }]}>
+            <Ionicons name="sparkles" size={18} color="#7C5CFC" />
+          </View>
+          <Text style={styles.rowLabel}>{fr ? "Assistant IA" : "AI Assistant"}</Text>
+          <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
+        </TouchableOpacity>
+
+        <View style={styles.divider} />
+
         <TouchableOpacity
           style={styles.row}
           onPress={openWhatsApp}

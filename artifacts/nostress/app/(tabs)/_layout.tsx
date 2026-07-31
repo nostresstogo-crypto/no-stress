@@ -1,22 +1,17 @@
 import { BlurView } from "expo-blur";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import {
-  Animated,
-  Image,
   Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SymbolView } from "expo-symbols";
 import type { ColorPalette } from "@/constants/colors";
 import { useApp, useT, useColors } from "@/context/AppContext";
-import { safePush } from "@/lib/navigation";
 
 /* ── Tab icon with active glow indicator ──────────────────────────────── */
 function TabIcon({
@@ -162,127 +157,6 @@ const makeCenterBtnStyles = (C: ColorPalette) =>
     },
   });
 
-/* ── AI Floating Button ──────────────────────────────────────────────── */
-function AIFloatingButton() {
-  const C = useColors();
-  const insets = useSafeAreaInsets();
-  const pulse = useRef(new Animated.Value(1)).current;
-  const wave = useRef(new Animated.Value(0)).current;
-  const bounce = useRef(new Animated.Value(0)).current;
-
-  /* Glow pulse — continu */
-  useEffect(() => {
-    const anim = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1.18, duration: 1400, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 1, duration: 1400, useNativeDriver: true }),
-      ])
-    );
-    anim.start();
-    return () => anim.stop();
-  }, [pulse]);
-
-  /* Salutation — joue au démarrage puis toutes les 6 secondes */
-  useEffect(() => {
-    function greet() {
-      Animated.sequence([
-        /* légère élévation */
-        Animated.timing(bounce, { toValue: -6, duration: 180, useNativeDriver: true }),
-        /* balancement : droite → gauche → droite → gauche → centre */
-        Animated.timing(wave, { toValue: 18, duration: 140, useNativeDriver: true }),
-        Animated.timing(wave, { toValue: -14, duration: 130, useNativeDriver: true }),
-        Animated.timing(wave, { toValue: 16, duration: 130, useNativeDriver: true }),
-        Animated.timing(wave, { toValue: -10, duration: 130, useNativeDriver: true }),
-        Animated.timing(wave, { toValue: 8, duration: 120, useNativeDriver: true }),
-        Animated.timing(wave, { toValue: 0, duration: 160, useNativeDriver: true }),
-        /* retour au sol */
-        Animated.timing(bounce, { toValue: 0, duration: 200, useNativeDriver: true }),
-      ]).start();
-    }
-
-    /* premier salut après 600 ms (app bien chargée) */
-    const first = setTimeout(greet, 600);
-    /* saluts périodiques toutes les 6 s */
-    const interval = setInterval(greet, 6000);
-    return () => {
-      clearTimeout(first);
-      clearInterval(interval);
-    };
-  }, [wave, bounce]);
-
-  const rotate = wave.interpolate({
-    inputRange: [-20, 0, 20],
-    outputRange: ["-20deg", "0deg", "20deg"],
-  });
-
-  const TAB_H = Platform.OS === "ios" ? 82 : 64;
-  const bottom = insets.bottom + TAB_H + 12;
-
-  return (
-    <TouchableOpacity
-      onPress={() => safePush("/ai-assistant")}
-      activeOpacity={0.82}
-      accessibilityLabel="Assistant IA"
-      style={[fabStyles.wrap, { bottom, right: 18 }]}
-    >
-      {/* Anneau de lueur pulsant */}
-      <Animated.View
-        style={[fabStyles.glow, { backgroundColor: C.lavender + "28", transform: [{ scale: pulse }] }]}
-        pointerEvents="none"
-      />
-
-      {/* Cercle + robot animé */}
-      <Animated.View style={{ transform: [{ translateY: bounce }] }}>
-        <LinearGradient
-          colors={["#1A1040", "#2D1F6E"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={fabStyles.circle}
-        >
-          <Animated.Image
-            source={require("@/assets/images/ai-mascot.png")}
-            style={[fabStyles.mascot, { transform: [{ rotate }] }]}
-            resizeMode="contain"
-          />
-        </LinearGradient>
-      </Animated.View>
-    </TouchableOpacity>
-  );
-}
-
-const fabStyles = StyleSheet.create({
-  wrap: {
-    position: "absolute",
-    zIndex: 9000,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  glow: {
-    position: "absolute",
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-  },
-  circle: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#5A46C0",
-    shadowOpacity: 0.7,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 14,
-    overflow: "hidden",
-  },
-  mascot: {
-    width: 54,
-    height: 54,
-    marginBottom: -4,
-  },
-});
-
 /* ── Tab layout ─────────────────────────────────────────────────────────── */
 function ClassicTabLayout() {
   const t = useT();
@@ -404,7 +278,6 @@ function ClassicTabLayout() {
       />
 
     </Tabs>
-    <AIFloatingButton />
     </View>
   );
 }

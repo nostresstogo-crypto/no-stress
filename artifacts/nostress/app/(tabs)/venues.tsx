@@ -339,7 +339,7 @@ const makeStyles = (C: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   header: {
     backgroundColor: C.bg,
-    paddingHorizontal: 20,
+    paddingHorizontal: 14,
     paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
@@ -384,7 +384,7 @@ const makeStyles = (C: any) => StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14,
     borderWidth: 1, borderColor: C.border, backgroundColor: C.card,
   },
-  list: { padding: 20 },
+  list: { padding: 14 },
   empty: { alignItems: "center", justifyContent: "center", paddingVertical: 60, gap: 16 },
   emptyText: { fontSize: 16, fontFamily: "Inter_500Medium", color: C.textMuted },
   popularSection: { marginBottom: 20 },

@@ -742,7 +742,7 @@ const s = StyleSheet.create({
 
   /* Header */
   header: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 14,
     paddingBottom: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
@@ -831,12 +831,12 @@ const s = StyleSheet.create({
 
   /* Sections */
   section: { marginBottom: 28 },
-  hList: { gap: 12, paddingHorizontal: 20 },
-  vList: { paddingHorizontal: 20, gap: 0 },
+  hList: { gap: 12, paddingHorizontal: 14 },
+  vList: { paddingHorizontal: 14, gap: 0 },
   dot: { width: 8, height: 8, borderRadius: 4 },
 
   /* Charger plus */
-  loadMore: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginHorizontal: 20, marginTop: 12, paddingVertical: 14, borderRadius: 14, borderWidth: 1 },
+  loadMore: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginHorizontal: 14, marginTop: 12, paddingVertical: 14, borderRadius: 14, borderWidth: 1 },
   loadMoreText: { fontFamily: Fonts.semiBold, fontSize: FontSize.sm },
 
   /* Empty */
