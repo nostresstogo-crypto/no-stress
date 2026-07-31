@@ -5,13 +5,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useT, useColors } from "@/context/AppContext";
-import { thumbUrl } from "@/lib/imageUrl";
 import { ColorPalette } from "@/constants/colors";
 import { Fonts, FontSize, LetterSpacing } from "@/constants/typography";
+import { ResilientImage } from "@/components/common/ResilientImage";
 
 interface Venue {
   id: string;
@@ -165,7 +164,6 @@ export function VenueCard({ venue, onPress, compact = false, variant }: VenueCar
 
   // ── homePremium ───────────────────────────────────────────────────────────
   if (resolvedVariant === "homePremium") {
-    const imgUri = thumbUrl(venue.imageUrl, 380, 400) ?? venue.imageUrl ?? null;
     return (
       <TouchableOpacity
         onPress={onPress} activeOpacity={0.88}
@@ -173,17 +171,16 @@ export function VenueCard({ venue, onPress, compact = false, variant }: VenueCar
         accessibilityRole="button" accessibilityLabel={venue.name}
         accessibilityHint={venue.city ? `${venue.city}${venue.type ? ` · ${venue.type}` : ""}` : undefined}
       >
-        {imgUri ? (
-          <Image
-            source={{ uri: imgUri }} style={styles.premiumImage}
-            contentFit="cover" cachePolicy="disk" transition={200}
-            placeholder={venue.blurhash ? { blurhash: venue.blurhash } : undefined}
-          />
-        ) : (
-          <View style={[styles.premiumImage, styles.placeholder]}>
-            <Ionicons name="business-outline" size={36} color={C.textMuted} />
-          </View>
-        )}
+        <ResilientImage
+          uri={venue.imageUrl}
+          blurhash={venue.blurhash}
+          style={styles.premiumImage}
+          contentFit="cover"
+          placeholderKind="venue"
+          fallbackIconSize={36}
+          noSkeleton
+          debugContext="VenueCard.homePremium"
+        />
         <LinearGradient
           colors={["transparent", "rgba(8,6,22,0.55)", "rgba(8,6,22,0.90)"]}
           locations={[0.3, 0.65, 1]}
@@ -216,25 +213,21 @@ export function VenueCard({ venue, onPress, compact = false, variant }: VenueCar
 
   // ── venueList ─────────────────────────────────────────────────────────────
   if (resolvedVariant === "venueList") {
-    const imgUri = thumbUrl(venue.imageUrl, 176, 176) ?? venue.imageUrl ?? null;
     return (
       <TouchableOpacity
         onPress={onPress} activeOpacity={0.84}
         style={styles.listCard}
         accessibilityRole="button" accessibilityLabel={venue.name}
       >
-        {/* Image */}
-        {imgUri ? (
-          <Image
-            source={{ uri: imgUri }} style={styles.listImage}
-            contentFit="cover" cachePolicy="disk" transition={180}
-            placeholder={venue.blurhash ? { blurhash: venue.blurhash } : undefined}
-          />
-        ) : (
-          <View style={[styles.listImage, styles.listPlaceholder]}>
-            <Ionicons name="business-outline" size={28} color={C.textMuted} />
-          </View>
-        )}
+        <ResilientImage
+          uri={venue.imageUrl}
+          blurhash={venue.blurhash}
+          style={styles.listImage}
+          contentFit="cover"
+          placeholderKind="venue"
+          fallbackIconSize={28}
+          debugContext="VenueCard.venueList"
+        />
 
         {/* Info */}
         <View style={styles.listInfo}>
@@ -269,24 +262,22 @@ export function VenueCard({ venue, onPress, compact = false, variant }: VenueCar
 
   // ── venueFeatured ────────────────────────────────────────────────────────
   if (resolvedVariant === "venueFeatured") {
-    const imgUri = thumbUrl(venue.imageUrl, 800, 440) ?? venue.imageUrl ?? null;
     return (
       <TouchableOpacity
         onPress={onPress} activeOpacity={0.88}
         style={styles.featuredCard}
         accessibilityRole="button" accessibilityLabel={venue.name}
       >
-        {imgUri ? (
-          <Image
-            source={{ uri: imgUri }} style={styles.featuredImage}
-            contentFit="cover" cachePolicy="disk" transition={220}
-            placeholder={venue.blurhash ? { blurhash: venue.blurhash } : undefined}
-          />
-        ) : (
-          <View style={[styles.featuredImage, styles.placeholder]}>
-            <Ionicons name="business-outline" size={52} color={C.textMuted} />
-          </View>
-        )}
+        <ResilientImage
+          uri={venue.imageUrl}
+          blurhash={venue.blurhash}
+          style={styles.featuredImage}
+          contentFit="cover"
+          placeholderKind="venue"
+          fallbackIconSize={52}
+          noSkeleton
+          debugContext="VenueCard.venueFeatured"
+        />
         <LinearGradient
           colors={["transparent", "rgba(6,4,18,0.45)", "rgba(6,4,18,0.92)"]}
           locations={[0.25, 0.6, 1]}
@@ -330,7 +321,6 @@ export function VenueCard({ venue, onPress, compact = false, variant }: VenueCar
 
   // ── default / compact ─────────────────────────────────────────────────────
   const isCompact = resolvedVariant === "compact";
-  const imgUri = thumbUrl(venue.imageUrl, isCompact ? 144 : 480, isCompact ? 144 : 280) ?? venue.imageUrl ?? null;
 
   return (
     <TouchableOpacity
@@ -338,19 +328,15 @@ export function VenueCard({ venue, onPress, compact = false, variant }: VenueCar
       style={[styles.card, isCompact && styles.compact]}
       accessibilityRole="button" accessibilityLabel={venue.name}
     >
-      {imgUri ? (
-        <Image
-          source={{ uri: imgUri }}
-          style={isCompact ? styles.compactImage : styles.image}
-          contentFit="cover" cachePolicy="disk" transition={200}
-          placeholder={venue.blurhash ? { blurhash: venue.blurhash } : undefined}
-        />
-      ) : (
-        <View style={[isCompact ? styles.compactImage : styles.image, styles.placeholder]}>
-          <Ionicons name="business" size={isCompact ? 28 : 44} color={C.lavender} />
-          {!isCompact && <Text style={styles.placeholderLabel}>{t("noPhoto" as any) || "Aucune photo"}</Text>}
-        </View>
-      )}
+      <ResilientImage
+        uri={venue.imageUrl}
+        blurhash={venue.blurhash}
+        style={isCompact ? styles.compactImage : styles.image}
+        contentFit="cover"
+        placeholderKind="venue"
+        fallbackIconSize={isCompact ? 28 : 44}
+        debugContext={isCompact ? "VenueCard.compact" : "VenueCard.default"}
+      />
       <View style={[styles.info, isCompact && styles.compactInfo]}>
         <View style={styles.nameRow}>
           <Text style={[styles.name, isCompact && styles.compactName]} numberOfLines={1}>

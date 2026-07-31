@@ -18,15 +18,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/context/AppContext";
 import { ColorPalette } from "@/constants/colors";
 import { Fonts, FontSize, LetterSpacing, headingMedium, caption, bodySmall } from "@/constants/typography";
-import { thumbUrl } from "@/lib/imageUrl";
 import { formatDateLocalized } from "@/lib/formatDate";
 import { safePush } from "@/lib/navigation";
+import { ResilientImage } from "@/components/common/ResilientImage";
 
 const { width: SCREEN_W } = Dimensions.get("window");
 
@@ -153,7 +152,6 @@ function HeroSlide({ item, lang, C }: { item: CarouselEvent; lang: string; C: Co
   const title = (lang === "fr" ? item.titleFr || item.title : item.title || item.titleFr) ?? "";
   const dateStr = item.date ? formatDateLocalized(item.date, (lang === "fr" ? "fr" : "en"), { short: true }) : "";
   const location = [item.venue, item.city].filter(Boolean).join(" · ");
-  const imgUri = thumbUrl(item.imageUrl, Math.round(CARD_WIDTH), CARD_HEIGHT) ?? item.imageUrl ?? null;
 
   return (
     <Pressable
@@ -162,20 +160,16 @@ function HeroSlide({ item, lang, C }: { item: CarouselEvent; lang: string; C: Co
       android_ripple={{ color: "rgba(255,255,255,0.08)", borderless: false }}
     >
       <View style={styles.card}>
-        {/* Image */}
-        {imgUri ? (
-          <Image
-            source={{ uri: imgUri }}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-            cachePolicy="disk"
-            transition={300}
-          />
-        ) : (
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: C.card2, alignItems: "center", justifyContent: "center" }]}>
-            <Ionicons name="musical-notes-outline" size={48} color={C.textMuted} />
-          </View>
-        )}
+        {/* Image résiliente — retry automatique, skeleton, fallback */}
+        <ResilientImage
+          uri={item.imageUrl}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          placeholderKind="event"
+          fallbackIconSize={48}
+          noSkeleton
+          debugContext="HeroCarousel"
+        />
 
         {/* Gradient overlay — gentle, bottom-heavy */}
         <LinearGradient

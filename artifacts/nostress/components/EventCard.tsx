@@ -6,13 +6,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { ColorPalette } from "@/constants/colors";
 import { formatDateLocalized } from "@/lib/formatDate";
-import { thumbUrl } from "@/lib/imageUrl";
 import { Fonts, FontSize, LetterSpacing } from "@/constants/typography";
+import { ResilientImage } from "@/components/common/ResilientImage";
 
 const { width } = Dimensions.get("window");
 const CARD_WIDTH = width * 0.72;
@@ -163,7 +162,6 @@ export function EventCard({ event, onPress, horizontal = false, variant }: Event
 
   // ── homeCompact variant ───────────────────────────────────────────────────
   if (resolvedVariant === "homeCompact") {
-    const imgUri = thumbUrl(event.imageUrl, 160, 160) ?? event.imageUrl ?? null;
     return (
       <TouchableOpacity
         onPress={onPress}
@@ -174,20 +172,15 @@ export function EventCard({ event, onPress, horizontal = false, variant }: Event
       >
         {/* Image thumbnail */}
         <View style={styles.compactImg}>
-          {imgUri ? (
-            <Image
-              source={{ uri: imgUri }}
-              style={[styles.compactImg, { position: "absolute" }]}
-              contentFit="cover"
-              cachePolicy="disk"
-              transition={150}
-              placeholder={event.blurhash ? { blurhash: event.blurhash } : undefined}
-            />
-          ) : (
-            <View style={[styles.compactImg, styles.compactImgPlaceholder]}>
-              <Ionicons name="musical-notes" size={24} color={C.lavender} />
-            </View>
-          )}
+          <ResilientImage
+            uri={event.imageUrl}
+            blurhash={event.blurhash}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            placeholderKind="event"
+            fallbackIconSize={24}
+            debugContext="EventCard.homeCompact"
+          />
           {safeCategory ? (
             <View style={styles.compactCatBadge}>
               <Text style={styles.compactCatText}>{safeCategory}</Text>
@@ -240,7 +233,6 @@ export function EventCard({ event, onPress, horizontal = false, variant }: Event
   }
 
   // ── default / horizontal ──────────────────────────────────────────────────
-  const imgUri = thumbUrl(event.imageUrl, 480, 320) ?? event.imageUrl ?? null;
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -250,20 +242,15 @@ export function EventCard({ event, onPress, horizontal = false, variant }: Event
       accessibilityLabel={safeTitle}
     >
       <View style={styles.imageContainer}>
-        {imgUri ? (
-          <Image
-            source={{ uri: imgUri }}
-            style={styles.image}
-            contentFit="cover"
-            cachePolicy="disk"
-            transition={200}
-            placeholder={event.blurhash ? { blurhash: event.blurhash } : undefined}
-          />
-        ) : (
-          <View style={[styles.image, styles.imagePlaceholder]}>
-            <Ionicons name="musical-notes" size={32} color={C.lavender} />
-          </View>
-        )}
+        <ResilientImage
+          uri={event.imageUrl}
+          blurhash={event.blurhash}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          placeholderKind="event"
+          fallbackIconSize={32}
+          debugContext="EventCard.default"
+        />
         <TouchableOpacity
           style={styles.favBtn}
           onPress={() => toggleFavorite(event.id)}
