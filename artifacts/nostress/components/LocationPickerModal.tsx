@@ -112,8 +112,6 @@ async function fetchNominatim(
   url.searchParams.set("limit", "10");
   url.searchParams.set("accept-language", lang === "fr" ? "fr,en" : "en,fr");
 
-  console.log("[Search] Nominatim URL:", url.toString());
-
   const res = await fetch(url.toString(), {
     headers: {
       "User-Agent": "NoStressApp/1.0 (https://nostress.tg; contact@nostress.tg)",
@@ -121,12 +119,9 @@ async function fetchNominatim(
     signal,
   });
 
-  console.log("[Search] Nominatim status:", res.status);
   if (!res.ok) throw new Error(`Nominatim HTTP ${res.status}`);
 
   const data: any[] = await res.json();
-  console.log("[Search] Nominatim raw count:", data.length);
-  console.log("[Search] Nominatim raw[0]:", JSON.stringify(data[0] ?? null).slice(0, 300));
 
   return parseNominatimResults(data, configCities);
 }
@@ -183,16 +178,12 @@ async function fetchPhoton(
   url.searchParams.set("limit", "10");
   url.searchParams.set("lang", lang === "fr" ? "fr" : "en");
 
-  console.log("[Search] Photon URL:", url.toString());
-
   const res = await fetch(url.toString(), { signal });
 
-  console.log("[Search] Photon status:", res.status);
   if (!res.ok) throw new Error(`Photon HTTP ${res.status}`);
 
   const data = await res.json();
   const features: any[] = data.features ?? [];
-  console.log("[Search] Photon raw count:", features.length);
 
   const seen = new Set<string>();
   const results: PlaceResult[] = [];
@@ -235,20 +226,15 @@ async function fetchPlaces(
   configCities: ConfigCity[],
   signal: AbortSignal,
 ): Promise<PlaceResult[]> {
-  console.log("[Search] ► fetchPlaces query:", JSON.stringify(query));
-
   try {
     const results = await fetchNominatim(query, lang, configCities, signal);
-    console.log("[Search] Nominatim results:", results.length, results.map(r => r.name));
     if (results.length > 0) return results;
-    console.log("[Search] Nominatim returned 0 — trying Photon fallback");
   } catch (err: any) {
     if (err?.name === "AbortError") throw err;
     console.warn("[Search] Nominatim failed:", err?.message, "— trying Photon fallback");
   }
 
   const fallback = await fetchPhoton(query, lang, configCities, signal);
-  console.log("[Search] Photon results:", fallback.length, fallback.map(r => r.name));
   return fallback;
 }
 
@@ -419,7 +405,6 @@ export function LocationPickerModal({
       setNominatimResults([]);
       setSearchLoading(false);
       setSearchError(null);
-      console.log("[Search] query too short:", JSON.stringify(q), "(min", MIN_QUERY, ")");
       return;
     }
 
@@ -428,20 +413,16 @@ export function LocationPickerModal({
     setSearchError(null);
 
     debounceRef.current = setTimeout(() => {
-      console.log("[Search] debounce fired, launching search for:", JSON.stringify(q));
       abortRef.current?.abort();
       abortRef.current = new AbortController();
 
       fetchPlaces(q, lang, configCities, abortRef.current.signal)
         .then((results) => {
-          console.log("[Search] ✅ final results count:", results.length);
-          console.log("[Search] results:", JSON.stringify(results.map((r) => ({ name: r.name, country: r.country, isConfig: r.isConfigCity }))));
           setNominatimResults(results);
           setSearchLoading(false);
         })
         .catch((err: any) => {
           if (err?.name === "AbortError") {
-            console.log("[Search] aborted");
             return;
           }
           console.error("[Search] ❌ error:", err?.message ?? String(err));
@@ -486,7 +467,6 @@ export function LocationPickerModal({
 
   const handleSelectConfigCity = useCallback(
     (city: ConfigCity) => {
-      console.log("[Select] ConfigCity:", city.slug, city.name);
       Keyboard.dismiss();
       saveRecent(city.slug);
       onSelectCity(city.slug, city.name);
@@ -496,7 +476,6 @@ export function LocationPickerModal({
 
   const handleSelectPlace = useCallback(
     (result: PlaceResult) => {
-      console.log("[Select] Place:", result.name, "slug:", result.slug ?? "(none)");
       Keyboard.dismiss();
       if (result.slug) {
         saveRecent(result.slug);
@@ -826,7 +805,6 @@ export function LocationPickerModal({
                   placeholderTextColor={C.textMuted}
                   value={query}
                   onChangeText={(t) => {
-                    console.log("[Search] onChangeText:", JSON.stringify(t));
                     setQuery(t);
                   }}
                   autoCorrect={false}
