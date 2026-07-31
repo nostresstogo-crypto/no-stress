@@ -59,7 +59,7 @@ type EventStatusFilter = "all" | "pending" | "approved" | "rejected";
 
 export default function DashboardScreen() {
   const t = useT();
-  const { user, lang, myEvents, setUser, addNotification, updateMyEvent, removeMyEvent, syncMyEventsStatus, syncMyEventsFromBackend, refreshApiEvents, authFetch, token, configCities, configVenueTypes, configCountries, unreadCount } = useApp();
+  const { user, lang, myEvents, setUser, addNotification, updateMyEvent, removeMyEvent, syncMyEventsStatus, syncMyEventsFromBackend, refreshApiEvents, authFetch, token, configCities, configVenueTypes, configCountries, unreadCount, isFavoriteVenue, toggleFavoriteVenue } = useApp();
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const C = useColors();
@@ -139,13 +139,8 @@ export default function DashboardScreen() {
     return "Good evening";
   }, [lang]);
 
-  const quickActions = useMemo(() => [
-    { icon: "add-circle",            label: lang === "fr" ? "Créer"      : "Create",  onPress: () => safePush("/create-event"),  primary: true  },
-    { icon: "calendar-outline",      label: lang === "fr" ? "Événements" : "Events",  onPress: () => setTab("events"),           primary: false },
-    { icon: "business-outline",      label: lang === "fr" ? "Lieux"      : "Venues",  onPress: () => setTab("venues"),           primary: false },
-    { icon: "notifications-outline", label: lang === "fr" ? "Notifs"     : "Notifs",  onPress: () => safePush("/notifications"), primary: false },
-    { icon: "person-circle-outline", label: lang === "fr" ? "Profil"     : "Profile", onPress: () => safePush("/edit-profile"),  primary: false },
-  ], [lang, setTab]);
+  const [showCreateMenu, setShowCreateMenu] = useState(false);
+  const [openVenueActionsId, setOpenVenueActionsId] = useState<string | null>(null);
   // ─────────────────────────────────────────────────────────────────────────
 
   const loadMyVenues = useCallback(async () => {
@@ -760,11 +755,13 @@ export default function DashboardScreen() {
               icon="checkmark-circle" value={approvedEventsCount}
               label={lang === "fr" ? "Approuvés" : "Approved"}
               color={C.success} C={C}
+              onPress={() => { setTab("events"); setEventStatusFilter("approved"); }}
             />
             <PremiumStatCard
               icon="hourglass-outline" value={pendingEventsCount}
               label={lang === "fr" ? "En attente" : "Pending"}
               color="#F59E0B" C={C}
+              onPress={() => { setTab("events"); setEventStatusFilter("pending"); }}
             />
           </View>
           {/* Avis — affichés seulement si des données réelles existent */}
@@ -786,35 +783,18 @@ export default function DashboardScreen() {
           )}
         </View>
 
-        {/* Actions rapides */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.quickActionsRow}
+        {/* Bouton Créer compact */}
+        <TouchableOpacity
+          style={[styles.createMenuBtn, { backgroundColor: C.lavender }]}
+          onPress={() => setShowCreateMenu(true)}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel={lang === "fr" ? "Créer" : "Create"}
         >
-          {quickActions.map((qa) => (
-            <TouchableOpacity
-              key={qa.label}
-              style={[
-                styles.quickAction,
-                qa.primary
-                  ? { backgroundColor: C.lavender, borderColor: C.lavender }
-                  : { backgroundColor: C.card, borderColor: C.border },
-              ]}
-              onPress={qa.onPress}
-              activeOpacity={0.8}
-            >
-              <Ionicons
-                name={qa.icon as any}
-                size={16}
-                color={qa.primary ? "#fff" : C.lavender}
-              />
-              <Text style={[styles.quickActionText, { color: qa.primary ? "#fff" : C.text }]}>
-                {qa.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+          <Ionicons name="add-circle-outline" size={17} color="#fff" />
+          <Text style={styles.createMenuBtnText}>{lang === "fr" ? "Créer" : "Create"}</Text>
+          <Ionicons name="chevron-down" size={13} color="rgba(255,255,255,0.75)" />
+        </TouchableOpacity>
 
         {/* Tabs avec icônes */}
         <View style={styles.tabs}>
@@ -1079,31 +1059,20 @@ export default function DashboardScreen() {
                 const statusColor = getStatusColor(event.status, C);
                 const statusIcon = isCancelled ? "close-circle" : event.status === "approved" ? "checkmark-circle" : event.status === "rejected" ? "alert-circle" : "time";
                 return (
-                  <View
-                    key={event.id}
-                    style={[
-                      styles.eventRow,
-                      { flexDirection: "column", alignItems: "stretch", gap: 0,
-                        borderLeftWidth: 3, borderLeftColor: statusColor },
-                    ]}
-                  >
-                    {/* Info row — icône statut + titre + meta */}
-                    <View style={{ flexDirection: "row", gap: 10, alignItems: "flex-start" }}>
-                      <View style={{
-                        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                        backgroundColor: statusColor + "18",
-                        alignItems: "center", justifyContent: "center", marginTop: 1,
-                      }}>
-                        <Ionicons name={statusIcon as any} size={17} color={statusColor} />
+                  <View key={event.id}>
+                    {/* Card row compacte : icône statut | info | ⋯ */}
+                    <View style={[styles.eventRow, { borderLeftWidth: 3, borderLeftColor: statusColor }]}>
+                      <View style={[styles.eventStatusIcon, { backgroundColor: statusColor + "18" }]}>
+                        <Ionicons name={statusIcon as any} size={15} color={statusColor} />
                       </View>
                       <View style={[styles.eventInfo, { flex: 1, gap: 2 }]}>
                         <Text style={[styles.eventTitle, { fontSize: 13 }]} numberOfLines={1}>
                           {lang === "fr" && event.titleFr ? event.titleFr : event.titleEn || event.titleFr}
                         </Text>
-                        <Text style={styles.eventMeta}>
+                        <Text style={styles.eventMeta} numberOfLines={1}>
                           {formatDateLocalized(event.date, lang)}{event.time ? ` · ${event.time}` : ""} · {event.city}
                         </Text>
-                        <View style={{ flexDirection: "row", gap: 5, marginTop: 5, flexWrap: "wrap", alignItems: "center" }}>
+                        <View style={{ flexDirection: "row", gap: 5, marginTop: 4, flexWrap: "wrap", alignItems: "center" }}>
                           <View style={[styles.statusBadge, { backgroundColor: statusColor + "18", borderColor: statusColor + "55" }]}>
                             <Text style={[styles.statusText, { color: statusColor }]}>
                               {isCancelled
@@ -1120,46 +1089,27 @@ export default function DashboardScreen() {
                           )}
                         </View>
                       </View>
-                    </View>
-
-                    <TouchableOpacity
-                      onPress={toggleActions}
-                      activeOpacity={0.8}
-                      style={[
-                        styles.actionsToggle,
-                        { backgroundColor: C.bg, borderColor: C.border },
-                      ]}
-                      accessibilityLabel={lang === "fr" ? "Actions" : "Actions"}
-                    >
-                      <Ionicons name="ellipsis-horizontal" size={16} color={C.textMuted} />
-                      <Text style={[styles.actionsToggleText, { color: C.text }]}>
-                        {lang === "fr" ? "Actions" : "Actions"}
-                      </Text>
-                      <Ionicons
-                        name={isOpen ? "chevron-up" : "chevron-down"}
-                        size={14}
-                        color={C.textMuted}
-                      />
-                    </TouchableOpacity>
-
-                    {isOpen && (
-                      <View
-                        style={[
-                          styles.actionsDropdown,
-                          { backgroundColor: C.bg, borderColor: C.border },
-                        ]}
+                      <TouchableOpacity
+                        onPress={toggleActions}
+                        hitSlop={8}
+                        style={styles.dotMenuBtn}
+                        accessibilityLabel={lang === "fr" ? "Actions" : "Actions"}
+                        accessibilityRole="button"
                       >
+                        <Ionicons name="ellipsis-vertical" size={18} color={C.textMuted} />
+                      </TouchableOpacity>
+                    </View>
+                    {/* Dropdown actions */}
+                    {isOpen && (
+                      <View style={[styles.actionsDropdown, { backgroundColor: C.bg, borderColor: C.border }]}>
                         <TouchableOpacity
                           style={styles.actionItem}
                           onPress={() => { setOpenEventActionsId(null); viewEvent(); }}
                           activeOpacity={0.7}
                         >
                           <Ionicons name="eye-outline" size={18} color={C.lavender} />
-                          <Text style={[styles.actionItemText, { color: C.text }]}>
-                            {lang === "fr" ? "Voir" : "View"}
-                          </Text>
+                          <Text style={[styles.actionItemText, { color: C.text }]}>{lang === "fr" ? "Voir" : "View"}</Text>
                         </TouchableOpacity>
-
                         {canEdit && (
                           <>
                             <View style={[styles.actionDivider, { backgroundColor: C.border }]} />
@@ -1169,13 +1119,10 @@ export default function DashboardScreen() {
                               activeOpacity={0.7}
                             >
                               <Ionicons name="create-outline" size={18} color={C.gold} />
-                              <Text style={[styles.actionItemText, { color: C.text }]}>
-                                {lang === "fr" ? "Modifier" : "Edit"}
-                              </Text>
+                              <Text style={[styles.actionItemText, { color: C.text }]}>{lang === "fr" ? "Modifier" : "Edit"}</Text>
                             </TouchableOpacity>
                           </>
                         )}
-
                         {canCancel && (
                           <>
                             <View style={[styles.actionDivider, { backgroundColor: C.border }]} />
@@ -1185,13 +1132,10 @@ export default function DashboardScreen() {
                               activeOpacity={0.7}
                             >
                               <Ionicons name="close-circle-outline" size={18} color="#F59E0B" />
-                              <Text style={[styles.actionItemText, { color: C.text }]}>
-                                {lang === "fr" ? "Annuler" : "Cancel"}
-                              </Text>
+                              <Text style={[styles.actionItemText, { color: C.text }]}>{lang === "fr" ? "Annuler" : "Cancel"}</Text>
                             </TouchableOpacity>
                           </>
                         )}
-
                         <View style={[styles.actionDivider, { backgroundColor: C.border }]} />
                         <TouchableOpacity
                           style={styles.actionItem}
@@ -1199,9 +1143,7 @@ export default function DashboardScreen() {
                           activeOpacity={0.7}
                         >
                           <Ionicons name="trash-outline" size={18} color={C.error} />
-                          <Text style={[styles.actionItemText, { color: C.error }]}>
-                            {lang === "fr" ? "Supprimer" : "Delete"}
-                          </Text>
+                          <Text style={[styles.actionItemText, { color: C.error }]}>{lang === "fr" ? "Supprimer" : "Delete"}</Text>
                         </TouchableOpacity>
                       </View>
                     )}
@@ -1240,66 +1182,93 @@ export default function DashboardScreen() {
                   ? (lang === "fr" ? "Rejeté" : "Rejected")
                   : (lang === "fr" ? "En attente" : "Pending");
                 const hasLocation = typeof venue.latitude === "number" && typeof venue.longitude === "number";
+                const isVenueMenuOpen = openVenueActionsId === venue.id;
+                const venueFaved = isFavoriteVenue(venue.id);
                 return (
-                  <View key={venue.id} style={[styles.venueRow, { flexDirection: "column", alignItems: "stretch", gap: 8 }]}>
-                    <View style={{ flexDirection: "row", gap: 12, alignItems: "center" }}>
-                      <View style={[styles.venueIconBox, { backgroundColor: C.gold + "22" }]}>
-                        <Ionicons name="business" size={20} color={C.gold} />
+                  <View key={venue.id}>
+                    {/* Card row compacte : image | info | ❤ ⋯ */}
+                    <View style={[styles.venueRow, { paddingVertical: 10 }]}>
+                      <View style={[styles.venueThumb, { backgroundColor: C.card2 ?? C.card }]}>
+                        {venue.imageUrl ? (
+                          <Image source={{ uri: venue.imageUrl }} style={{ width: "100%", height: "100%" }} contentFit="cover" />
+                        ) : (
+                          <Ionicons name="business" size={20} color={C.gold} />
+                        )}
                       </View>
-                      <View style={styles.eventInfo}>
-                        <Text style={styles.eventTitle}>{venue.name}</Text>
-                        <Text style={styles.eventMeta}>{venue.type} · {venue.city}</Text>
-                        {venue.address ? (
-                          <Text style={styles.eventMeta}>{venue.address}</Text>
-                        ) : null}
-                        <View style={{ flexDirection: "row", gap: 6, marginTop: 6, flexWrap: "wrap" }}>
-                          <View style={[styles.statusBadge, { backgroundColor: statusColor + "22", borderColor: statusColor }]}>
+                      <View style={[styles.eventInfo, { flex: 1, gap: 2 }]}>
+                        <Text style={[styles.eventTitle, { fontSize: 13 }]} numberOfLines={1}>{venue.name}</Text>
+                        <Text style={styles.eventMeta} numberOfLines={1}>{venue.type} · {venue.city}</Text>
+                        <View style={{ flexDirection: "row", gap: 5, marginTop: 4, flexWrap: "wrap", alignItems: "center" }}>
+                          <View style={[styles.statusBadge, { backgroundColor: statusColor + "22", borderColor: statusColor + "55" }]}>
                             <Text style={[styles.statusText, { color: statusColor }]}>{statusLabel}</Text>
                           </View>
                           {!hasLocation && (
-                            <View style={[styles.statusBadge, { backgroundColor: C.textMuted + "22", borderColor: C.textMuted }]}>
-                              <Text style={[styles.statusText, { color: C.textMuted }]}>
-                                {lang === "fr" ? "GPS manquant" : "GPS missing"}
-                              </Text>
+                            <View style={[styles.statusBadge, { backgroundColor: C.textMuted + "18", borderColor: C.textMuted + "44" }]}>
+                              <Text style={[styles.statusText, { color: C.textMuted }]}>GPS</Text>
                             </View>
                           )}
                         </View>
-                        {vStatus === "rejected" && venue.rejectionReason ? (
-                          <Text style={[styles.eventMeta, { color: C.error, marginTop: 4 }]} numberOfLines={3}>
-                            {venue.rejectionReason}
-                          </Text>
-                        ) : null}
+                      </View>
+                      <View style={styles.venueRightBtns}>
+                        <TouchableOpacity
+                          onPress={() => toggleFavoriteVenue(venue.id)}
+                          hitSlop={8}
+                          style={styles.heartBtn}
+                          accessibilityRole="button"
+                          accessibilityLabel={venueFaved ? (lang === "fr" ? "Retirer des favoris" : "Remove from favorites") : (lang === "fr" ? "Ajouter aux favoris" : "Add to favorites")}
+                        >
+                          <Ionicons name={venueFaved ? "heart" : "heart-outline"} size={18} color={venueFaved ? C.error : C.textMuted} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => setOpenVenueActionsId(isVenueMenuOpen ? null : venue.id)}
+                          hitSlop={8}
+                          style={styles.dotMenuBtn}
+                          accessibilityLabel={lang === "fr" ? "Actions" : "Actions"}
+                          accessibilityRole="button"
+                        >
+                          <Ionicons name="ellipsis-vertical" size={18} color={C.textMuted} />
+                        </TouchableOpacity>
                       </View>
                     </View>
-                    <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-                      <TouchableOpacity
-                        onPress={() => setVenueLocation(venue)}
-                        style={[styles.venueActionBtn, { borderColor: C.lavender }]}
-                      >
-                        <Ionicons name="navigate" size={14} color={C.lavender} />
-                        <Text style={[styles.venueActionText, { color: C.lavender }]}>
-                          {hasLocation ? (lang === "fr" ? "Modifier GPS" : "Update GPS") : (lang === "fr" ? "Définir GPS" : "Set GPS")}
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => openEditVenueModal(venue)}
-                        style={[styles.venueActionBtn, { borderColor: C.gold }]}
-                      >
-                        <Ionicons name="create-outline" size={14} color={C.gold} />
-                        <Text style={[styles.venueActionText, { color: C.gold }]}>
-                          {lang === "fr" ? "Modifier" : "Edit"}
-                        </Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => deleteVenue(venue.id)}
-                        style={[styles.venueActionBtn, { borderColor: C.error }]}
-                      >
-                        <Ionicons name="trash-outline" size={14} color={C.error} />
-                        <Text style={[styles.venueActionText, { color: C.error }]}>
-                          {lang === "fr" ? "Supprimer" : "Delete"}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
+                    {/* Raison de rejet */}
+                    {vStatus === "rejected" && venue.rejectionReason ? (
+                      <Text style={[styles.eventMeta, { color: C.error, paddingHorizontal: 14, paddingBottom: 8 }]} numberOfLines={3}>
+                        {venue.rejectionReason}
+                      </Text>
+                    ) : null}
+                    {/* Dropdown actions */}
+                    {isVenueMenuOpen && (
+                      <View style={[styles.actionsDropdown, { backgroundColor: C.bg, borderColor: C.border }]}>
+                        <TouchableOpacity
+                          style={styles.actionItem}
+                          onPress={() => { setOpenVenueActionsId(null); setVenueLocation(venue); }}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="navigate" size={18} color={C.lavender} />
+                          <Text style={[styles.actionItemText, { color: C.text }]}>
+                            {hasLocation ? (lang === "fr" ? "Modifier GPS" : "Update GPS") : (lang === "fr" ? "Définir GPS" : "Set GPS")}
+                          </Text>
+                        </TouchableOpacity>
+                        <View style={[styles.actionDivider, { backgroundColor: C.border }]} />
+                        <TouchableOpacity
+                          style={styles.actionItem}
+                          onPress={() => { setOpenVenueActionsId(null); openEditVenueModal(venue); }}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="create-outline" size={18} color={C.gold} />
+                          <Text style={[styles.actionItemText, { color: C.text }]}>{lang === "fr" ? "Modifier" : "Edit"}</Text>
+                        </TouchableOpacity>
+                        <View style={[styles.actionDivider, { backgroundColor: C.border }]} />
+                        <TouchableOpacity
+                          style={styles.actionItem}
+                          onPress={() => { setOpenVenueActionsId(null); deleteVenue(venue.id); }}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="trash-outline" size={18} color={C.error} />
+                          <Text style={[styles.actionItemText, { color: C.error }]}>{lang === "fr" ? "Supprimer" : "Delete"}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
                 );
               })
@@ -1598,6 +1567,74 @@ export default function DashboardScreen() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+
+      {/* ── Modal Créer ── */}
+      <Modal
+        visible={showCreateMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCreateMenu(false)}
+      >
+        <TouchableOpacity
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "flex-end" }}
+          activeOpacity={1}
+          onPress={() => setShowCreateMenu(false)}
+        >
+          <View style={[styles.createMenuSheet, { backgroundColor: C.card }]}>
+            <View style={[styles.createMenuHandle, { backgroundColor: C.border }]} />
+            <Text style={[styles.createMenuTitle, { color: C.text }]}>
+              {lang === "fr" ? "Que voulez-vous créer ?" : "What do you want to create?"}
+            </Text>
+            <TouchableOpacity
+              style={[styles.createMenuOption, { borderColor: C.border }]}
+              onPress={() => { setShowCreateMenu(false); safePush("/create-event"); }}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+            >
+              <View style={[styles.createMenuOptionIcon, { backgroundColor: C.lavender + "18" }]}>
+                <Ionicons name="calendar-outline" size={22} color={C.lavender} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.createMenuOptionTitle, { color: C.text }]}>
+                  {lang === "fr" ? "Créer un événement" : "Create an event"}
+                </Text>
+                <Text style={[styles.createMenuOptionSub, { color: C.textMuted }]}>
+                  {lang === "fr" ? "Publier sur la carte et dans les résultats" : "Publish on the map and in search results"}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={C.textMuted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.createMenuOption, { borderColor: C.border }]}
+              onPress={() => { setShowCreateMenu(false); openVenueModal(); }}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+            >
+              <View style={[styles.createMenuOptionIcon, { backgroundColor: C.gold + "18" }]}>
+                <Ionicons name="business-outline" size={22} color={C.gold} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.createMenuOptionTitle, { color: C.text }]}>
+                  {lang === "fr" ? "Ajouter un lieu" : "Add a venue"}
+                </Text>
+                <Text style={[styles.createMenuOptionSub, { color: C.textMuted }]}>
+                  {lang === "fr" ? "Référencer un établissement sur NoStress" : "List an establishment on NoStress"}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={C.textMuted} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.createMenuCancelBtn, { borderColor: C.border }]}
+              onPress={() => setShowCreateMenu(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.createMenuCancelText, { color: C.textMuted }]}>
+                {lang === "fr" ? "Annuler" : "Cancel"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -1618,27 +1655,29 @@ function PremiumStatCard({
       style={{
         flex: 1,
         backgroundColor: C.card,
-        borderRadius: 14,
+        borderRadius: 12,
         borderWidth: 1,
         borderColor: C.border,
-        padding: cardPad,
-        gap: 4,
-        minHeight: 88,
-        justifyContent: "space-between",
+        paddingHorizontal: cardPad,
+        paddingVertical: 8,
+        gap: 2,
+        minHeight: 60,
+        justifyContent: "center",
       }}
       onPress={onPress}
       activeOpacity={0.8}
+      accessibilityRole={onPress ? "button" : undefined}
     >
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
         <View style={{ width: iconBoxSize, height: iconBoxSize, borderRadius: iconBoxSize / 2, backgroundColor: color + "18", alignItems: "center", justifyContent: "center" }}>
-          <Ionicons name={icon as any} size={sw < 360 ? 13 : 15} color={color} />
+          <Ionicons name={icon as any} size={sw < 360 ? 11 : 13} color={color} />
         </View>
-        {onPress && <Ionicons name="chevron-forward" size={12} color={C.textMuted} />}
+        <Text style={{ fontSize: valueFontSize, fontFamily: "Inter_700Bold", color: C.text }}>
+          {value}
+        </Text>
+        {onPress && <Ionicons name="chevron-forward" size={10} color={C.textMuted} style={{ marginLeft: "auto" }} />}
       </View>
-      <Text style={{ fontSize: valueFontSize, fontFamily: "Inter_700Bold", color: C.text, marginTop: 2 }}>
-        {value}
-      </Text>
-      <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: C.textMuted, lineHeight: 15 }} numberOfLines={1} ellipsizeMode="tail">
+      <Text style={{ fontSize: 10, fontFamily: "Inter_400Regular", color: C.textMuted, lineHeight: 14 }} numberOfLines={1} ellipsizeMode="tail">
         {label}
       </Text>
     </Wrapper>
@@ -2087,6 +2126,127 @@ const makeStyles = (C: ColorPalette, screenWidth = 375) => StyleSheet.create({
   venueActionText: {
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
+  },
+
+  /* ── Compact createMenu button ── */
+  createMenuBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    marginHorizontal: 20,
+    marginBottom: 10,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+  createMenuBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: "#fff",
+  },
+
+  /* ── ⋯ dot menu button ── */
+  dotMenuBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+  },
+
+  /* ── Event status icon in event row ── */
+  eventStatusIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    flexShrink: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  /* ── Venue thumbnail ── */
+  venueThumb: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+    flexShrink: 0,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+
+  /* ── Venue right buttons (❤ + ⋯) ── */
+  venueRightBtns: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 0,
+  },
+
+  /* ── Heart / J'aime button ── */
+  heartBtn: {
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+  },
+
+  /* ── CreateMenu bottom sheet ── */
+  createMenuSheet: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: Platform.OS === "ios" ? 36 : 20,
+    gap: 12,
+  },
+  createMenuHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: "center",
+    marginBottom: 4,
+  },
+  createMenuTitle: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  createMenuOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  createMenuOptionIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  createMenuOptionTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    marginBottom: 2,
+  },
+  createMenuOptionSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    lineHeight: 17,
+  },
+  createMenuCancelBtn: {
+    alignItems: "center",
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 4,
+  },
+  createMenuCancelText: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
   },
 
   modalOverlay: {
