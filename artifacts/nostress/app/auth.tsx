@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { safeReplace, dismissAndReplace } from "@/lib/navigation";
 
 import type { ColorPalette } from "@/constants/colors";
@@ -42,7 +42,11 @@ export default function AuthScreen() {
   const styles = useMemo(() => makeStyles(C), [C]);
   const modal = useMemo(() => makeModalStyles(C), [C]);
 
-  const [mode, setMode] = useState<Mode>("login");
+  // Pre-select mode from onboarding auth gateway (?mode=register or ?mode=login)
+  const params = useLocalSearchParams<{ mode?: string }>();
+  const [mode, setMode] = useState<Mode>(() =>
+    params.mode === "register" ? "register" : "login",
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
