@@ -324,14 +324,19 @@ export async function notifyPartnerSubscriptionExpiring(input: {
   const recipients = await tokensForPartnerId(input.partnerId);
   if (recipients.length === 0) return;
 
-  const expiryStr = input.expiryDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const expiryStrFr = input.expiryDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const expiryStrEn = input.expiryDate.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
   const { daysRemaining } = input;
 
-  const messages = buildMessages(recipients, () => ({
-    title: daysRemaining === 1 ? "Abonnement : dernier jour !" : `Abonnement : ${daysRemaining} jours restants`,
-    body: `Votre abonnement NoStress expire le ${expiryStr}. Renouvelez-le pour continuer à publier vos événements.`,
+  const messages = buildMessages(recipients, (lang) => ({
+    title: lang === "en"
+      ? (daysRemaining === 1 ? "Subscription: last day!" : `Subscription: ${daysRemaining} days left`)
+      : (daysRemaining === 1 ? "Abonnement : dernier jour !" : `Abonnement : ${daysRemaining} jours restants`),
+    body: lang === "en"
+      ? `Your NoStress subscription expires on ${expiryStrEn}. Renew it to keep publishing your events.`
+      : `Votre abonnement NoStress expire le ${expiryStrFr}. Renouvelez-le pour continuer à publier vos événements.`,
     channelId: "default",
-    data: { type: "subscription_expiring", daysRemaining: String(daysRemaining) },
+    data: { type: "subscription_expiring", daysRemaining: String(daysRemaining), screen: "/(tabs)/account" },
   }));
   const ok = await sendExpoPush(messages);
   if (!ok) {

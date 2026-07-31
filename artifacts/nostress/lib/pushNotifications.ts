@@ -171,6 +171,10 @@ function routeFromNotificationData(data: any): string | null {
     return `/venue/${venueId}`;
   }
 
+  if (type === "subscription_expiring") {
+    return "/(tabs)/account";
+  }
+
   if (eventId) return `/event/${eventId}`;
   if (venueId) return `/venue/${venueId}`;
   return null;

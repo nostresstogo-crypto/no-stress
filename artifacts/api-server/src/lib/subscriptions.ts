@@ -48,7 +48,7 @@ export async function checkExpiringSubscriptions(): Promise<void> {
   windowStart.setDate(windowStart.getDate() + 1); // tomorrow 00:00
 
   const windowEnd = new Date(todayStart);
-  windowEnd.setDate(windowEnd.getDate() + 6); // day+6 00:00 (exclusive upper bound)
+  windowEnd.setDate(windowEnd.getDate() + 8); // day+8 00:00 (exclusive upper bound — covers ≤7 days)
 
   const expiring = await db
     .select()
@@ -74,7 +74,7 @@ export async function checkExpiringSubscriptions(): Promise<void> {
       const msRemaining = expiryDate.getTime() - now.getTime();
       const daysRemaining = Math.ceil(msRemaining / 86_400_000);
 
-      if (daysRemaining < 1 || daysRemaining > 5) continue;
+      if (daysRemaining < 1 || daysRemaining > 7) continue;
 
       // Atomic claim: update only if not yet notified today.
       // This is race-safe: if two instances run simultaneously, only one will
