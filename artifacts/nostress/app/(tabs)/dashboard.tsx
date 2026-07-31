@@ -75,6 +75,22 @@ export default function DashboardScreen() {
   const [partnerRejectReason, setPartnerRejectReason] = useState<string | null>(null);
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
+  // Real stats fetched from backend
+  const [partnerStats, setPartnerStats] = useState<{ reviewCount: number; averageRating: number | null } | null>(null);
+
+  const loadPartnerStats = useCallback(async () => {
+    if (!token) return;
+    try {
+      const r = await authFetch(`${API_BASE}/partners/me/stats`);
+      if (!r.ok) return;
+      const data = await r.json();
+      setPartnerStats({ reviewCount: data.reviewCount ?? 0, averageRating: data.averageRating ?? null });
+    } catch {}
+  }, [authFetch, token]);
+
+  useEffect(() => { loadPartnerStats(); }, [loadPartnerStats]);
+  useFocusEffect(useCallback(() => { loadPartnerStats(); }, [loadPartnerStats]));
+
   const [myVenues, setMyVenues] = useState<MyVenue[]>([]);
   const [showVenueModal, setShowVenueModal] = useState(false);
   const [editingVenueId, setEditingVenueId] = useState<string | null>(null);
@@ -751,6 +767,23 @@ export default function DashboardScreen() {
               color="#F59E0B" C={C}
             />
           </View>
+          {/* Avis — affichés seulement si des données réelles existent */}
+          {partnerStats !== null && partnerStats.reviewCount > 0 && (
+            <View style={styles.statsRow}>
+              <PremiumStatCard
+                icon="star" value={partnerStats.reviewCount}
+                label={lang === "fr" ? "Avis reçus" : "Reviews"}
+                color={C.gold} C={C}
+              />
+              {partnerStats.averageRating !== null && (
+                <PremiumStatCard
+                  icon="star-half" value={partnerStats.averageRating}
+                  label={lang === "fr" ? "Note moyenne" : "Avg. rating"}
+                  color="#F59E0B" C={C}
+                />
+              )}
+            </View>
+          )}
         </View>
 
         {/* Actions rapides */}

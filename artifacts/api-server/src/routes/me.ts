@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import {
   db,
   usersTable,
@@ -7,6 +7,7 @@ import {
   favoritesTable,
   eventsTable,
   venuesTable,
+  reviewsTable,
 } from "@workspace/db";
 import {
   requireAuth,
@@ -295,6 +296,66 @@ router.delete("/partners/me/favorites", requireAuth, async (req: any, res) => {
       eq(favoritesTable.itemId, itemId),
     ));
   res.json({ ok: true });
+});
+
+// ── Partner stats (real data only) ─────────────────────────────────────────
+router.get("/partners/me/stats", requireAuth, async (req: any, res) => {
+  const partnerId = partnerIdFromAuth(req.auth);
+  if (!partnerId) return res.status(401).json({ error: "Non autorisé." });
+
+  // Collect IDs of all events belonging to this partner
+  const partnerEvents = await db
+    .select({ id: eventsTable.id })
+    .from(eventsTable)
+    .where(eq(eventsTable.partnerId, partnerId));
+
+  const eventIds = partnerEvents.map((e) => e.id);
+
+  // Collect IDs of all venues belonging to this partner
+  const partnerVenues = await db
+    .select({ id: venuesTable.id })
+    .from(venuesTable)
+    .where(eq(venuesTable.partnerId, partnerId));
+
+  const venueIds = partnerVenues.map((v) => v.id);
+
+  let reviewCount = 0;
+  let averageRating: number | null = null;
+
+  // Query only approved reviews — matches what is publicly visible
+  const allRows: { rating: number }[] = [];
+
+  if (eventIds.length > 0) {
+    const rows = await db
+      .select({ rating: reviewsTable.rating })
+      .from(reviewsTable)
+      .where(and(
+        eq(reviewsTable.itemType, "event"),
+        inArray(reviewsTable.itemId, eventIds),
+        eq(reviewsTable.status, "approved"),
+      ));
+    allRows.push(...rows.map((r) => ({ rating: Number(r.rating) })));
+  }
+
+  if (venueIds.length > 0) {
+    const rows = await db
+      .select({ rating: reviewsTable.rating })
+      .from(reviewsTable)
+      .where(and(
+        eq(reviewsTable.itemType, "venue"),
+        inArray(reviewsTable.itemId, venueIds),
+        eq(reviewsTable.status, "approved"),
+      ));
+    allRows.push(...rows.map((r) => ({ rating: Number(r.rating) })));
+  }
+
+  reviewCount = allRows.length;
+  if (reviewCount > 0) {
+    const sum = allRows.reduce((acc, r) => acc + r.rating, 0);
+    averageRating = Math.round((sum / reviewCount) * 10) / 10;
+  }
+
+  return res.json({ reviewCount, averageRating });
 });
 
 export default router;
