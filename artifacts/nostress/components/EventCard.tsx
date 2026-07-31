@@ -180,6 +180,22 @@ export function EventCard({ event, onPress, horizontal = false, variant }: Event
           bounciness: 6,
         }),
       ]).start();
+    } else {
+      // Animate scale-down when removing from favorites
+      Animated.sequence([
+        Animated.spring(heartScale, {
+          toValue: 0.75,
+          useNativeDriver: true,
+          speed: 40,
+          bounciness: 0,
+        }),
+        Animated.spring(heartScale, {
+          toValue: 1,
+          useNativeDriver: true,
+          speed: 20,
+          bounciness: 4,
+        }),
+      ]).start();
     }
     toggleFavorite(event.id);
   }, [fav, heartScale, toggleFavorite, event.id]);
