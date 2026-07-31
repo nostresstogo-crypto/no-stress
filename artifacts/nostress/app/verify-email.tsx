@@ -210,15 +210,15 @@ export default function VerifyEmailScreen() {
 
       // ── Success ──
       if (role === "partner") {
+        if (data.user)  await setUser(data.user);
+        if (data.token) await setSession(data.token, data.refreshToken || null);
         addNotification({
-          title: "Email verified",   titleFr: "Email vérifié",
-          body:  "Your account is pending admin approval. You will be notified by email.",
-          bodyFr: "Votre compte est en attente d'approbation. Vous serez notifié par email.",
+          title: "Account activated",   titleFr: "Compte activé",
+          body:  "Your partner account is now active. Your venue is pending review.",
+          bodyFr: "Votre compte partenaire est actif. Votre lieu est en cours de validation.",
         });
         triggerSuccess("success-partner");
-        setTimeout(() => {
-          router.replace({ pathname: "/partner-pending", params: { email: targetEmail } } as any);
-        }, 2400);
+        setTimeout(() => safeReplace("/(tabs)"), 2000);
       } else {
         if (data.user)  await setUser(data.user);
         if (data.token) await setSession(data.token, data.refreshToken || null);
@@ -281,37 +281,29 @@ export default function VerifyEmailScreen() {
 
   // ── Success screen ───────────────────────────────────────────
   if (phase === "success-user" || phase === "success-partner") {
-    const isPartner = phase === "success-partner";
-    const iconColor = isPartner ? C.gold : C.success;
     return (
       <View style={[S.successRoot, { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 32 }]}>
         <Animated.View style={[
           S.successCircle,
-          { borderColor: iconColor + "44", backgroundColor: iconColor + "14" },
+          { borderColor: C.success + "44", backgroundColor: C.success + "14" },
           { transform: [{ scale: successAnim }], opacity: successAnim },
         ]}>
           <LinearGradient
-            colors={isPartner ? [C.gold, C.gold + "CC"] : [C.success, C.success + "CC"]}
+            colors={[C.success, C.success + "CC"]}
             style={S.successIconInner}
           >
-            <Ionicons name={isPartner ? "time" : "checkmark"} size={52} color="#FFFFFF" />
+            <Ionicons name="checkmark" size={52} color="#FFFFFF" />
           </LinearGradient>
         </Animated.View>
 
         <Animated.View style={{ opacity: successAnim, alignItems: "center", gap: 10 }}>
           <Text style={[S.successTitle, { color: C.text }]}>
-            {isPartner
-              ? (fr ? "Email vérifié !" : "Email verified!")
-              : (fr ? "Email vérifié !" : "Email verified!")}
+            {fr ? "Email vérifié !" : "Email verified!"}
           </Text>
           <Text style={[S.successSub, { color: C.textMuted }]}>
-            {isPartner
-              ? (fr
-                ? "Votre demande est en cours d'examen par notre équipe (24–48h). Vous recevrez un email dès validation."
-                : "Your request is being reviewed by our team (24–48h). You will receive an email once approved.")
-              : (fr ? "Connexion en cours…" : "Signing you in…")}
+            {fr ? "Connexion en cours…" : "Signing you in…"}
           </Text>
-          {!isPartner && <ActivityIndicator color={C.lavender} style={{ marginTop: 12 }} />}
+          <ActivityIndicator color={C.lavender} style={{ marginTop: 12 }} />
         </Animated.View>
       </View>
     );
@@ -365,8 +357,8 @@ export default function VerifyEmailScreen() {
             <Ionicons name="business-outline" size={15} color={C.gold} />
             <Text style={[S.partnerBannerText, { color: C.gold }]}>
               {fr
-                ? "Après vérification, votre demande sera examinée par l'administrateur (24-48h)."
-                : "After verification, your request will be reviewed by the admin (24-48h)."}
+                ? "Compte partenaire — votre lieu sera examiné par notre équipe après vérification."
+                : "Partner account — your venue will be reviewed by our team after verification."}
             </Text>
           </View>
         )}

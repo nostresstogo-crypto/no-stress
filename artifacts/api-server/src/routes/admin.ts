@@ -231,7 +231,10 @@ router.get("/admin/stats", requireAdmin, async (_req, res) => {
     .select({ total: sql<number>`count(*)::int` })
     .from(usersTable);
   const [venueStats] = await db
-    .select({ total: sql<number>`count(*)::int` })
+    .select({
+      total: sql<number>`count(*)::int`,
+      pending: sql<number>`count(*) filter (where status = 'pending')::int`,
+    })
     .from(venuesTable);
   return res.json({
     pendingPartners: partnerStats?.pending ?? 0,
@@ -243,6 +246,7 @@ router.get("/admin/stats", requireAdmin, async (_req, res) => {
     totalPublications: eventStats?.total ?? 0,
     totalUsers: userStats?.total ?? 0,
     totalVenues: venueStats?.total ?? 0,
+    pendingVenues: venueStats?.pending ?? 0,
   });
 });
 

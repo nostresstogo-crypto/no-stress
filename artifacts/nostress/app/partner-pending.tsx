@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { Animated, View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from "expo-router";
+import { router } from "expo-router";
 
 import { useApp, useColors } from "@/context/AppContext";
 
@@ -10,12 +10,9 @@ export default function PartnerPendingScreen() {
   const { lang } = useApp();
   const C = useColors();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ email?: string }>();
   const fr = lang === "fr";
-  const email = String(params.email || "").trim();
   const styles = makeStyles(C);
 
-  // Entrance animation
   const enterAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.spring(enterAnim, {
@@ -33,18 +30,18 @@ export default function PartnerPendingScreen() {
     >
       <Animated.View style={{ transform: [{ scale: enterAnim }], opacity: enterAnim }}>
         <View style={styles.iconCircle}>
-          <Ionicons name="hourglass-outline" size={48} color={C.gold} />
+          <Ionicons name="time-outline" size={48} color={C.gold} />
         </View>
       </Animated.View>
 
       <Text style={styles.title}>
-        {fr ? "Compte en attente d'approbation" : "Account pending approval"}
+        {fr ? "Lieu en cours de validation" : "Venue being reviewed"}
       </Text>
 
       <Text style={styles.subtitle}>
         {fr
-          ? "Merci ! Votre adresse email a bien été vérifiée. Notre équipe va maintenant examiner votre demande de compte partenaire."
-          : "Thanks! Your email is verified. Our team will now review your partner account request."}
+          ? "Votre compte est actif ! Notre équipe va examiner votre lieu avant qu'il soit publié sur la plateforme."
+          : "Your account is active! Our team will review your venue before it is published on the platform."}
       </Text>
 
       <View style={styles.card}>
@@ -54,8 +51,8 @@ export default function PartnerPendingScreen() {
           </View>
           <Text style={styles.cardText}>
             {fr
-              ? "Validation de votre dossier sous 24 à 48h."
-              : "Your file is reviewed within 24 to 48 hours."}
+              ? "Validation de votre lieu sous 24 à 48h."
+              : "Your venue is reviewed within 24 to 48 hours."}
           </Text>
         </View>
         <View style={styles.cardRow}>
@@ -64,8 +61,8 @@ export default function PartnerPendingScreen() {
           </View>
           <Text style={styles.cardText}>
             {fr
-              ? "Vous recevrez un email avec votre mot de passe sécurisé."
-              : "You will receive an email with your secure password."}
+              ? "Vous serez notifié par email dès que votre lieu est approuvé."
+              : "You will be notified by email once your venue is approved."}
           </Text>
         </View>
         <View style={styles.cardRow}>
@@ -74,29 +71,21 @@ export default function PartnerPendingScreen() {
           </View>
           <Text style={styles.cardText}>
             {fr
-              ? "Connectez-vous avec ce mot de passe pour accéder à votre tableau de bord."
-              : "Log in with that password to access your dashboard."}
+              ? "Une fois validé, vous pourrez publier vos événements depuis le tableau de bord."
+              : "Once approved, you can publish your events from the dashboard."}
           </Text>
         </View>
       </View>
-
-      {!!email && (
-        <View style={styles.emailBox}>
-          <Ionicons name="mail-outline" size={16} color={C.textMuted} />
-          <Text style={styles.emailText}>{email}</Text>
-        </View>
-      )}
 
       <TouchableOpacity
         style={styles.primaryBtn}
         onPress={() => router.replace("/(tabs)")}
         activeOpacity={0.85}
-        accessibilityLabel={fr ? "Retour à l'accueil" : "Back to home"}
+        accessibilityLabel={fr ? "Accéder au tableau de bord" : "Go to dashboard"}
         accessibilityRole="button"
-        accessibilityHint={fr ? "Ferme cet écran et revient à l'accueil de l'application" : "Closes this screen and returns to the app home"}
       >
-        <Ionicons name="home-outline" size={18} color={C.bg} />
-        <Text style={styles.primaryBtnText}>{fr ? "Retour à l'accueil" : "Back to home"}</Text>
+        <Ionicons name="grid-outline" size={18} color={C.bg} />
+        <Text style={styles.primaryBtnText}>{fr ? "Accéder au tableau de bord" : "Go to dashboard"}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -107,13 +96,11 @@ const makeStyles = (C: any) => StyleSheet.create({
   iconCircle: { width: 96, height: 96, borderRadius: 48, backgroundColor: C.gold + "22", alignItems: "center", justifyContent: "center", marginBottom: 24 },
   title: { fontSize: 22, fontFamily: "Inter_700Bold", color: C.text, textAlign: "center", marginBottom: 12 },
   subtitle: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.textMuted, textAlign: "center", lineHeight: 22, marginBottom: 24, maxWidth: 380 },
-  card: { width: "100%", maxWidth: 420, backgroundColor: C.card, borderRadius: 16, borderWidth: 1, borderColor: C.border, padding: 18, marginBottom: 18, gap: 14 },
+  card: { width: "100%", maxWidth: 420, backgroundColor: C.card, borderRadius: 16, borderWidth: 1, borderColor: C.border, padding: 18, marginBottom: 28, gap: 14 },
   cardRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
   bullet: { width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   bulletText: { fontFamily: "Inter_700Bold", fontSize: 13 },
   cardText: { color: C.text, fontFamily: "Inter_400Regular", fontSize: 13.5, lineHeight: 20, flex: 1 },
-  emailBox: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8, paddingHorizontal: 14, backgroundColor: C.card, borderRadius: 10, borderWidth: 1, borderColor: C.border, marginBottom: 24 },
-  emailText: { color: C.text, fontSize: 13, fontFamily: "Inter_500Medium" },
   primaryBtn: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: C.lavender, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 28 },
   primaryBtnText: { color: C.bg, fontSize: 15, fontFamily: "Inter_600SemiBold" },
 });

@@ -598,6 +598,10 @@ export default function AuthScreen() {
       if (!lastName.trim())  errs.lastName  = lang === "fr" ? "Requis." : "Required.";
       if (!phone.trim())     errs.phone     = lang === "fr" ? "Requis." : "Required.";
       if (!email.trim())     errs.email     = lang === "fr" ? "L'email est requis." : "Email is required.";
+      if (!password)         errs.password  = lang === "fr" ? "Requis." : "Required.";
+      else if (strength < 2) errs.password  = lang === "fr" ? "Mot de passe trop faible." : "Password too weak.";
+      if (!passwordConfirm)  errs.passwordConfirm = lang === "fr" ? "Requis." : "Required.";
+      else if (password !== passwordConfirm) errs.passwordConfirm = lang === "fr" ? "Les mots de passe ne correspondent pas." : "Passwords do not match.";
     }
     if (step === 2) {
       if (!businessName.trim()) errs.businessName = lang === "fr" ? "Requis." : "Required.";
@@ -723,6 +727,7 @@ export default function AuthScreen() {
           email: cleanEmail, contactName,
           businessName: businessName.trim(), businessType,
           phone: phone.trim(), city, country,
+          password,
           description: description.trim() || null,
           venueName: venueName.trim() || null,
           venueType: businessType || null,
@@ -1095,8 +1100,8 @@ export default function AuthScreen() {
                           ref={emailRef}
                           value={email} onChange={v => { setEmail(v); clearErrors(); }}
                           placeholder="contact@structure.com" icon="mail-outline"
-                          keyboardType="email-address" returnKeyType="done"
-                          onSubmit={handlePartnerNext} accessLabel="Email"
+                          keyboardType="email-address" returnKeyType="next"
+                          onSubmit={() => passwordRef.current?.focus()} accessLabel="Email"
                         />
                         {emailExistsHint && (
                           <View style={S.hintCard}>
@@ -1106,6 +1111,50 @@ export default function AuthScreen() {
                               <Text style={{ color: LAVENDER, fontFamily: "Inter_600SemiBold" }} onPress={() => switchMode("login")}>
                                 {lang === "fr" ? "Se connecter →" : "Sign in →"}
                               </Text>
+                            </Text>
+                          </View>
+                        )}
+                      </FieldWrap>
+
+                      <FieldWrap label={t("password")} error={fe("password")}>
+                        <InputBox
+                          ref={passwordRef}
+                          value={password} onChange={v => { setPassword(v); setFieldErrors(e => ({ ...e, password: "" })); }}
+                          placeholder="••••••••" icon="lock-closed-outline"
+                          secure={!showPassword} showToggle onToggle={() => setShowPassword(v => !v)}
+                          returnKeyType="next" onSubmit={() => pwdConfirmRef.current?.focus()}
+                          accessLabel={t("password")}
+                        />
+                        {password.length > 0 && (
+                          <View style={$shared.errorRow}>
+                            <Ionicons name={strength >= 2 ? "checkmark-circle" : "alert-circle"} size={13} color={strengthColor} />
+                            <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: strengthColor }}>{strengthLabel}</Text>
+                          </View>
+                        )}
+                      </FieldWrap>
+
+                      <FieldWrap label={lang === "fr" ? "Confirmer le mot de passe *" : "Confirm password *"} error={fe("passwordConfirm")}>
+                        <InputBox
+                          ref={pwdConfirmRef}
+                          value={passwordConfirm} onChange={v => { setPasswordConfirm(v); setFieldErrors(e => ({ ...e, passwordConfirm: "" })); }}
+                          placeholder="••••••••" icon="lock-closed-outline"
+                          secure={!showPwdConfirm} showToggle onToggle={() => setShowPwdConfirm(v => !v)}
+                          returnKeyType="done" onSubmit={handlePartnerNext}
+                          accessLabel={lang === "fr" ? "Confirmer le mot de passe" : "Confirm password"}
+                        />
+                        {!passwordsMatch && passwordConfirm.length > 0 && (
+                          <View style={$shared.errorRow}>
+                            <Ionicons name="alert-circle" size={13} color={C.error} />
+                            <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: C.error }}>
+                              {lang === "fr" ? "Les mots de passe ne correspondent pas." : "Passwords do not match."}
+                            </Text>
+                          </View>
+                        )}
+                        {passwordConfirm.length > 0 && passwordsMatch && passwordConfirm === password && (
+                          <View style={$shared.errorRow}>
+                            <Ionicons name="checkmark-circle" size={13} color={C.success} />
+                            <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: C.success }}>
+                              {lang === "fr" ? "Identiques." : "Matching."}
                             </Text>
                           </View>
                         )}

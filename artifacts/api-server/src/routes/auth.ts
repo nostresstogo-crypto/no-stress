@@ -193,9 +193,8 @@ router.post("/auth/login", loginLimiter, async (req, res) => {
       });
     }
     if (partner.status !== "approved") {
-      // Pending (or any other non-approved state) — no session until admin approves.
       return res.status(403).json({
-        error: "Compte partenaire en attente d'approbation par l'administrateur.",
+        error: "Compte partenaire non actif. Contactez le support si le problème persiste.",
         partnerStatus: partner.status,
         email: partner.email,
       });

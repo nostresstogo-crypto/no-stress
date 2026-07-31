@@ -29,6 +29,7 @@ interface Stats {
   totalPublications: number;
   totalUsers: number;
   totalVenues: number;
+  pendingVenues: number;
 }
 
 const WEEKDAYS_FR = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
@@ -58,21 +59,21 @@ export default function Dashboard() {
     ? stats.pendingPartners + stats.approvedPartners + stats.rejectedPartners
     : 0;
   const urgentCount = stats
-    ? stats.pendingPartners + stats.pendingPublications + stats.pendingDeletionRequests
+    ? stats.pendingVenues + stats.pendingPublications + stats.pendingDeletionRequests
     : 0;
 
   const kpiCards = [
     {
-      title: "Partenaires en attente",
-      value: stats?.pendingPartners ?? 0,
+      title: "Lieux en attente",
+      value: stats?.pendingVenues ?? 0,
       caption: "À valider",
       icon: Clock,
       gradient: "from-amber-500/20 via-amber-500/5 to-transparent",
       ring: "ring-amber-500/30",
       iconColor: "text-amber-400",
       iconBg: "bg-amber-500/15",
-      link: "/partenaires?status=pending",
-      urgent: (stats?.pendingPartners ?? 0) > 0,
+      link: "/lieux?status=pending",
+      urgent: (stats?.pendingVenues ?? 0) > 0,
     },
     {
       title: "Partenaires approuvés",
@@ -136,13 +137,13 @@ export default function Dashboard() {
 
   const quickActions = [
     {
-      label: "Valider les inscriptions partenaires",
-      caption: "Examiner et approuver les nouveaux comptes",
-      href: "/partenaires?status=pending",
+      label: "Valider les lieux",
+      caption: "Examiner et approuver les nouveaux lieux partenaires",
+      href: "/lieux?status=pending",
       icon: Users,
       iconColor: "text-amber-400",
       iconBg: "bg-amber-500/15",
-      badge: stats?.pendingPartners,
+      badge: stats?.pendingVenues,
     },
     {
       label: "Modérer les publications",

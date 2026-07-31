@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { AdminLayout } from "@/components/AdminLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { api, type Partner, type Venue } from "@/lib/api";
+import { api, type Partner } from "@/lib/api";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +28,6 @@ import {
   Calendar,
   AlertTriangle,
   Trash2,
-  KeyRound,
   CalendarClock,
   CalendarPlus,
   RefreshCw,
@@ -135,8 +134,6 @@ export default function Partners() {
   const [filterStatus, setFilterStatus] = useState(urlStatus);
   const [selected, setSelected] = useState<Partner | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [rejectOpen, setRejectOpen] = useState(false);
-  const [rejectReason, setRejectReason] = useState("");
   const [deletePartnerOpen, setDeletePartnerOpen] = useState(false);
   const [deletePartnerReason, setDeletePartnerReason] = useState("");
   const [extendOpen, setExtendOpen] = useState(false);
@@ -151,8 +148,6 @@ export default function Partners() {
   const [banReason, setBanReason] = useState("");
   const [reactivateOpen, setReactivateOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
-  const [pendingVenue,  setPendingVenue]  = useState<Venue | null>(null);
-  const [venueLoading,  setVenueLoading]  = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
   const showToast = (msg: string, type: "success" | "error" = "success") => {
@@ -167,19 +162,6 @@ export default function Partners() {
 
   useEffect(() => { loadPartners(); }, [loadPartners]);
 
-  // Fetch the first pending venue when a pending partner's detail dialog is shown.
-  useEffect(() => {
-    if (!selected || selected.status !== "pending") {
-      setPendingVenue(null);
-      return;
-    }
-    setVenueLoading(true);
-    api.venues.listByPartner(selected.id)
-      .then(({ venues }) => setPendingVenue(venues.length > 0 ? venues[0] : null))
-      .catch(() => setPendingVenue(null))
-      .finally(() => setVenueLoading(false));
-  }, [selected]);
-
   const filtered = partners.filter((p) => {
     const matchStatus = !filterStatus || p.status === filterStatus;
     const matchSearch =
@@ -189,57 +171,6 @@ export default function Partners() {
       p.city.toLowerCase().includes(search.toLowerCase());
     return matchStatus && matchSearch;
   });
-
-  const handleApprove = async (partner: Partner) => {
-    setActionLoading(true);
-    try {
-      const result = await api.partners.approve(partner.id);
-      if (result?.emailError) {
-        showToast(
-          `${partner.businessName} approuvé, mais l'email d'identifiants n'a pas pu être envoyé. Cliquez sur "Renvoyer les identifiants".`,
-          "error",
-        );
-      } else {
-        showToast(`${partner.businessName} a été approuvé. Email d'identifiants envoyé.`);
-      }
-      loadPartners();
-      setDetailOpen(false);
-    } catch (err: any) {
-      showToast(err.message, "error");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleResendCredentials = async (partner: Partner) => {
-    if (!confirm(`Régénérer un nouveau mot de passe pour ${partner.businessName} et l'envoyer par email ? Cela invalidera les anciens accès.`)) return;
-    setActionLoading(true);
-    try {
-      await api.partners.resendCredentials(partner.id);
-      showToast(`Nouveaux identifiants envoyés à ${partner.email}.`);
-    } catch (err: any) {
-      showToast(err.message, "error");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleReject = async () => {
-    if (!selected) return;
-    setActionLoading(true);
-    try {
-      await api.partners.reject(selected.id, rejectReason);
-      showToast(`${selected.businessName} a été rejeté.`);
-      loadPartners();
-      setRejectOpen(false);
-      setDetailOpen(false);
-      setRejectReason("");
-    } catch (err: any) {
-      showToast(err.message, "error");
-    } finally {
-      setActionLoading(false);
-    }
-  };
 
   const handleExtendSubscription = async () => {
     if (!selected) return;
@@ -449,32 +380,6 @@ export default function Partners() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {partner.status === "pending" && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-green-400 border-green-400/30 hover:bg-green-400/10 h-7 text-xs"
-                              onClick={() => { setSelected(partner); handleApprove(partner); }}
-                              disabled={actionLoading}
-                            >
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              Approuver
-                            </Button>
-                            {isSuperAdmin && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="text-destructive border-destructive/30 hover:bg-destructive/10 h-7 text-xs"
-                                onClick={() => { setSelected(partner); setRejectOpen(true); }}
-                                disabled={actionLoading}
-                              >
-                                <XCircle className="w-3 h-3 mr-1" />
-                                Rejeter
-                              </Button>
-                            )}
-                          </>
-                        )}
                         {partner.status === "approved" && isSuperAdmin && (
                           <>
                             <Button
@@ -628,35 +533,6 @@ export default function Partners() {
                 </div>
               )}
 
-              {selected.status === "pending" && (
-                <div className="bg-muted/30 rounded-lg p-3 space-y-2 border border-border/50">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5" />
-                    Premier lieu soumis
-                  </p>
-                  {venueLoading ? (
-                    <p className="text-xs text-muted-foreground">Chargement…</p>
-                  ) : pendingVenue ? (
-                    <div className="space-y-1">
-                      <p className="text-sm text-foreground font-medium">{pendingVenue.name}</p>
-                      {pendingVenue.type && (
-                        <p className="text-xs text-muted-foreground">{BUSINESS_TYPES[pendingVenue.type] || pendingVenue.type}</p>
-                      )}
-                      {pendingVenue.address && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <MapPin className="w-3 h-3 flex-shrink-0" />
-                          {pendingVenue.address}
-                        </p>
-                      )}
-                      {pendingVenue.description && (
-                        <p className="text-xs text-muted-foreground italic line-clamp-2">{pendingVenue.description}</p>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="text-xs text-muted-foreground italic">Aucun lieu soumis à l'inscription.</p>
-                  )}
-                </div>
-              )}
 
               {selected.status === "rejected" && selected.rejectionReason && (
                 <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
@@ -670,39 +546,8 @@ export default function Partners() {
             </div>
           )}
 
-          {selected?.status === "pending" && (
-            <DialogFooter className="gap-2">
-              {isSuperAdmin && (
-                <Button
-                  variant="outline"
-                  className="text-destructive border-destructive/30 hover:bg-destructive/10"
-                  onClick={() => { setDetailOpen(false); setRejectOpen(true); }}
-                >
-                  <XCircle className="w-4 h-4 mr-1" />
-                  Rejeter
-                </Button>
-              )}
-              <Button
-                className="bg-green-500 hover:bg-green-600 text-white"
-                onClick={() => selected && handleApprove(selected)}
-                disabled={actionLoading || venueLoading}
-              >
-                <CheckCircle className="w-4 h-4 mr-1" />
-                {pendingVenue ? "Approuver le partenaire et le lieu" : "Approuver"}
-              </Button>
-            </DialogFooter>
-          )}
-
           {selected?.status === "approved" && (
             <DialogFooter className="gap-2 flex-wrap">
-              <Button
-                variant="outline"
-                onClick={() => selected && handleResendCredentials(selected)}
-                disabled={actionLoading}
-              >
-                <KeyRound className="w-4 h-4 mr-1" />
-                Renvoyer les identifiants
-              </Button>
               {isSuperAdmin && (
                 <Button
                   variant="outline"
@@ -769,47 +614,6 @@ export default function Partners() {
               </Button>
             </DialogFooter>
           )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
-        <DialogContent className="bg-card border-border max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <XCircle className="w-5 h-5" />
-              Rejeter la demande
-            </DialogTitle>
-            <DialogDescription>
-              Rejeter l'inscription de <strong>{selected?.businessName}</strong>. Le partenaire sera notifié par email.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-3">
-            <div>
-              <Label htmlFor="reject-reason">Motif du rejet (recommandé)</Label>
-              <Textarea
-                id="reject-reason"
-                value={rejectReason}
-                onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Expliquez pourquoi la demande est rejetée..."
-                rows={3}
-                className="bg-background mt-1.5"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectOpen(false)}>
-              Annuler
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleReject}
-              disabled={actionLoading}
-            >
-              {actionLoading ? "En cours..." : "Confirmer le rejet"}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

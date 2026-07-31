@@ -163,12 +163,13 @@ router.get("/partners/approved-map", async (_req, res) => {
 router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
   const email = normEmail(req.body?.email);
   const phone = normPhone(req.body?.phone);
-  const { contactName, businessName, businessType, city, description, websiteUrl, country, venueName, venueType, venueAddress, venueDescription } = req.body || {};
+  const { contactName, businessName, businessType, city, description, websiteUrl, country, venueName, venueType, venueAddress, venueDescription, password } = req.body || {};
   if (!email || !contactName || !businessName || !businessType || !phone || !city) {
     return res.status(400).json({ error: "Tous les champs obligatoires doivent être remplis." });
   }
-  // Password is auto-generated and emailed only upon admin approval.
-  const tempPassword = generateRandomPassword();
+  if (!password || typeof password !== "string" || password.length < 8 || !/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+    return res.status(400).json({ error: "Le mot de passe doit contenir au moins 8 caractères avec des lettres et des chiffres." });
+  }
   // Note: a same email may coexist as a "user" and as a "partner" account.
   // Only duplicate-within-the-same-role is forbidden (checked just below).
   // If a partner with same email exists AND email already verified → 409 (use login).
@@ -198,7 +199,7 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
   const cityWithCountry = country ? `${city}, ${country}` : city;
   let partner;
   let isNewRegistration = false;
-  const passwordHash = await hashPassword(tempPassword);
+  const passwordHash = await hashPassword(password);
   if (existingByEmail) {
     // Re-submission for an unverified partner: refresh data + regenerate OTP.
     // Atomic update guarded by `email_verified IS NULL` to prevent a TOCTOU race
@@ -345,9 +346,8 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
       throw err;
     }
     await db.insert(registrationLogTable).values({ type: "partner" });
-    // No token issued — partner must (1) verify email by OTP, (2) wait for admin approval, then login.
     res.status(201).json({
-      message: "Code de vérification envoyé par email. Vérifiez votre email pour finaliser l'inscription.",
+      message: "Code de vérification envoyé par email. Vérifiez votre email pour activer votre compte.",
       pendingVerification: true,
       email,
     });
@@ -363,7 +363,7 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
 const partnerVerifyLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: "partner-verify" });
 const partnerResendLimiter = rateLimit({ windowMs: 60 * 60 * 1000, max: 5, key: "partner-resend" });
 
-// Public OTP verification for partners. Does NOT issue a session — partners must wait for admin approval.
+// Public OTP verification for partners. Auto-approves and issues a session immediately.
 router.post("/partners/verify-email", partnerVerifyLimiter, async (req, res) => {
   const email = normEmail(req.body?.email);
   const code = String(req.body?.code || "").trim();
@@ -374,7 +374,7 @@ router.post("/partners/verify-email", partnerVerifyLimiter, async (req, res) => 
     return res.json({
       message: "Email déjà vérifié.",
       verified: true,
-      needsApproval: partner.status === "pending",
+      needsApproval: false,
       partnerStatus: partner.status,
     });
   }
@@ -387,19 +387,35 @@ router.post("/partners/verify-email", partnerVerifyLimiter, async (req, res) => 
   if (partner.verificationCode !== code) {
     return res.status(400).json({ error: "Code incorrect." });
   }
+  // Mark email verified and auto-approve — no admin approval step required.
   const [updated] = await db
     .update(partnersTable)
-    .set({ emailVerified: new Date(), verificationCode: null, verificationCodeExpires: null, updatedAt: new Date() })
+    .set({ emailVerified: new Date(), verificationCode: null, verificationCodeExpires: null, status: "approved", updatedAt: new Date() })
     .where(eq(partnersTable.id, partner.id))
     .returning();
-  // Notify partner + admin only after email verification (avoids spam from fake registrations)
-  sendPartnerRegistrationEmailToPartner(updated.email, updated.contactName, updated.businessName).catch(() => {});
+  const sub = `p_${updated.id}`;
+  const token = signToken({ sub, email: updated.email, role: "structure" });
+  const refreshToken = await issueRefreshToken(sub, req.headers["user-agent"] as string | undefined);
   return res.json({
-    message: "Email vérifié. Votre compte est en attente d'approbation par l'administrateur.",
+    message: "Email vérifié. Votre compte partenaire est maintenant actif.",
     verified: true,
-    needsApproval: true,
-    partnerStatus: updated.status,
-    email: updated.email,
+    token,
+    refreshToken,
+    user: {
+      id: String(updated.id),
+      email: updated.email,
+      name: updated.contactName || updated.businessName,
+      displayName: (updated as any).displayName ?? null,
+      phone: updated.phone,
+      role: "structure",
+      favorites: [],
+      partnerStatus: "approved",
+      businessName: updated.businessName,
+      city: updated.city,
+      latitude: (updated as any).latitude ?? null,
+      longitude: (updated as any).longitude ?? null,
+      profileImage: (updated as any).profileImage ?? null,
+    },
   });
 });
 
