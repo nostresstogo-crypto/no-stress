@@ -99,6 +99,39 @@ export default function DashboardScreen() {
   }, [user, configCountries]);
   const [savingVenue, setSavingVenue] = useState(false);
 
+  // ── Hooks dérivés — DOIVENT être avant tout return conditionnel ──────────
+  const approvedEventsCount = useMemo(
+    () => myEvents.filter(e => e.status === "approved").length,
+    [myEvents],
+  );
+  const pendingEventsCount = useMemo(
+    () => myEvents.filter(e => e.status === "pending").length,
+    [myEvents],
+  );
+
+  const dashGreeting = useMemo(() => {
+    const h = new Date().getHours();
+    if (lang === "fr") {
+      if (h < 5)  return "Bonne nuit";
+      if (h < 12) return "Bonjour";
+      if (h < 18) return "Bon après-midi";
+      return "Bonsoir";
+    }
+    if (h < 5)  return "Good night";
+    if (h < 12) return "Good morning";
+    if (h < 18) return "Good afternoon";
+    return "Good evening";
+  }, [lang]);
+
+  const quickActions = useMemo(() => [
+    { icon: "add-circle",            label: lang === "fr" ? "Créer"      : "Create",  onPress: () => safePush("/create-event"),  primary: true  },
+    { icon: "calendar-outline",      label: lang === "fr" ? "Événements" : "Events",  onPress: () => setTab("events"),           primary: false },
+    { icon: "business-outline",      label: lang === "fr" ? "Lieux"      : "Venues",  onPress: () => setTab("venues"),           primary: false },
+    { icon: "notifications-outline", label: lang === "fr" ? "Notifs"     : "Notifs",  onPress: () => safePush("/notifications"), primary: false },
+    { icon: "person-circle-outline", label: lang === "fr" ? "Profil"     : "Profile", onPress: () => safePush("/edit-profile"),  primary: false },
+  ], [lang, setTab]);
+  // ─────────────────────────────────────────────────────────────────────────
+
   const loadMyVenues = useCallback(async () => {
     try {
       const cached = await AsyncStorage.getItem(NS_MY_VENUES_KEY);
@@ -639,33 +672,8 @@ export default function DashboardScreen() {
     plan:   "star-outline",
   };
 
-  // Statistiques dérivées des vraies données
-  const approvedEventsCount = useMemo(() => myEvents.filter(e => e.status === "approved").length, [myEvents]);
-  const pendingEventsCount  = useMemo(() => myEvents.filter(e => e.status === "pending").length, [myEvents]);
-
-  // Salutation selon l'heure
-  const dashGreeting = useMemo(() => {
-    const h = new Date().getHours();
-    if (lang === "fr") {
-      if (h < 5)  return "Bonne nuit";
-      if (h < 12) return "Bonjour";
-      if (h < 18) return "Bon après-midi";
-      return "Bonsoir";
-    }
-    if (h < 5)  return "Good night";
-    if (h < 12) return "Good morning";
-    if (h < 18) return "Good afternoon";
-    return "Good evening";
-  }, [lang]);
-
-  // Actions rapides — toutes fonctionnelles, toutes routées
-  const quickActions = useMemo(() => [
-    { icon: "add-circle",         label: lang === "fr" ? "Créer"       : "Create",     onPress: () => safePush("/create-event"),   primary: true  },
-    { icon: "calendar-outline",   label: lang === "fr" ? "Événements"  : "Events",     onPress: () => setTab("events"),            primary: false },
-    { icon: "business-outline",   label: lang === "fr" ? "Lieux"       : "Venues",     onPress: () => setTab("venues"),            primary: false },
-    { icon: "notifications-outline", label: lang === "fr" ? "Notifs"  : "Notifs",     onPress: () => safePush("/notifications"),  primary: false },
-    { icon: "person-circle-outline", label: lang === "fr" ? "Profil"  : "Profile",    onPress: () => safePush("/edit-profile"),   primary: false },
-  ], [lang, setTab]);
+  // (approvedEventsCount, pendingEventsCount, dashGreeting, quickActions
+  //  sont déclarés AVANT les return conditionnels — voir bloc hooks ci-dessus)
 
   const avatarInitial = (user.name || "?").trim()[0]?.toUpperCase() ?? "?";
 
