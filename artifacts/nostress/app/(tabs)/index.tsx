@@ -154,7 +154,7 @@ const fc = StyleSheet.create({
 export default function HomeScreen() {
   const t = useT();
   const C = useColors();
-  const { lang, selectedCity, setSelectedCity, selectedCategory, setSelectedCategory, configEventCategories, configCities, unreadCount } = useApp();
+  const { lang, selectedCity, setSelectedCity, selectedCategory, setSelectedCategory, configEventCategories, configCities, unreadCount, isFavoriteVenue, toggleFavoriteVenue } = useApp();
   const insets = useSafeAreaInsets();
   const lowData = useLowDataMode();
   const [refreshing, setRefreshing]       = useState(false);
@@ -598,6 +598,8 @@ export default function HomeScreen() {
                       }}
                       variant="homePremium"
                       onPress={() => safePush(`/venue/api_${item.id}`)}
+                      isFavorite={isFavoriteVenue(String(item.id))}
+                      onToggleFavorite={() => toggleFavoriteVenue(String(item.id))}
                     />
                   )}
                 />

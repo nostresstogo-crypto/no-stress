@@ -27,7 +27,7 @@ const DISTANCE_OPTIONS = [2, 5, 10, 25, 50];
 export default function VenuesScreen() {
   const t = useT();
   const C = useColors();
-  const { lang, configVenueTypes, configCountries, configCities } = useApp();
+  const { lang, configVenueTypes, configCountries, configCities, isFavoriteVenue, toggleFavoriteVenue } = useApp();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => makeStyles(C), [C]);
   const topInset = Platform.OS === "web" ? 67 : insets.top;
@@ -306,6 +306,8 @@ export default function VenuesScreen() {
                       }}
                       variant="homePremium"
                       onPress={() => safePush(`/venue/api_${v.id}` as any)}
+                      isFavorite={isFavoriteVenue(`api_${v.id}`)}
+                      onToggleFavorite={() => toggleFavoriteVenue(`api_${v.id}`)}
                     />
                   ))}
                 </ScrollView>
@@ -323,6 +325,8 @@ export default function VenuesScreen() {
               venue={item}
               variant="venueList"
               onPress={() => safePush(`/venue/${item.id}` as any)}
+              isFavorite={isFavoriteVenue(item.id)}
+              onToggleFavorite={() => toggleFavoriteVenue(item.id)}
             />
           )}
         />

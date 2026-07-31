@@ -37,6 +37,8 @@ interface VenueCardProps {
   /** @deprecated Use variant="compact" instead */
   compact?: boolean;
   variant?: VenueCardVariant;
+  isFavorite?: boolean;
+  onToggleFavorite?: () => void;
 }
 
 function makeStyles(C: ColorPalette) {
@@ -123,6 +125,8 @@ function makeStyles(C: ColorPalette) {
       color: C.lavender, letterSpacing: LetterSpacing.wide,
     },
     listChevron: { paddingHorizontal: 12, alignSelf: "center" },
+    listRightActions: { flexDirection: "row", alignItems: "center" },
+    listHeartBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
 
     // ── venueFeatured (large featured card, used in grid / top spot) ──────
     featuredCard: {
@@ -154,7 +158,7 @@ function makeStyles(C: ColorPalette) {
   });
 }
 
-export function VenueCard({ venue, onPress, compact = false, variant }: VenueCardProps) {
+export function VenueCard({ venue, onPress, compact = false, variant, isFavorite = false, onToggleFavorite }: VenueCardProps) {
   const t = useT();
   const C = useColors();
   const styles = useMemo(() => makeStyles(C), [C]);
@@ -193,7 +197,21 @@ export function VenueCard({ venue, onPress, compact = false, variant }: VenueCar
             </Text>
           </View>
         ) : null}
-        {venue.isVerified ? (
+        {onToggleFavorite ? (
+          <TouchableOpacity
+            onPress={onToggleFavorite}
+            hitSlop={8}
+            style={styles.premiumVerified}
+            accessibilityRole="button"
+            accessibilityLabel={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+          >
+            <Ionicons
+              name={isFavorite ? "heart" : "heart-outline"}
+              size={14}
+              color={isFavorite ? "#E05C5C" : "rgba(255,255,255,0.9)"}
+            />
+          </TouchableOpacity>
+        ) : venue.isVerified ? (
           <View style={styles.premiumVerified}>
             <Ionicons name="checkmark-circle" size={14} color={C.lavender} />
           </View>
@@ -252,9 +270,26 @@ export function VenueCard({ venue, onPress, compact = false, variant }: VenueCar
           )}
         </View>
 
-        {/* Chevron */}
-        <View style={styles.listChevron}>
-          <Ionicons name="chevron-forward" size={16} color={C.textMuted} />
+        {/* Right: J'aime + chevron */}
+        <View style={styles.listRightActions}>
+          {onToggleFavorite ? (
+            <TouchableOpacity
+              onPress={onToggleFavorite}
+              hitSlop={8}
+              style={styles.listHeartBtn}
+              accessibilityRole="button"
+              accessibilityLabel={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+            >
+              <Ionicons
+                name={isFavorite ? "heart" : "heart-outline"}
+                size={18}
+                color={isFavorite ? "#E05C5C" : C.textMuted}
+              />
+            </TouchableOpacity>
+          ) : null}
+          <View style={styles.listChevron}>
+            <Ionicons name="chevron-forward" size={16} color={C.textMuted} />
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -339,12 +374,27 @@ export function VenueCard({ venue, onPress, compact = false, variant }: VenueCar
       />
       <View style={[styles.info, isCompact && styles.compactInfo]}>
         <View style={styles.nameRow}>
-          <Text style={[styles.name, isCompact && styles.compactName]} numberOfLines={1}>
+          <Text style={[styles.name, isCompact && styles.compactName, { flex: 1 }]} numberOfLines={1}>
             {venue.name}
           </Text>
           {venue.isVerified && (
             <Ionicons name="checkmark-circle" size={14} color={C.lavender} />
           )}
+          {onToggleFavorite ? (
+            <TouchableOpacity
+              onPress={onToggleFavorite}
+              hitSlop={8}
+              style={{ padding: 4 }}
+              accessibilityRole="button"
+              accessibilityLabel={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
+            >
+              <Ionicons
+                name={isFavorite ? "heart" : "heart-outline"}
+                size={16}
+                color={isFavorite ? "#E05C5C" : C.textMuted}
+              />
+            </TouchableOpacity>
+          ) : null}
         </View>
         <View style={styles.row}>
           <Ionicons name="business-outline" size={12} color={C.textMuted} />

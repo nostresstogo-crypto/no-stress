@@ -213,7 +213,7 @@ function makeStyles(C: ColorPalette) {
 
 export default function SearchScreen() {
   const C = useColors();
-  const { lang, configVenueTypes } = useApp();
+  const { lang, configVenueTypes, isFavoriteVenue, toggleFavoriteVenue } = useApp();
   const insets = useSafeAreaInsets();
   const { q } = useLocalSearchParams<{ q?: string }>();
   const isFr = lang === "fr";
@@ -489,6 +489,8 @@ export default function SearchScreen() {
             <VenueCard
               venue={item}
               onPress={() => safePush(`/venue/${item.id}`)}
+              isFavorite={isFavoriteVenue(item.id)}
+              onToggleFavorite={() => toggleFavoriteVenue(item.id)}
             />
           )}
           ListEmptyComponent={

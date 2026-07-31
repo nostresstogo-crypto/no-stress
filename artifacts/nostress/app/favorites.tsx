@@ -96,7 +96,7 @@ const es = StyleSheet.create({
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function FavoritesScreen() {
   const C = useColors();
-  const { lang, favorites, favoriteVenues, apiEvents, refreshApiEvents, toggleFavorite, toggleFavoriteVenue } = useApp();
+  const { lang, favorites, favoriteVenues, apiEvents, refreshApiEvents, toggleFavorite, toggleFavoriteVenue, isFavoriteVenue } = useApp();
   const insets = useSafeAreaInsets();
   const topInset = Platform.OS === "web" ? 67 : insets.top;
 
@@ -333,6 +333,8 @@ export default function FavoritesScreen() {
                     venue={detail}
                     variant="compact"
                     onPress={() => safePush(`/venue/${navId}`)}
+                    isFavorite={isFavoriteVenue(vid)}
+                    onToggleFavorite={() => toggleFavoriteVenue(vid)}
                   />
                 );
               })}
