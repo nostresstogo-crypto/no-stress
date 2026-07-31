@@ -1051,10 +1051,6 @@ export default function DashboardScreen() {
         {/* ── Venues tab ── */}
         {tab === "venues" && (
           <>
-            <TouchableOpacity style={styles.createBtn} onPress={openVenueModal}>
-              <Ionicons name="add-circle" size={20} color={C.bg} />
-              <Text style={styles.createBtnText}>{t("createVenue")}</Text>
-            </TouchableOpacity>
             {myVenues.length === 0 ? (
               <View style={styles.empty}>
                 <Ionicons name="business-outline" size={44} color={C.border} />
@@ -1594,9 +1590,9 @@ function PremiumStatCard({
         borderWidth: 1,
         borderColor: C.border,
         paddingHorizontal: cardPad,
-        paddingVertical: 8,
+        paddingVertical: compact ? 5 : 8,
         gap: 2,
-        minHeight: 60,
+        minHeight: compact ? 52 : 60,
         justifyContent: "center",
       }}
       onPress={onPress}
