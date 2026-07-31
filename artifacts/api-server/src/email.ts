@@ -838,11 +838,12 @@ export async function sendReportToAdmin(opts: {
 }
 
 export async function sendManagerCredentialsEmail({
-  to, name, firstName, email, password, adminUrl,
-}: { to: string; name: string; firstName: string; email: string; password: string; adminUrl: string }) {
+  to, name, firstName, email, code, adminUrl,
+}: { to: string; name: string; firstName: string; email: string; code: string; adminUrl: string }) {
   const safeName = escapeHtml(`${firstName} ${name}`);
   const safeEmail = escapeHtml(email);
-  const safePassword = escapeHtml(password);
+  const safeCode = escapeHtml(code);
+  const setPasswordUrl = `${adminUrl}/set-password?email=${encodeURIComponent(email)}`;
   await sendMail({
     to,
     subject: "Vos accès au panneau d'administration NoStress",
@@ -851,7 +852,8 @@ export async function sendManagerCredentialsEmail({
         ${headerHtml("Bienvenue sur l'administration NoStress")}
         <p style="color:#c8c8d8;line-height:1.6;margin:0 0 16px;">
           Bonjour <strong style="color:#fff;">${safeName}</strong>,<br><br>
-          Un compte <strong style="color:#7c6af7;">Gestionnaire</strong> a été créé pour vous sur le panneau d'administration NoStress. Voici vos identifiants de connexion.
+          Un compte <strong style="color:#7c6af7;">Gestionnaire</strong> a été créé pour vous sur le panneau d'administration NoStress.
+          Utilisez le code ci-dessous pour définir votre mot de passe.
         </p>
         <div style="background:#1a1c2e;border-radius:12px;padding:20px;margin:16px 0;">
           <div style="margin-bottom:14px;">
@@ -859,14 +861,17 @@ export async function sendManagerCredentialsEmail({
             <p style="margin:0;font-size:15px;color:#e8e8f0;">${safeEmail}</p>
           </div>
           <div>
-            <p style="margin:0 0 4px;font-size:12px;color:#7c6af7;text-transform:uppercase;letter-spacing:0.05em;">Mot de passe temporaire</p>
-            <p style="margin:0;font-family:monospace;font-size:16px;color:#fff;background:#0d0f1a;padding:8px 12px;border-radius:8px;display:inline-block;letter-spacing:0.05em;">${safePassword}</p>
+            <p style="margin:0 0 4px;font-size:12px;color:#7c6af7;text-transform:uppercase;letter-spacing:0.05em;">Code d'activation (valable 15 minutes)</p>
+            <p style="margin:0;font-family:monospace;font-size:24px;font-weight:700;color:#fff;background:#0d0f1a;padding:12px 16px;border-radius:8px;display:inline-block;letter-spacing:0.15em;">${safeCode}</p>
           </div>
         </div>
-        <p style="color:#c8c8d8;font-size:13px;margin:0 0 20px;">Nous vous recommandons de changer votre mot de passe dès votre première connexion depuis votre profil.</p>
-        <a href="${adminUrl}" style="display:inline-block;background:#7c6af7;color:#fff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">
-          Accéder à l'administration
+        <p style="color:#c8c8d8;font-size:13px;margin:0 0 20px;">Cliquez sur le bouton ci-dessous et saisissez votre code pour choisir votre mot de passe.</p>
+        <a href="${setPasswordUrl}" style="display:inline-block;background:#7c6af7;color:#fff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">
+          Définir mon mot de passe
         </a>
+        <p style="color:#6b6d8a;font-size:12px;margin:16px 0 0;">
+          Lien direct : <a href="${setPasswordUrl}" style="color:#7c6af7;word-break:break-all;">${setPasswordUrl}</a>
+        </p>
         ${footerHtml}
       </div>
     `,
@@ -874,10 +879,11 @@ export async function sendManagerCredentialsEmail({
 }
 
 export async function sendManagerPasswordResetEmail({
-  to, name, firstName, password,
-}: { to: string; name: string; firstName: string; password: string }) {
+  to, name, firstName, code,
+}: { to: string; name: string; firstName: string; code: string }) {
   const safeName = escapeHtml(`${firstName} ${name}`.trim());
-  const safePassword = escapeHtml(password);
+  const safeCode = escapeHtml(code);
+  const setPasswordUrl = `${ADMIN_BASE_URL}/set-password?email=${encodeURIComponent(to)}`;
   await sendMail({
     to,
     subject: "Réinitialisation de votre mot de passe — NoStress Admin",
@@ -886,13 +892,21 @@ export async function sendManagerPasswordResetEmail({
         ${headerHtml("Réinitialisation de mot de passe")}
         <p style="color:#c8c8d8;line-height:1.6;margin:0 0 16px;">
           Bonjour <strong style="color:#fff;">${safeName}</strong>,<br><br>
-          Un nouveau mot de passe a été généré pour votre compte gestionnaire NoStress.
+          Une réinitialisation de mot de passe a été demandée pour votre compte gestionnaire NoStress.
+          Utilisez le code ci-dessous pour choisir un nouveau mot de passe.
         </p>
         <div style="background:#1a1c2e;border-radius:12px;padding:20px;margin:16px 0;">
-          <p style="margin:0 0 4px;font-size:12px;color:#7c6af7;text-transform:uppercase;letter-spacing:0.05em;">Nouveau mot de passe</p>
-          <p style="margin:0;font-family:monospace;font-size:16px;color:#fff;background:#0d0f1a;padding:8px 12px;border-radius:8px;display:inline-block;letter-spacing:0.05em;">${safePassword}</p>
+          <p style="margin:0 0 4px;font-size:12px;color:#7c6af7;text-transform:uppercase;letter-spacing:0.05em;">Code de réinitialisation (valable 15 minutes)</p>
+          <p style="margin:0;font-family:monospace;font-size:24px;font-weight:700;color:#fff;background:#0d0f1a;padding:12px 16px;border-radius:8px;display:inline-block;letter-spacing:0.15em;">${safeCode}</p>
         </div>
-        <p style="color:#c8c8d8;font-size:13px;margin:0 0 20px;">Connectez-vous et changez ce mot de passe immédiatement depuis votre profil.</p>
+        <p style="color:#c8c8d8;font-size:13px;margin:0 0 20px;">Cliquez sur le bouton ci-dessous et saisissez votre code pour définir votre nouveau mot de passe.</p>
+        <a href="${setPasswordUrl}" style="display:inline-block;background:#7c6af7;color:#fff;text-decoration:none;padding:12px 24px;border-radius:10px;font-weight:600;">
+          Réinitialiser mon mot de passe
+        </a>
+        <p style="color:#6b6d8a;font-size:12px;margin:16px 0 0;">
+          Lien direct : <a href="${setPasswordUrl}" style="color:#7c6af7;word-break:break-all;">${setPasswordUrl}</a>
+        </p>
+        <p style="color:#8a8caa;font-size:12px;margin:12px 0 0;">Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
         ${footerHtml}
       </div>
     `,

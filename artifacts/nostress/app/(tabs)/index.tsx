@@ -390,6 +390,21 @@ export default function HomeScreen() {
             >
               <Ionicons name="search-outline" size={18} color={C.textMuted} />
             </TouchableOpacity>
+            {/* Filtres */}
+            <TouchableOpacity
+              onPress={openFilters}
+              style={[s.headerActionBtn, { backgroundColor: activeFilterCount > 0 ? C.lavender : C.card, borderColor: activeFilterCount > 0 ? C.lavender : C.border }]}
+              accessibilityLabel={lang === "fr" ? "Filtres" : "Filters"}
+              accessibilityRole="button"
+              hitSlop={8}
+            >
+              <Ionicons name="options-outline" size={18} color={activeFilterCount > 0 ? "#fff" : C.textMuted} />
+              {activeFilterCount > 0 && (
+                <View style={[s.headerBadge, { backgroundColor: C.error }]}>
+                  <Text style={s.headerBadgeText}>{activeFilterCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
             {/* Favoris */}
             <TouchableOpacity
               onPress={() => safePush("/favorites")}

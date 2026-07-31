@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 
 import Login from "@/pages/Login";
+import SetPassword from "@/pages/SetPassword";
 import Dashboard from "@/pages/Dashboard";
 import Partners from "@/pages/Partners";
 import DeletionRequests from "@/pages/DeletionRequests";
@@ -48,6 +49,9 @@ function Router() {
     <Switch>
       <Route path="/login">
         {!isLoading && admin ? <Redirect to="/dashboard" /> : <Login />}
+      </Route>
+      <Route path="/set-password">
+        <SetPassword />
       </Route>
       <Route path="/dashboard">
         <ProtectedRoute component={Dashboard} />

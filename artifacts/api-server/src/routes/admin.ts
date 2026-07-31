@@ -10,7 +10,8 @@ import {
   issueRefreshToken,
   revokeRefreshToken,
   revokeAllForSubject,
-  generateRandomPassword,
+  generateVerificationCode,
+  verificationCodeExpiry,
 } from "../lib/auth-utils.js";
 import {
   sendManagerCredentialsEmail,
@@ -266,11 +267,24 @@ router.post("/admin/managers", requireSuperAdmin, async (req, res) => {
   if (existing) {
     return res.status(409).json({ error: "Cet email est déjà utilisé." });
   }
-  const password = generateRandomPassword();
-  const passwordHash = await hashPassword(password);
+  // Generate a locked placeholder hash — the account is only usable after OTP setup.
+  const lockedHash = await hashPassword(`locked-${Date.now()}-${Math.random()}`);
+  const code = generateVerificationCode();
+  // Store only the bcrypt hash of the OTP — never the raw code — so a DB
+  // compromise during the 15-minute window cannot be used to take over accounts.
+  const codeHash = await hashPassword(code);
+  const codeExpires = verificationCodeExpiry();
   const [created] = await db
     .insert(adminsTable)
-    .values({ email: cleanEmail, passwordHash, name: String(name).trim(), firstName: String(firstName).trim(), role: "gestionnaire" })
+    .values({
+      email: cleanEmail,
+      passwordHash: lockedHash,
+      name: String(name).trim(),
+      firstName: String(firstName).trim(),
+      role: "gestionnaire",
+      verificationCode: codeHash,
+      verificationCodeExpires: codeExpires,
+    })
     .returning({ id: adminsTable.id, name: adminsTable.name, firstName: adminsTable.firstName, email: adminsTable.email });
   const adminUrl = (process.env.ADMIN_BASE_URL || "https://admin.no-stress.net").replace(/\/+$/, "");
   sendManagerCredentialsEmail({
@@ -278,7 +292,7 @@ router.post("/admin/managers", requireSuperAdmin, async (req, res) => {
     name: String(name).trim(),
     firstName: String(firstName).trim(),
     email: cleanEmail,
-    password,
+    code,
     adminUrl,
   }).catch((e) => console.error("[admin] Failed to send manager credentials email:", e));
   return res.status(201).json({ manager: { ...created, id: String(created.id) } });
@@ -292,16 +306,68 @@ router.post("/admin/managers/:id/reset-password", requireSuperAdmin, async (req,
     .from(adminsTable)
     .where(and(eq(adminsTable.id, id), eq(adminsTable.role, "gestionnaire")));
   if (!manager) return res.status(404).json({ error: "Gestionnaire introuvable." });
-  const password = generateRandomPassword();
-  const passwordHash = await hashPassword(password);
-  await db.update(adminsTable).set({ passwordHash }).where(eq(adminsTable.id, id));
+  const code = generateVerificationCode();
+  // Store only the bcrypt hash — raw OTP is emailed and immediately discarded.
+  const codeHash = await hashPassword(code);
+  const codeExpires = verificationCodeExpiry();
+  await db
+    .update(adminsTable)
+    .set({ verificationCode: codeHash, verificationCodeExpires: codeExpires })
+    .where(eq(adminsTable.id, id));
   sendManagerPasswordResetEmail({
     to: manager.email,
     name: manager.name,
     firstName: manager.firstName ?? "",
-    password,
+    code,
   }).catch((e) => console.error("[admin] Failed to send manager password reset email:", e));
-  return res.json({ message: "Mot de passe réinitialisé et envoyé par email au gestionnaire." });
+  return res.json({ message: "Un code de réinitialisation a été envoyé par email au gestionnaire." });
+});
+
+// ── Manager OTP password setup (public — no auth token required) ───────────────
+const managerOtpLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, key: "manager-set-password" });
+
+router.post("/admin/set-password-with-otp", managerOtpLimiter, async (req, res) => {
+  const { email, code, newPassword } = req.body || {};
+  if (!email || !code || !newPassword) {
+    return res.status(400).json({ error: "Email, code et nouveau mot de passe requis." });
+  }
+  if (typeof newPassword !== "string" || newPassword.length < 12) {
+    return res.status(400).json({ error: "Le mot de passe doit faire au moins 12 caractères." });
+  }
+  const cleanEmail = String(email).trim().toLowerCase();
+  const badCode = { error: "Code invalide ou expiré." };
+  const [admin] = await db
+    .select()
+    .from(adminsTable)
+    .where(sql`lower(${adminsTable.email}) = ${cleanEmail}`);
+  if (!admin || !admin.verificationCode) return res.status(400).json(badCode);
+  if (!admin.verificationCodeExpires || admin.verificationCodeExpires < new Date()) {
+    return res.status(400).json(badCode);
+  }
+  // bcrypt-compare the submitted code against the stored hash (constant-time).
+  const codeOk = await verifyPassword(String(code).trim(), admin.verificationCode);
+  if (!codeOk) return res.status(400).json(badCode);
+  const passwordHash = await hashPassword(newPassword);
+  // Atomically set the new password and consume (clear) the OTP in one UPDATE.
+  // The WHERE clause matches the *exact* hash we just verified, so:
+  //  - a concurrent redemption will clear the code first → second UPDATE matches 0 rows.
+  //  - a new reset code issued between our read and this UPDATE will overwrite the hash →
+  //    the old hash no longer matches → this UPDATE matches 0 rows, old code is rejected.
+  const updated = await db
+    .update(adminsTable)
+    .set({ passwordHash, verificationCode: null, verificationCodeExpires: null })
+    .where(
+      and(
+        eq(adminsTable.id, admin.id),
+        eq(adminsTable.verificationCode, admin.verificationCode),
+      ),
+    )
+    .returning({ id: adminsTable.id });
+  if (updated.length === 0) return res.status(400).json(badCode);
+  // Revoke all active sessions so the new password takes effect immediately.
+  await revokeAllForSubject(`a_${admin.id}`);
+  console.log(`[admin] Manager set password via OTP: id=${admin.id} email=${JSON.stringify(admin.email)}`);
+  return res.json({ message: "Mot de passe défini avec succès. Vous pouvez maintenant vous connecter." });
 });
 
 router.delete("/admin/managers/:id", requireSuperAdmin, async (req, res) => {

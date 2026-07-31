@@ -118,6 +118,8 @@ export const adminsTable = pgTable("admins", {
   name: text("name").notNull(),
   firstName: text("first_name"),
   role: text("role").notNull().default("superadmin"),
+  verificationCode: text("verification_code"),
+  verificationCodeExpires: timestamp("verification_code_expires"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
