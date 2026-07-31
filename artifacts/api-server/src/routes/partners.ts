@@ -393,6 +393,8 @@ router.post("/partners/verify-email", partnerVerifyLimiter, async (req, res) => 
     .set({ emailVerified: new Date(), verificationCode: null, verificationCodeExpires: null, status: "approved", updatedAt: new Date() })
     .where(eq(partnersTable.id, partner.id))
     .returning();
+  // Send welcome email — fire-and-forget so a transient SMTP error never blocks login.
+  sendPartnerRegistrationEmailToPartner(updated.email, updated.contactName, updated.businessName).catch(() => {});
   const sub = `p_${updated.id}`;
   const token = signToken({ sub, email: updated.email, role: "structure" });
   const refreshToken = await issueRefreshToken(sub, req.headers["user-agent"] as string | undefined);

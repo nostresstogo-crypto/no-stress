@@ -173,17 +173,17 @@ export async function sendWelcomeEmail(to: string, name: string) {
 export async function sendPartnerRegistrationEmailToPartner(to: string, contactName: string, businessName: string) {
   await sendMail({
     to,
-    subject: "✅ Demande d'inscription partenaire reçue – NoStress",
+    subject: "🎉 Bienvenue sur NoStress – Votre compte partenaire est actif !",
     html: `
       <div style="${baseStyle}">
-        ${headerHtml(`Demande reçue, ${contactName} !`)}
+        ${headerHtml(`Bienvenue, ${contactName} ! 🎉`)}
         <p style="color: #b0b2cc; line-height: 1.7; margin: 0 0 16px;">
-          Nous avons bien reçu votre demande d'inscription en tant que partenaire pour <strong style="color: #e8e8f0;">${businessName}</strong>.
+          Votre compte partenaire <strong style="color: #e8e8f0;">${businessName}</strong> est maintenant actif sur NoStress.
         </p>
         <div style="background: #1a1c2e; border-radius: 12px; padding: 20px; margin: 20px 0; border-left: 4px solid #f0c040;">
           <p style="margin: 0; font-size: 14px; color: #b0b2cc; line-height: 1.6;">
-            ⏳ Votre dossier sera examiné par notre équipe sous <strong style="color: #f0c040;">48 heures ouvrables</strong>.<br><br>
-            Vous recevrez un email dès que votre demande sera traitée.
+            📍 <strong style="color: #e8e8f0;">Votre lieu est en cours d'examen</strong> par notre équipe (24–48h).<br><br>
+            Dès qu'il sera validé, vous pourrez publier vos événements depuis votre tableau de bord.
           </p>
         </div>
         <p style="color: #b0b2cc; line-height: 1.7; margin: 16px 0 0;">
