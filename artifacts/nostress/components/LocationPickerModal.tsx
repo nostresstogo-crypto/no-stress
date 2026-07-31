@@ -570,11 +570,13 @@ export function LocationPickerModal({
   //
   const kbOpen = keyboardHeight > 0;
 
-  // Hauteur totale disponible pour le sheet
-  const sheetHeight =
-    Platform.OS === "android" && kbOpen
-      ? windowHeight - keyboardHeight - insets.top - 20
-      : Math.min(windowHeight * 0.85, windowHeight - insets.top - 20);
+  // Hauteur disponible au-dessus du clavier (toutes plateformes).
+  // On soustrait insets.top pour ne jamais dépasser la barre d'état iOS.
+  const availableHeight = kbOpen
+    ? windowHeight - keyboardHeight - insets.top - 16
+    : windowHeight - insets.top - 16;
+
+  const sheetHeight = Math.min(windowHeight * 0.85, availableHeight);
 
   const paddingBottom = kbOpen ? 8 : Math.max(insets.bottom, 16);
 
@@ -738,11 +740,13 @@ export function LocationPickerModal({
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
 
         {/*
-          iOS : KAV avec behavior="padding" remonte le sheet quand le clavier apparaît.
-          Android : on réduit sheetHeight dynamiquement (keyboardHeight ci-dessus).
+          iOS : KAV behavior="padding" + keyboardVerticalOffset={insets.top}
+                → le sheet remonte exactement jusqu'à la safe area, jamais derrière.
+          Android : behavior={undefined}, sheetHeight réduit dynamiquement.
         */}
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
+          keyboardVerticalOffset={insets.top}
           style={styles.kavOuter}
         >
           {/*
