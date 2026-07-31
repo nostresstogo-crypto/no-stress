@@ -1,21 +1,13 @@
 /**
- * LocationPickerModal
+ * LocationPickerModal — v3
  *
- * Bottom-sheet de sélection de localisation.
- *
- * Recherche
- * ─────────
- * • 1-2 chars : filtrage local sur configCities (instantané, hors-ligne)
- * • ≥ 3 chars : Nominatim (OpenStreetMap) — mondial, gratuit, 0 clé API
- *   → debounce 400 ms, AbortController, loading + erreur réseau
- *   → chaque résultat est comparé à configCities (nom normalisé + proximité < 50 km)
- *     → si match  → slug propre (filtrage événements fonctionne)
- *     → si pas    → nom brut comme slug (fallback display dans index.tsx)
- *
- * Keyboard
- * ────────
- * iOS  : KeyboardAvoidingView behavior="padding"
- * Android : Keyboard listener → maxHeight dynamique du sheet
+ * Corrections v3 :
+ * ─ Layout     : `sheet` avec hauteur EXPLICITE → flex:1 fonctionne pour la zone résultats
+ * ─ MIN_QUERY  : 2 (était 3 — spec : à partir de 2 caractères)
+ * ─ Logs       : toute la chaîne (query → URL → status → count → résultats)
+ * ─ APIs       : Nominatim (primaire) + photon.komoot.io (fallback automatique)
+ * ─ ScrollView : remplace FlatList pour éviter les conflits de hauteur imbriquée
+ * ─ Keyboard   : iOS KAV + Android maxHeight dynamique
  */
 
 import React, {
@@ -27,12 +19,12 @@ import React, {
 } from "react";
 import {
   ActivityIndicator,
-  FlatList,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -50,24 +42,21 @@ import type { ConfigCity } from "@/context/AppContext";
 import { useApp, useColors } from "@/context/AppContext";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const RECENT_KEY   = "ns_recent_cities";
-const MAX_RECENT   = 5;
-const MIN_QUERY    = 3;   // Nominatim only when ≥ MIN_QUERY chars
-const DEBOUNCE_MS  = 400;
+const RECENT_KEY  = "ns_recent_cities";
+const MAX_RECENT  = 5;
+const MIN_QUERY   = 2;   // déclencher la recherche dès 2 caractères
+const DEBOUNCE_MS = 350;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface PlaceResult {
   placeId: string;
-  /** Short city / town / village / state name */
   name: string;
   state?: string;
   country?: string;
   countryCode?: string;
   lat: number;
   lon: number;
-  /** Slug of the matched ConfigCity, if any */
   slug?: string;
-  /** True when this result matches a known ConfigCity */
   isConfigCity: boolean;
 }
 
@@ -84,15 +73,12 @@ function distKm(lat1: number, lon1: number, lat2: number, lon2: number): number 
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-// ─── Accent-insensitive normaliser ───────────────────────────────────────────
+// ─── Normalisation accent-insensible ─────────────────────────────────────────
 function normalize(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
-// ─── Match a Nominatim result to a ConfigCity ─────────────────────────────────
+// ─── Match Nominatim / photon → ConfigCity ────────────────────────────────────
 function findConfigCity(
   name: string,
   lat: number,
@@ -100,12 +86,10 @@ function findConfigCity(
   cities: ConfigCity[],
 ): ConfigCity | null {
   const nl = normalize(name);
-  // Exact / substring name match (accent-insensitive)
   for (const c of cities) {
     const cl = normalize(c.name);
     if (cl === nl || cl.startsWith(nl) || nl.startsWith(cl)) return c;
   }
-  // Proximity match (≤ 50 km)
   for (const c of cities) {
     if (c.latitude != null && c.longitude != null) {
       if (distKm(lat, lon, c.latitude, c.longitude) <= 50) return c;
@@ -114,8 +98,8 @@ function findConfigCity(
   return null;
 }
 
-// ─── Nominatim API call ───────────────────────────────────────────────────────
-async function fetchPlaces(
+// ─── Nominatim ────────────────────────────────────────────────────────────────
+async function fetchNominatim(
   query: string,
   lang: string,
   configCities: ConfigCity[],
@@ -128,18 +112,26 @@ async function fetchPlaces(
   url.searchParams.set("limit", "10");
   url.searchParams.set("accept-language", lang === "fr" ? "fr,en" : "en,fr");
 
+  console.log("[Search] Nominatim URL:", url.toString());
+
   const res = await fetch(url.toString(), {
     headers: {
-      "User-Agent": "NoStressApp/1.0 (https://nostress.tg)",
-      "Accept-Language": lang === "fr" ? "fr,en" : "en,fr",
+      "User-Agent": "NoStressApp/1.0 (https://nostress.tg; contact@nostress.tg)",
     },
     signal,
   });
 
+  console.log("[Search] Nominatim status:", res.status);
   if (!res.ok) throw new Error(`Nominatim HTTP ${res.status}`);
 
   const data: any[] = await res.json();
+  console.log("[Search] Nominatim raw count:", data.length);
+  console.log("[Search] Nominatim raw[0]:", JSON.stringify(data[0] ?? null).slice(0, 300));
 
+  return parseNominatimResults(data, configCities);
+}
+
+function parseNominatimResults(data: any[], configCities: ConfigCity[]): PlaceResult[] {
   const seen = new Set<string>();
   const results: PlaceResult[] = [];
 
@@ -156,7 +148,6 @@ async function fetchPlaces(
       "";
     if (!name) continue;
 
-    // Deduplicate by normalised name + country
     const key = `${normalize(name)}|${addr.country_code ?? ""}`;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -166,7 +157,7 @@ async function fetchPlaces(
     const matched = findConfigCity(name, lat, lon, configCities);
 
     results.push({
-      placeId: String(item.place_id),
+      placeId: `nom_${item.place_id}`,
       name,
       state: addr.state !== name ? addr.state : undefined,
       country: addr.country,
@@ -177,8 +168,88 @@ async function fetchPlaces(
       isConfigCity: !!matched,
     });
   }
+  return results;
+}
+
+// ─── Photon (fallback) ───────────────────────────────────────────────────────
+async function fetchPhoton(
+  query: string,
+  lang: string,
+  configCities: ConfigCity[],
+  signal: AbortSignal,
+): Promise<PlaceResult[]> {
+  const url = new URL("https://photon.komoot.io/api/");
+  url.searchParams.set("q", query);
+  url.searchParams.set("limit", "10");
+  url.searchParams.set("lang", lang === "fr" ? "fr" : "en");
+
+  console.log("[Search] Photon URL:", url.toString());
+
+  const res = await fetch(url.toString(), { signal });
+
+  console.log("[Search] Photon status:", res.status);
+  if (!res.ok) throw new Error(`Photon HTTP ${res.status}`);
+
+  const data = await res.json();
+  const features: any[] = data.features ?? [];
+  console.log("[Search] Photon raw count:", features.length);
+
+  const seen = new Set<string>();
+  const results: PlaceResult[] = [];
+
+  for (const f of features) {
+    const p = f.properties ?? {};
+    const name = p.name ?? p.city ?? p.state ?? p.country ?? "";
+    if (!name) continue;
+
+    const [lon, lat] = f.geometry?.coordinates ?? [0, 0];
+    const country    = p.country ?? "";
+    const cc         = p.countrycode ?? "";
+
+    const key = `${normalize(name)}|${cc}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const matched = findConfigCity(name, lat, lon, configCities);
+
+    results.push({
+      placeId: `pho_${Math.random().toString(36).slice(2)}`,
+      name,
+      state: p.state !== name ? p.state : undefined,
+      country,
+      countryCode: cc,
+      lat,
+      lon,
+      slug: matched?.slug,
+      isConfigCity: !!matched,
+    });
+  }
 
   return results;
+}
+
+// ─── Unified search (Nominatim → photon fallback) ────────────────────────────
+async function fetchPlaces(
+  query: string,
+  lang: string,
+  configCities: ConfigCity[],
+  signal: AbortSignal,
+): Promise<PlaceResult[]> {
+  console.log("[Search] ► fetchPlaces query:", JSON.stringify(query));
+
+  try {
+    const results = await fetchNominatim(query, lang, configCities, signal);
+    console.log("[Search] Nominatim results:", results.length, results.map(r => r.name));
+    if (results.length > 0) return results;
+    console.log("[Search] Nominatim returned 0 — trying Photon fallback");
+  } catch (err: any) {
+    if (err?.name === "AbortError") throw err;
+    console.warn("[Search] Nominatim failed:", err?.message, "— trying Photon fallback");
+  }
+
+  const fallback = await fetchPhoton(query, lang, configCities, signal);
+  console.log("[Search] Photon results:", fallback.length, fallback.map(r => r.name));
+  return fallback;
 }
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -192,7 +263,7 @@ export interface LocationPickerModalProps {
   lang: string;
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── ConfigCityRow ────────────────────────────────────────────────────────────
 function ConfigCityRow({
   city, selected, onPress, C,
 }: { city: ConfigCity; selected: boolean; onPress: () => void; C: ColorPalette }) {
@@ -201,8 +272,6 @@ function ConfigCityRow({
       style={[cr.row, { borderBottomColor: C.border }, selected && { backgroundColor: C.card2 }]}
       onPress={onPress}
       activeOpacity={0.7}
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
     >
       <Ionicons
         name="location-outline"
@@ -221,6 +290,7 @@ function ConfigCityRow({
   );
 }
 
+// ─── PlaceRow ─────────────────────────────────────────────────────────────────
 function PlaceRow({
   result, onPress, C,
 }: { result: PlaceResult; onPress: () => void; C: ColorPalette }) {
@@ -230,7 +300,6 @@ function PlaceRow({
       style={[cr.row, { borderBottomColor: C.border }]}
       onPress={onPress}
       activeOpacity={0.7}
-      accessibilityRole="button"
     >
       <Ionicons
         name={result.isConfigCity ? "location" : "location-outline"}
@@ -241,9 +310,7 @@ function PlaceRow({
       <View style={cr.info}>
         <Text style={[cr.name, { color: C.text }]}>{result.name}</Text>
         {subtitle ? (
-          <Text style={[cr.sub, { color: C.textMuted }]} numberOfLines={1}>
-            {subtitle}
-          </Text>
+          <Text style={[cr.sub, { color: C.textMuted }]} numberOfLines={1}>{subtitle}</Text>
         ) : null}
       </View>
       {result.isConfigCity && (
@@ -283,11 +350,10 @@ export function LocationPickerModal({
   const { height: windowHeight } = useWindowDimensions();
 
   // ── Search state ─────────────────────────────────────────────────────────
-  const [query, setQuery]                   = useState("");
-  const [debouncedQ, setDebouncedQ]         = useState("");
+  const [query, setQuery]                       = useState("");
   const [nominatimResults, setNominatimResults] = useState<PlaceResult[]>([]);
-  const [searchLoading, setSearchLoading]   = useState(false);
-  const [searchError, setSearchError]       = useState<string | null>(null);
+  const [searchLoading, setSearchLoading]       = useState(false);
+  const [searchError, setSearchError]           = useState<string | null>(null);
 
   // ── GPS state ─────────────────────────────────────────────────────────────
   const [gpsLoading, setGpsLoading] = useState(false);
@@ -318,34 +384,83 @@ export function LocationPickerModal({
     if (!visible) {
       setKeyboardHeight(0);
       abortRef.current?.abort();
+      if (debounceRef.current) clearTimeout(debounceRef.current);
       return;
     }
     setQuery("");
-    setDebouncedQ("");
-    setGpsError(null);
     setNominatimResults([]);
     setSearchLoading(false);
     setSearchError(null);
+    setGpsError(null);
     AsyncStorage.getItem(RECENT_KEY)
       .then((v) => {
         if (!v) return;
         const slugs: string[] = JSON.parse(v);
-        const found = slugs
-          .map((slug) => configCities.find((c) => c.slug === slug))
-          .filter(Boolean) as ConfigCity[];
-        setRecentCities(found);
+        setRecentCities(
+          slugs
+            .map((s) => configCities.find((c) => c.slug === s))
+            .filter(Boolean) as ConfigCity[],
+        );
       })
       .catch(() => {});
   }, [visible, configCities]);
 
-  // ── Debounce ──────────────────────────────────────────────────────────────
+  // ── Search trigger on query change ───────────────────────────────────────
+  // (single useEffect, no intermediate debouncedQ state)
   useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => setDebouncedQ(query), DEBOUNCE_MS);
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [query]);
+    const q = query.trim();
 
-  // ── Local filter (1-2 chars, instant) ────────────────────────────────────
+    // Abort any in-flight request
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (q.length < MIN_QUERY) {
+      // Clear network results immediately; local results still shown
+      abortRef.current?.abort();
+      setNominatimResults([]);
+      setSearchLoading(false);
+      setSearchError(null);
+      console.log("[Search] query too short:", JSON.stringify(q), "(min", MIN_QUERY, ")");
+      return;
+    }
+
+    // Show loading immediately (before debounce) so UX feels responsive
+    setSearchLoading(true);
+    setSearchError(null);
+
+    debounceRef.current = setTimeout(() => {
+      console.log("[Search] debounce fired, launching search for:", JSON.stringify(q));
+      abortRef.current?.abort();
+      abortRef.current = new AbortController();
+
+      fetchPlaces(q, lang, configCities, abortRef.current.signal)
+        .then((results) => {
+          console.log("[Search] ✅ final results count:", results.length);
+          console.log("[Search] results:", JSON.stringify(results.map((r) => ({ name: r.name, country: r.country, isConfig: r.isConfigCity }))));
+          setNominatimResults(results);
+          setSearchLoading(false);
+        })
+        .catch((err: any) => {
+          if (err?.name === "AbortError") {
+            console.log("[Search] aborted");
+            return;
+          }
+          console.error("[Search] ❌ error:", err?.message ?? String(err));
+          setSearchError(
+            lang === "fr"
+              ? "Erreur réseau. Vérifiez votre connexion."
+              : "Network error. Check your connection.",
+          );
+          setNominatimResults([]);
+          setSearchLoading(false);
+        });
+    }, DEBOUNCE_MS);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [query, lang, configCities]);
+
+  // ── Local filter (instant, works offline) ────────────────────────────────
   const localResults = useMemo(() => {
     const q = query.trim();
     if (!q) return [];
@@ -359,41 +474,6 @@ export function LocationPickerModal({
       .slice(0, 12);
   }, [configCities, query]);
 
-  // ── Nominatim search (≥ MIN_QUERY chars) ─────────────────────────────────
-  useEffect(() => {
-    const q = debouncedQ.trim();
-    if (q.length < MIN_QUERY) {
-      setNominatimResults([]);
-      setSearchLoading(false);
-      setSearchError(null);
-      abortRef.current?.abort();
-      return;
-    }
-
-    abortRef.current?.abort();
-    abortRef.current = new AbortController();
-    setSearchLoading(true);
-    setSearchError(null);
-
-    fetchPlaces(q, lang, configCities, abortRef.current.signal)
-      .then((results) => {
-        setNominatimResults(results);
-        setSearchLoading(false);
-      })
-      .catch((err) => {
-        if ((err as any)?.name === "AbortError") return;
-        console.warn("[LocationPickerModal] Nominatim error:", err?.message ?? err);
-        setSearchError(
-          lang === "fr"
-            ? "Erreur réseau. Vérifiez votre connexion."
-            : "Network error. Check your connection.",
-        );
-        setSearchLoading(false);
-      });
-
-    return () => { abortRef.current?.abort(); };
-  }, [debouncedQ, lang, configCities]);
-
   // ── Helpers ───────────────────────────────────────────────────────────────
   const saveRecent = async (slug: string) => {
     try {
@@ -406,6 +486,7 @@ export function LocationPickerModal({
 
   const handleSelectConfigCity = useCallback(
     (city: ConfigCity) => {
+      console.log("[Select] ConfigCity:", city.slug, city.name);
       Keyboard.dismiss();
       saveRecent(city.slug);
       onSelectCity(city.slug, city.name);
@@ -415,13 +496,12 @@ export function LocationPickerModal({
 
   const handleSelectPlace = useCallback(
     (result: PlaceResult) => {
+      console.log("[Select] Place:", result.name, "slug:", result.slug ?? "(none)");
       Keyboard.dismiss();
       if (result.slug) {
-        // Matched a known ConfigCity → use proper slug
         saveRecent(result.slug);
         onSelectCity(result.slug, result.name);
       } else {
-        // Unknown location → name used as slug (parent fallback displays it)
         onSelectCity(result.name, result.name);
       }
     },
@@ -483,22 +563,28 @@ export function LocationPickerModal({
     }
   }, [lang, configCities, onSelectGPS]);
 
-  // ── Layout ────────────────────────────────────────────────────────────────
-  const hasQuery     = query.trim().length > 0;
-  const useNominatim = debouncedQ.trim().length >= MIN_QUERY;
+  // ── Layout heights ────────────────────────────────────────────────────────
+  //
+  // CORRECTION CRITIQUE : le `sheet` reçoit une hauteur EXPLICITE.
+  // Sans hauteur explicite, `flex:1` dans la zone résultats donne 0px.
+  //
+  const kbOpen = keyboardHeight > 0;
 
-  // Android: shrink sheet when keyboard is up
-  const sheetMaxHeight =
-    Platform.OS === "android" && keyboardHeight > 0
+  // Hauteur totale disponible pour le sheet
+  const sheetHeight =
+    Platform.OS === "android" && kbOpen
       ? windowHeight - keyboardHeight - insets.top - 20
-      : windowHeight * 0.85;
-  const paddingBottom =
-    keyboardHeight > 0 && Platform.OS === "android" ? 8 : Math.max(insets.bottom, 16);
+      : Math.min(windowHeight * 0.85, windowHeight - insets.top - 20);
 
-  // ── Render results section ────────────────────────────────────────────────
+  const paddingBottom = kbOpen ? 8 : Math.max(insets.bottom, 16);
+
+  // ── Render results ────────────────────────────────────────────────────────
+  const hasQuery    = query.trim().length > 0;
+  const hasEnough   = query.trim().length >= MIN_QUERY;
+
   const renderResults = () => {
-    // ── Searching via Nominatim ──
-    if (useNominatim) {
+    if (hasEnough) {
+      // Network search mode
       if (searchLoading) {
         return (
           <View style={styles.feedbackWrap}>
@@ -515,7 +601,21 @@ export function LocationPickerModal({
             <Ionicons name="wifi-outline" size={28} color={C.error} style={{ marginBottom: 8 }} />
             <Text style={[styles.feedbackText, { color: C.error }]}>{searchError}</Text>
             <TouchableOpacity
-              onPress={() => setDebouncedQ(query)} // re-trigger
+              onPress={() => {
+                // force re-trigger by resetting loading state
+                setSearchError(null);
+                setSearchLoading(true);
+                const q = query.trim();
+                abortRef.current?.abort();
+                abortRef.current = new AbortController();
+                fetchPlaces(q, lang, configCities, abortRef.current.signal)
+                  .then((r) => { setNominatimResults(r); setSearchLoading(false); })
+                  .catch((e: any) => {
+                    if (e?.name === "AbortError") return;
+                    setSearchError(lang === "fr" ? "Erreur réseau." : "Network error.");
+                    setSearchLoading(false);
+                  });
+              }}
               style={[styles.retryBtn, { borderColor: C.border }]}
             >
               <Text style={[styles.retryText, { color: C.lavender }]}>
@@ -525,7 +625,12 @@ export function LocationPickerModal({
           </View>
         );
       }
-      if (nominatimResults.length === 0) {
+
+      // Show both local + network results (local at top for known cities)
+      const showLocal = localResults.length > 0 &&
+        !nominatimResults.some((r) => r.isConfigCity);
+
+      if (nominatimResults.length === 0 && localResults.length === 0) {
         return (
           <View style={styles.feedbackWrap}>
             <Ionicons name="search-outline" size={28} color={C.border} style={{ marginBottom: 8 }} />
@@ -535,28 +640,39 @@ export function LocationPickerModal({
           </View>
         );
       }
+
       return (
-        <FlatList
-          data={nominatimResults}
-          keyExtractor={(r) => r.placeId}
-          keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="none"
-          renderItem={({ item }) => (
-            <PlaceRow result={item} onPress={() => handleSelectPlace(item)} C={C} />
-          )}
-        />
+        <>
+          {showLocal && localResults.map((city) => (
+            <ConfigCityRow
+              key={city.slug}
+              city={city}
+              selected={city.slug === currentCity && !usingGPS}
+              onPress={() => handleSelectConfigCity(city)}
+              C={C}
+            />
+          ))}
+          {nominatimResults.map((result) => (
+            <PlaceRow
+              key={result.placeId}
+              result={result}
+              onPress={() => handleSelectPlace(result)}
+              C={C}
+            />
+          ))}
+        </>
       );
     }
 
-    // ── Local search (1-2 chars) ──
-    if (hasQuery && !useNominatim) {
+    // Short query: local filter only
+    if (hasQuery) {
       if (localResults.length === 0) {
         return (
           <View style={styles.feedbackWrap}>
             <Text style={[styles.feedbackText, { color: C.textMuted }]}>
               {lang === "fr"
-                ? `Continuez à taper pour rechercher "${query.trim()}"…`
-                : `Keep typing to search for "${query.trim()}"…`}
+                ? `Encore ${MIN_QUERY - query.trim().length} caractère(s)…`
+                : `${MIN_QUERY - query.trim().length} more character(s)…`}
             </Text>
           </View>
         );
@@ -572,7 +688,7 @@ export function LocationPickerModal({
       ));
     }
 
-    // ── No query: recent + "all cities" ──
+    // No query: recent + all cities
     return (
       <>
         {recentCities.length > 0 && (
@@ -621,124 +737,131 @@ export function LocationPickerModal({
         {/* Backdrop */}
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
 
-        {/* iOS: KAV pushes sheet above keyboard */}
+        {/*
+          iOS : KAV avec behavior="padding" remonte le sheet quand le clavier apparaît.
+          Android : on réduit sheetHeight dynamiquement (keyboardHeight ci-dessus).
+        */}
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
           style={styles.kavOuter}
         >
-          <View style={[styles.sheet, { paddingBottom, maxHeight: sheetMaxHeight }]}>
-            {/* Drag handle */}
-            <View style={[styles.handle, { backgroundColor: C.border }]} />
+          {/*
+            CORRECTION CLEF : height EXPLICITE sur le sheet.
+            Sans ça, flex:1 dans la zone résultats = hauteur 0.
+          */}
+          <View style={[styles.sheet, { height: sheetHeight }]}>
 
-            {/* Title */}
-            <View style={styles.titleRow}>
-              <Text style={[styles.title, { color: C.text }]}>
-                {lang === "fr" ? "Choisir une localisation" : "Choose a location"}
-              </Text>
-              <TouchableOpacity onPress={onClose} hitSlop={12} accessibilityRole="button">
-                <Ionicons name="close" size={22} color={C.textMuted} />
-              </TouchableOpacity>
-            </View>
+            {/* ── En-tête fixe ─────────────────────────────────────────── */}
+            <View style={styles.fixedHeader}>
+              {/* Drag handle */}
+              <View style={[styles.handle, { backgroundColor: C.border }]} />
 
-            {/* GPS button — hidden when keyboard is open */}
-            {keyboardHeight === 0 && (
-              <>
-                <TouchableOpacity
-                  style={[
-                    styles.gpsBtn,
-                    {
-                      backgroundColor: C.lavender + "12",
-                      borderColor: usingGPS && !gpsError ? C.lavender : C.lavender + "44",
-                    },
-                  ]}
-                  onPress={handleGPS}
-                  disabled={gpsLoading}
-                  activeOpacity={0.8}
-                  accessibilityRole="button"
-                  accessibilityLabel={lang === "fr" ? "Utiliser ma position" : "Use my location"}
-                >
-                  {gpsLoading ? (
-                    <ActivityIndicator size="small" color={C.lavender} style={{ width: 20 }} />
-                  ) : (
-                    <Ionicons name="navigate" size={18} color={C.lavender} />
-                  )}
-                  <Text style={[styles.gpsBtnText, { color: C.lavender }]}>
-                    {gpsLoading
-                      ? (lang === "fr" ? "Localisation en cours…" : "Getting location…")
-                      : usingGPS
-                        ? (lang === "fr" ? "Ma position (active)" : "My location (active)")
-                        : (lang === "fr" ? "Utiliser ma position" : "Use my location")}
-                  </Text>
-                  {usingGPS && !gpsLoading && (
-                    <Ionicons name="checkmark-circle" size={16} color={C.lavender} />
-                  )}
-                </TouchableOpacity>
-                {gpsError ? (
-                  <Text style={[styles.gpsError, { color: C.error }]}>{gpsError}</Text>
-                ) : null}
-
-                {/* Separator */}
-                <View style={styles.sepRow}>
-                  <View style={[styles.sepLine, { backgroundColor: C.border }]} />
-                  <Text style={[styles.sepText, { color: C.textMuted }]}>
-                    {lang === "fr" ? "ou" : "or"}
-                  </Text>
-                  <View style={[styles.sepLine, { backgroundColor: C.border }]} />
-                </View>
-              </>
-            )}
-
-            {/* Search input */}
-            <View style={[styles.searchWrap, { backgroundColor: C.card2, borderColor: C.border }]}>
-              <Ionicons name="search-outline" size={16} color={C.textMuted} />
-              <TextInput
-                ref={inputRef}
-                style={[styles.searchInput, { color: C.text }]}
-                placeholder={
-                  lang === "fr"
-                    ? "Lomé, Abidjan, Paris, Togo…"
-                    : "Lomé, Abidjan, Paris, Togo…"
-                }
-                placeholderTextColor={C.textMuted}
-                value={query}
-                onChangeText={setQuery}
-                autoCorrect={false}
-                autoCapitalize="none"
-                returnKeyType="search"
-                clearButtonMode="while-editing"
-                accessibilityLabel={lang === "fr" ? "Rechercher une ville" : "Search for a city"}
-              />
-              {query.length > 0 && Platform.OS === "android" && (
-                <TouchableOpacity onPress={() => setQuery("")} hitSlop={8}>
-                  <Ionicons name="close-circle" size={15} color={C.textMuted} />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Min chars hint */}
-            {hasQuery && query.trim().length < MIN_QUERY && (
-              <Text style={[styles.hintText, { color: C.textMuted }]}>
-                {lang === "fr"
-                  ? `Encore ${MIN_QUERY - query.trim().length} caractère(s) pour lancer la recherche`
-                  : `${MIN_QUERY - query.trim().length} more character(s) to search`}
-              </Text>
-            )}
-
-            {/* Results area — takes remaining space */}
-            <View style={styles.resultArea}>{renderResults()}</View>
-
-            {/* Cancel — hidden when keyboard is open */}
-            {keyboardHeight === 0 && (
-              <TouchableOpacity
-                style={[styles.cancelBtn, { borderColor: C.border }]}
-                onPress={onClose}
-                accessibilityRole="button"
-                accessibilityLabel={lang === "fr" ? "Annuler" : "Cancel"}
-              >
-                <Text style={[styles.cancelText, { color: C.textMuted }]}>
-                  {lang === "fr" ? "Annuler" : "Cancel"}
+              {/* Title */}
+              <View style={styles.titleRow}>
+                <Text style={[styles.title, { color: C.text }]}>
+                  {lang === "fr" ? "Choisir une localisation" : "Choose a location"}
                 </Text>
-              </TouchableOpacity>
+                <TouchableOpacity onPress={onClose} hitSlop={12}>
+                  <Ionicons name="close" size={22} color={C.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              {/* GPS — caché quand clavier ouvert */}
+              {!kbOpen && (
+                <>
+                  <TouchableOpacity
+                    style={[
+                      styles.gpsBtn,
+                      {
+                        backgroundColor: C.lavender + "12",
+                        borderColor: usingGPS && !gpsError ? C.lavender : C.lavender + "44",
+                      },
+                    ]}
+                    onPress={handleGPS}
+                    disabled={gpsLoading}
+                    activeOpacity={0.8}
+                  >
+                    {gpsLoading ? (
+                      <ActivityIndicator size="small" color={C.lavender} style={{ width: 20 }} />
+                    ) : (
+                      <Ionicons name="navigate" size={18} color={C.lavender} />
+                    )}
+                    <Text style={[styles.gpsBtnText, { color: C.lavender }]}>
+                      {gpsLoading
+                        ? (lang === "fr" ? "Localisation…" : "Getting location…")
+                        : usingGPS
+                          ? (lang === "fr" ? "Ma position (active)" : "My location (active)")
+                          : (lang === "fr" ? "Utiliser ma position" : "Use my location")}
+                    </Text>
+                    {usingGPS && !gpsLoading && (
+                      <Ionicons name="checkmark-circle" size={16} color={C.lavender} />
+                    )}
+                  </TouchableOpacity>
+                  {gpsError ? (
+                    <Text style={[styles.gpsError, { color: C.error }]}>{gpsError}</Text>
+                  ) : null}
+
+                  {/* Separator */}
+                  <View style={styles.sepRow}>
+                    <View style={[styles.sepLine, { backgroundColor: C.border }]} />
+                    <Text style={[styles.sepText, { color: C.textMuted }]}>
+                      {lang === "fr" ? "ou" : "or"}
+                    </Text>
+                    <View style={[styles.sepLine, { backgroundColor: C.border }]} />
+                  </View>
+                </>
+              )}
+
+              {/* Search input */}
+              <View style={[styles.searchWrap, { backgroundColor: C.card2, borderColor: C.border }]}>
+                <Ionicons name="search-outline" size={16} color={C.textMuted} />
+                <TextInput
+                  ref={inputRef}
+                  style={[styles.searchInput, { color: C.text }]}
+                  placeholder="Lomé, Abidjan, Paris, Togo…"
+                  placeholderTextColor={C.textMuted}
+                  value={query}
+                  onChangeText={(t) => {
+                    console.log("[Search] onChangeText:", JSON.stringify(t));
+                    setQuery(t);
+                  }}
+                  autoCorrect={false}
+                  autoCapitalize="none"
+                  returnKeyType="search"
+                  clearButtonMode="while-editing"
+                  accessibilityLabel={lang === "fr" ? "Rechercher une ville" : "Search for a city"}
+                />
+                {query.length > 0 && Platform.OS === "android" && (
+                  <TouchableOpacity onPress={() => setQuery("")} hitSlop={8}>
+                    <Ionicons name="close-circle" size={15} color={C.textMuted} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* ── Zone résultats (flex:1 → fonctionne car parent a height explicite) ── */}
+            <ScrollView
+              style={styles.resultScroll}
+              contentContainerStyle={styles.resultContent}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="none"
+              showsVerticalScrollIndicator
+            >
+              {renderResults()}
+            </ScrollView>
+
+            {/* ── Pied fixe — caché quand clavier ouvert ───────────────── */}
+            {!kbOpen && (
+              <View style={[styles.fixedFooter, { paddingBottom }]}>
+                <TouchableOpacity
+                  style={[styles.cancelBtn, { borderColor: C.border }]}
+                  onPress={onClose}
+                >
+                  <Text style={[styles.cancelText, { color: C.textMuted }]}>
+                    {lang === "fr" ? "Annuler" : "Cancel"}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         </KeyboardAvoidingView>
@@ -755,12 +878,19 @@ const makeStyles = (C: ColorPalette) =>
       backgroundColor: "rgba(0,0,0,0.55)",
       justifyContent: "flex-end",
     },
-    kavOuter: {},
+    kavOuter: {
+      // Pas de flex ici — le sheet définit lui-même sa hauteur
+    },
     sheet: {
       backgroundColor: C.bg,
       borderTopLeftRadius: 26,
       borderTopRightRadius: 26,
       paddingTop: 12,
+      overflow: "hidden",
+      // `height` défini dynamiquement via style inline
+    },
+    fixedHeader: {
+      // Taille déterminée par son contenu — ne pas mettre de flex
     },
     handle: {
       width: 40,
@@ -813,7 +943,6 @@ const makeStyles = (C: ColorPalette) =>
       paddingVertical: Platform.OS === "ios" ? 11 : 9,
       borderRadius: 12,
       borderWidth: 1,
-      marginBottom: 4,
     },
     searchInput: {
       flex: 1,
@@ -821,14 +950,13 @@ const makeStyles = (C: ColorPalette) =>
       fontFamily: "Inter_400Regular",
       padding: 0,
     },
-    hintText: {
-      fontSize: 11,
-      fontFamily: "Inter_400Regular",
-      marginHorizontal: 20,
-      marginTop: 4,
-      marginBottom: 4,
+    // ScrollView pour les résultats — flex:1 fonctionne car le parent (sheet) a une hauteur explicite
+    resultScroll: {
+      flex: 1,
     },
-    resultArea: { flex: 1 },
+    resultContent: {
+      flexGrow: 1,
+    },
     sectionLabel: {
       fontSize: 11,
       fontFamily: "Inter_600SemiBold",
@@ -860,9 +988,11 @@ const makeStyles = (C: ColorPalette) =>
       borderWidth: 1,
     },
     retryText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+    fixedFooter: {
+      paddingHorizontal: 20,
+      paddingTop: 8,
+    },
     cancelBtn: {
-      marginHorizontal: 20,
-      marginTop: 12,
       paddingVertical: 13,
       borderRadius: 12,
       borderWidth: 1,
