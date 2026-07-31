@@ -19,13 +19,11 @@ import { safePush } from "@/lib/navigation";
 import { useT, useApp, useColors } from "@/context/AppContext";
 import { ColorPalette } from "@/constants/colors";
 import { LANG_LABELS, type Lang } from "@/constants/i18n";
-import { formatDateTimeLocalized } from "@/lib/formatDate";
 import { API_BASE } from "@/lib/apiBase";
 
 const SUPPORT_WHATSAPP = "+22872770767";
 const SUPPORT_WHATSAPP_URL = `https://wa.me/${SUPPORT_WHATSAPP.replace(/[^0-9]/g, "")}?text=${encodeURIComponent("Bonjour NoStress, j'ai besoin d'aide.")}`;
 
-type Tab = "notifications";
 
 const DELETION_REASONS = [
   { key: "not_useful", labelFr: "Je n'utilise plus l'application", labelEn: "I no longer use the app" },
@@ -203,22 +201,7 @@ function makeStyles(C: ColorPalette) {
       paddingHorizontal: 4,
     },
     badgeText: { fontSize: 10, fontFamily: "Inter_700Bold", color: C.white },
-    notifCard: {
-      flexDirection: "row",
-      backgroundColor: C.card,
-      borderRadius: 12,
-      padding: 14,
-      borderWidth: 1,
-      borderColor: C.border,
-      gap: 10,
-    },
-    notifUnread: { borderColor: C.lavender },
-    notifDot: { width: 10, paddingTop: 4, alignItems: "center" },
-    dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.lavender },
-    notifContent: { flex: 1, gap: 2 },
-    notifTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text },
-    notifBody: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textMuted },
-    notifDate: { fontSize: 11, fontFamily: "Inter_400Regular", color: C.textMuted, marginTop: 4 },
+    shortcutIconWrap: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
     empty: { alignItems: "center", justifyContent: "center", paddingVertical: 40, gap: 16 },
     emptyText: { fontSize: 15, fontFamily: "Inter_500Medium", color: C.textMuted },
     logoutBtn: {
@@ -239,9 +222,8 @@ function makeStyles(C: ColorPalette) {
 export default function AccountScreen() {
   const t = useT();
   const C = useColors();
-  const { user, lang, setLang, logout, notifications, markAllRead, removeNotification, unreadCount, isDark, themeMode, setThemeMode, locationNotificationsEnabled, setLocationNotificationsEnabled, selectedCity, nearbyEventsCount, refreshApiEvents, syncMyEventsFromBackend } = useApp();
+  const { user, lang, setLang, logout, unreadCount, isDark, themeMode, setThemeMode, locationNotificationsEnabled, setLocationNotificationsEnabled, selectedCity, nearbyEventsCount, refreshApiEvents, syncMyEventsFromBackend } = useApp();
   const insets = useSafeAreaInsets();
-  const [tab, setTab] = useState<Tab>("notifications");
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const styles = useMemo(() => makeStyles(C), [C]);
 
@@ -611,52 +593,37 @@ export default function AccountScreen() {
         )}
       </View>
 
-      {/* Tab: Notifications */}
-      <View style={styles.tabs}>
+      {/* Raccourcis — Notifications & Favoris */}
+      <View style={[styles.card, { marginTop: 0 }]}>
         <TouchableOpacity
-          style={[styles.tabBtn, styles.tabBtnActive]}
-          onPress={() => markAllRead()}
+          style={styles.settingRow}
+          onPress={() => safePush("/notifications")}
         >
-          <Ionicons name="notifications" size={16} color={C.lavender} />
-          <Text style={[styles.tabText, styles.tabTextActive]}>
-            {t("notifications")}
-          </Text>
+          <View style={[styles.shortcutIconWrap, { backgroundColor: C.lavender + "18" }]}>
+            <Ionicons name="notifications-outline" size={18} color={C.lavender} />
+          </View>
+          <Text style={styles.settingLabel}>{t("notifications")}</Text>
           {unreadCount > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>{unreadCount}</Text>
+            <View style={[styles.badge, { marginRight: 4 }]}>
+              <Text style={styles.badgeText}>{unreadCount > 9 ? "9+" : String(unreadCount)}</Text>
             </View>
           )}
+          <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
+        </TouchableOpacity>
+
+        <View style={styles.settingDivider} />
+
+        <TouchableOpacity
+          style={styles.settingRow}
+          onPress={() => safePush("/favorites")}
+        >
+          <View style={[styles.shortcutIconWrap, { backgroundColor: C.error + "15" }]}>
+            <Ionicons name="heart-outline" size={18} color={C.error} />
+          </View>
+          <Text style={styles.settingLabel}>{t("favorites")}</Text>
+          <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
         </TouchableOpacity>
       </View>
-
-      {(
-        notifications.length > 0 ? (
-          notifications.map((n) => (
-            <View key={n.id} style={[styles.notifCard, !n.read && styles.notifUnread]}>
-              <View style={styles.notifDot}>
-                {!n.read && <View style={styles.dot} />}
-              </View>
-              <View style={styles.notifContent}>
-                <Text style={styles.notifTitle}>{lang === "fr" ? n.titleFr : n.title}</Text>
-                <Text style={styles.notifBody}>{lang === "fr" ? n.bodyFr : n.body}</Text>
-                <Text style={styles.notifDate}>{formatDateTimeLocalized(n.createdAt, lang)}</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => removeNotification(n.id)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                style={{ padding: 4 }}
-              >
-                <Ionicons name="close-circle-outline" size={20} color={C.textMuted} />
-              </TouchableOpacity>
-            </View>
-          ))
-        ) : (
-          <View style={styles.empty}>
-            <Ionicons name="notifications-outline" size={48} color={C.border} />
-            <Text style={styles.emptyText}>{t("noNotifications")}</Text>
-          </View>
-        )
-      )}
 
       {/* Logout */}
       <TouchableOpacity style={styles.logoutBtn} onPress={logout}>

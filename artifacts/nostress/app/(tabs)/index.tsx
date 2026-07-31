@@ -152,7 +152,7 @@ const fc = StyleSheet.create({
 export default function HomeScreen() {
   const t = useT();
   const C = useColors();
-  const { lang, selectedCity, setSelectedCity, selectedCategory, setSelectedCategory, configEventCategories } = useApp();
+  const { lang, selectedCity, setSelectedCity, selectedCategory, setSelectedCategory, configEventCategories, unreadCount } = useApp();
   const insets = useSafeAreaInsets();
   const [refreshing, setRefreshing]       = useState(false);
   const [loading, setLoading]             = useState(true);
@@ -299,15 +299,31 @@ export default function HomeScreen() {
             <Text style={[s.greeting, { color: C.textMuted }]}>{greeting}</Text>
             <CitySelector value={selectedCity} onChange={setSelectedCity} />
           </View>
-          <TouchableOpacity
-            onPress={() => safePush("/favorites")}
-            style={[s.favHeaderBtn, { backgroundColor: C.card, borderColor: C.border }]}
-            accessibilityLabel={lang === "fr" ? "Mes favoris" : "My favorites"}
-            accessibilityRole="button"
-            hitSlop={8}
-          >
-            <Ionicons name="heart-outline" size={20} color={C.lavender} />
-          </TouchableOpacity>
+          <View style={s.headerActions}>
+            <TouchableOpacity
+              onPress={() => safePush("/favorites")}
+              style={[s.headerActionBtn, { backgroundColor: C.card, borderColor: C.border }]}
+              accessibilityLabel={lang === "fr" ? "Mes favoris" : "My favorites"}
+              accessibilityRole="button"
+              hitSlop={8}
+            >
+              <Ionicons name="heart-outline" size={20} color={C.lavender} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => safePush("/notifications")}
+              style={[s.headerActionBtn, { backgroundColor: C.card, borderColor: C.border }]}
+              accessibilityLabel={lang === "fr" ? "Notifications" : "Notifications"}
+              accessibilityRole="button"
+              hitSlop={8}
+            >
+              <Ionicons name="notifications-outline" size={20} color={unreadCount > 0 ? C.lavender : C.textMuted} />
+              {unreadCount > 0 && (
+                <View style={[s.headerBadge, { backgroundColor: C.error }]}>
+                  <Text style={s.headerBadgeText}>{unreadCount > 9 ? "9+" : String(unreadCount)}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Row 2: search bar */}
@@ -617,13 +633,19 @@ const s = StyleSheet.create({
     fontSize: FontSize.sm,
     letterSpacing: LetterSpacing.wide,
   },
-  favHeaderBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
+  headerActions: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerActionBtn: {
+    width: 40, height: 40, borderRadius: 20, borderWidth: 1,
+    alignItems: "center", justifyContent: "center",
+  },
+  headerBadge: {
+    position: "absolute", top: -3, right: -3,
+    minWidth: 16, height: 16, borderRadius: 8,
+    alignItems: "center", justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  headerBadgeText: {
+    fontSize: 9, fontFamily: "Inter_700Bold", color: "#fff",
   },
 
   /* Search bar */
