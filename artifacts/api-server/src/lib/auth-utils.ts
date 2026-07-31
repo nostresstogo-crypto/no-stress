@@ -26,7 +26,8 @@ export async function hashPassword(plain: string): Promise<string> {
 }
 
 export function generateVerificationCode(): string {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  // crypto.randomInt is cryptographically secure and avoids modulo bias
+  return crypto.randomInt(100000, 1000000).toString();
 }
 
 // Auto-generated password sent by email (partner approval, forgot-password).
