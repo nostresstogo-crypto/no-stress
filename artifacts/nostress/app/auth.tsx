@@ -658,9 +658,11 @@ export default function AuthScreen() {
       }
     } catch {
       setGlobalError(lang === "fr" ? "Erreur réseau. Vérifiez votre connexion." : "Network error. Check your connection.");
+      setLoading(false);
+      return;
     }
     setLoading(false);
-    router.back();
+    dismissAndReplace("/(tabs)");
   }
 
   async function handleUserRegister() {
