@@ -1,5 +1,6 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useRef, useCallback } from "react";
 import {
+  Animated,
   Dimensions,
   StyleSheet,
   Text,
@@ -160,6 +161,29 @@ export function EventCard({ event, onPress, horizontal = false, variant }: Event
 
   const fav = isFavorite(event.id);
 
+  const heartScale = useRef(new Animated.Value(1)).current;
+
+  const handleToggleFavorite = useCallback(() => {
+    if (!fav) {
+      // Animate scale-up when adding to favorites
+      Animated.sequence([
+        Animated.spring(heartScale, {
+          toValue: 1.4,
+          useNativeDriver: true,
+          speed: 40,
+          bounciness: 12,
+        }),
+        Animated.spring(heartScale, {
+          toValue: 1,
+          useNativeDriver: true,
+          speed: 30,
+          bounciness: 6,
+        }),
+      ]).start();
+    }
+    toggleFavorite(event.id);
+  }, [fav, heartScale, toggleFavorite, event.id]);
+
   // ── homeCompact variant ───────────────────────────────────────────────────
   if (resolvedVariant === "homeCompact") {
     return (
@@ -214,7 +238,7 @@ export function EventCard({ event, onPress, horizontal = false, variant }: Event
         {/* Fav */}
         <TouchableOpacity
           style={styles.compactFavBtn}
-          onPress={() => toggleFavorite(event.id)}
+          onPress={handleToggleFavorite}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityLabel={fav
             ? (lang === "fr" ? "Retirer des favoris" : "Remove from favorites")
@@ -222,11 +246,13 @@ export function EventCard({ event, onPress, horizontal = false, variant }: Event
           accessibilityRole="togglebutton"
           accessibilityState={{ checked: fav }}
         >
-          <Ionicons
-            name={fav ? "heart" : "heart-outline"}
-            size={18}
-            color={fav ? "#E05C5C" : C.textMuted}
-          />
+          <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+            <Ionicons
+              name={fav ? "heart" : "heart-outline"}
+              size={18}
+              color={fav ? "#E05C5C" : C.textMuted}
+            />
+          </Animated.View>
         </TouchableOpacity>
       </TouchableOpacity>
     );
@@ -253,7 +279,7 @@ export function EventCard({ event, onPress, horizontal = false, variant }: Event
         />
         <TouchableOpacity
           style={styles.favBtn}
-          onPress={() => toggleFavorite(event.id)}
+          onPress={handleToggleFavorite}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityLabel={fav
             ? (lang === "fr" ? "Retirer des favoris" : "Remove from favorites")
@@ -261,11 +287,13 @@ export function EventCard({ event, onPress, horizontal = false, variant }: Event
           accessibilityRole="togglebutton"
           accessibilityState={{ checked: fav }}
         >
-          <Ionicons
-            name={fav ? "heart" : "heart-outline"}
-            size={20}
-            color={fav ? "#E05C5C" : C.white}
-          />
+          <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+            <Ionicons
+              name={fav ? "heart" : "heart-outline"}
+              size={20}
+              color={fav ? "#E05C5C" : C.white}
+            />
+          </Animated.View>
         </TouchableOpacity>
       </View>
 

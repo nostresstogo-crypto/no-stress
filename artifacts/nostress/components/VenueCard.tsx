@@ -1,5 +1,6 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useRef, useCallback } from "react";
 import {
+  Animated,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -179,6 +180,28 @@ export function VenueCard({ venue, onPress, compact = false, variant, isFavorite
   const resolvedVariant: VenueCardVariant =
     variant ?? (compact ? "compact" : "default");
 
+  const heartScale = useRef(new Animated.Value(1)).current;
+
+  const handleToggleFavorite = useCallback(() => {
+    if (!isFavorite) {
+      Animated.sequence([
+        Animated.spring(heartScale, {
+          toValue: 1.4,
+          useNativeDriver: true,
+          speed: 40,
+          bounciness: 12,
+        }),
+        Animated.spring(heartScale, {
+          toValue: 1,
+          useNativeDriver: true,
+          speed: 30,
+          bounciness: 6,
+        }),
+      ]).start();
+    }
+    onToggleFavorite?.();
+  }, [isFavorite, heartScale, onToggleFavorite]);
+
   // ── homePremium ───────────────────────────────────────────────────────────
   if (resolvedVariant === "homePremium") {
     return (
@@ -212,17 +235,19 @@ export function VenueCard({ venue, onPress, compact = false, variant, isFavorite
         ) : null}
         {onToggleFavorite ? (
           <TouchableOpacity
-            onPress={onToggleFavorite}
+            onPress={handleToggleFavorite}
             hitSlop={8}
             style={styles.premiumVerified}
             accessibilityRole="button"
             accessibilityLabel={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
           >
-            <Ionicons
-              name={isFavorite ? "heart" : "heart-outline"}
-              size={14}
-              color={isFavorite ? "#E05C5C" : "rgba(255,255,255,0.9)"}
-            />
+            <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+              <Ionicons
+                name={isFavorite ? "heart" : "heart-outline"}
+                size={14}
+                color={isFavorite ? "#E05C5C" : "rgba(255,255,255,0.9)"}
+              />
+            </Animated.View>
           </TouchableOpacity>
         ) : venue.isVerified ? (
           <View style={styles.premiumVerified}>
@@ -287,17 +312,19 @@ export function VenueCard({ venue, onPress, compact = false, variant, isFavorite
         <View style={styles.listRightActions}>
           {onToggleFavorite ? (
             <TouchableOpacity
-              onPress={onToggleFavorite}
+              onPress={handleToggleFavorite}
               hitSlop={8}
               style={styles.listHeartBtn}
               accessibilityRole="button"
               accessibilityLabel={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
             >
-              <Ionicons
-                name={isFavorite ? "heart" : "heart-outline"}
-                size={18}
-                color={isFavorite ? "#E05C5C" : C.textMuted}
-              />
+              <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+                <Ionicons
+                  name={isFavorite ? "heart" : "heart-outline"}
+                  size={18}
+                  color={isFavorite ? "#E05C5C" : C.textMuted}
+                />
+              </Animated.View>
             </TouchableOpacity>
           ) : null}
           <View style={styles.listChevron}>
@@ -395,17 +422,19 @@ export function VenueCard({ venue, onPress, compact = false, variant, isFavorite
           )}
           {onToggleFavorite ? (
             <TouchableOpacity
-              onPress={onToggleFavorite}
+              onPress={handleToggleFavorite}
               hitSlop={8}
               style={{ padding: 4 }}
               accessibilityRole="button"
               accessibilityLabel={isFavorite ? "Retirer des favoris" : "Ajouter aux favoris"}
             >
-              <Ionicons
-                name={isFavorite ? "heart" : "heart-outline"}
-                size={16}
-                color={isFavorite ? "#E05C5C" : C.textMuted}
-              />
+              <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+                <Ionicons
+                  name={isFavorite ? "heart" : "heart-outline"}
+                  size={16}
+                  color={isFavorite ? "#E05C5C" : C.textMuted}
+                />
+              </Animated.View>
             </TouchableOpacity>
           ) : null}
         </View>
