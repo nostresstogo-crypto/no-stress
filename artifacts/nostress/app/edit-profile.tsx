@@ -1,4 +1,14 @@
-import React, { useMemo, useState } from "react";
+/**
+ * edit-profile.tsx
+ *
+ * ARCHITECTURE :
+ * - Tous les TextInput sont inlinés directement dans le JSX d'EditProfileScreen
+ *   (aucun sous-composant intermédiaire ne les enveloppe), ce qui évite tout
+ *   démontage/remontage intempestif lors des re-renders.
+ * - Les handlers (pickImage, saveProfile) sont définis avec useCallback AVANT
+ *   le premier return conditionnel, conformément aux règles des hooks React.
+ */
+import React, { useCallback, useMemo, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -68,12 +78,11 @@ export default function EditProfileScreen() {
   const [lastName, setLastName] = useState<string>((user as any)?.lastName || "");
   const [gender, setGender] = useState<"F" | "M" | "ND" | "">(((user as any)?.gender as any) || "");
 
-  if (!user) {
-    router.replace("/auth");
-    return null;
-  }
+  // ── Handlers defined with useCallback BEFORE any conditional return ──────
+  // This ensures stable references across renders (no keyboard-dismissal risk)
+  // and satisfies React's rules of hooks.
 
-  const pickImage = async () => {
+  const pickImage = useCallback(async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
       Alert.alert(lang === "fr" ? "Permission refusée" : "Permission denied");
@@ -98,9 +107,10 @@ export default function EditProfileScreen() {
     } finally {
       setUploading(false);
     }
-  };
+  }, [lang]);
 
-  const saveProfile = async () => {
+  const saveProfile = useCallback(async () => {
+    if (!user) return;
     if (savingProfile) return;
     if (isPartner) {
       if (!businessName.trim() || businessName.trim().length < 2) {
@@ -156,7 +166,13 @@ export default function EditProfileScreen() {
     } finally {
       setSavingProfile(false);
     }
-  };
+  }, [user, savingProfile, isPartner, businessName, lang, phone, city, profileImage, displayName, firstName, lastName, gender, authFetch, refreshPartnerProfile, setUser, t]);
+
+  // ── Early return (after all hooks and handler definitions) ───────────────
+  if (!user) {
+    router.replace("/auth");
+    return null;
+  }
 
   return (
     <KeyboardAvoidingView style={styles.root} behavior={Platform.OS === "ios" ? "padding" : "height"}>
