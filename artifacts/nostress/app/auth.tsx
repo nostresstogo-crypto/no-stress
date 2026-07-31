@@ -1244,14 +1244,6 @@ export default function AuthScreen() {
                         />
                       </FieldWrap>
 
-                      <View style={S.infoCard}>
-                        <Ionicons name="mail-open-outline" size={16} color={C.gold} />
-                        <Text style={S.infoCardText}>
-                          {lang === "fr"
-                            ? "Un mot de passe sécurisé vous sera envoyé par email après validation par notre équipe."
-                            : "A secure password will be emailed to you once our team validates your request."}
-                        </Text>
-                      </View>
                     </>
                   )}
 
