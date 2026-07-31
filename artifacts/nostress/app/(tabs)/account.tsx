@@ -1,5 +1,19 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+/**
+ * account.tsx — Phase 5 refonte
+ *
+ * Organisation :
+ *   Non connecté  → Connexion / Inscription + réglages invité
+ *   Connecté      → Profil · Compte · Préférences · Assistance · Zone sensible
+ *
+ * Règles :
+ *   - Tous les hooks avant le premier return conditionnel.
+ *   - Aucune route fictive : on navigue uniquement vers des écrans existants.
+ *   - useColors() + useApp() uniquement pour les contextes.
+ */
+
+import React, { useCallback, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Linking,
   Platform,
@@ -22,97 +36,56 @@ import { ColorPalette } from "@/constants/colors";
 import { LANG_LABELS, type Lang } from "@/constants/i18n";
 import { API_BASE } from "@/lib/apiBase";
 
-const SUPPORT_WHATSAPP = "+22872770767";
-const SUPPORT_WHATSAPP_URL = `https://wa.me/${SUPPORT_WHATSAPP.replace(/[^0-9]/g, "")}?text=${encodeURIComponent("Bonjour NoStress, j'ai besoin d'aide.")}`;
+// ─── Constants ────────────────────────────────────────────────────────────────
 
+const SUPPORT_WHATSAPP_URL = `https://wa.me/22872770767?text=${encodeURIComponent("Bonjour NoStress, j'ai besoin d'aide.")}`;
 
-const DELETION_REASONS = [
-  { key: "not_useful", labelFr: "Je n'utilise plus l'application", labelEn: "I no longer use the app" },
-  { key: "privacy", labelFr: "Préoccupations de confidentialité", labelEn: "Privacy concerns" },
-  { key: "bad_experience", labelFr: "Mauvaise expérience utilisateur", labelEn: "Bad user experience" },
-  { key: "too_many_notifs", labelFr: "Trop de notifications", labelEn: "Too many notifications" },
-  { key: "found_alternative", labelFr: "J'ai trouvé une alternative", labelEn: "I found an alternative" },
-  { key: "other", labelFr: "Autre raison", labelEn: "Other reason" },
-] as const;
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 function makeStyles(C: ColorPalette) {
   return StyleSheet.create({
     root: { flex: 1, backgroundColor: C.bg },
-    content: { paddingHorizontal: 20, gap: 16 },
+    content: { paddingHorizontal: 20, gap: 14 },
+
+    // ── Guest ────────────────────────────────────────────────────────────────
     authPrompt: {
       flex: 1,
       alignItems: "center",
       justifyContent: "center",
-      paddingHorizontal: 40,
-      gap: 16,
+      paddingHorizontal: 32,
+      gap: 12,
     },
-    authTitle: { fontSize: 24, fontFamily: "Inter_700Bold", color: C.text, textAlign: "center" },
-    authSub: { fontSize: 15, fontFamily: "Inter_400Regular", color: C.textMuted, textAlign: "center" },
-    loginBtn: {
+    authTitle: { fontSize: 22, fontFamily: "Inter_700Bold", color: C.text, textAlign: "center" },
+    authSub: { fontSize: 14, fontFamily: "Inter_400Regular", color: C.textMuted, textAlign: "center", lineHeight: 20 },
+    authBtnPrimary: {
       backgroundColor: C.lavender,
       borderRadius: 12,
-      paddingVertical: 14,
-      paddingHorizontal: 32,
+      paddingVertical: 15,
       width: "100%" as any,
       alignItems: "center" as const,
     },
-    loginBtnText: { color: C.bg, fontSize: 16, fontFamily: "Inter_600SemiBold" },
-    registerBtn: {
-      borderWidth: 1,
+    authBtnPrimaryText: { color: C.bg, fontSize: 15, fontFamily: "Inter_600SemiBold" },
+    authBtnSecondary: {
+      borderWidth: 1.5,
       borderColor: C.lavender,
       borderRadius: 12,
       paddingVertical: 14,
-      paddingHorizontal: 32,
       width: "100%" as any,
       alignItems: "center" as const,
     },
-    registerBtnText: { color: C.lavender, fontSize: 16, fontFamily: "Inter_600SemiBold" },
-    guestSettings: {
+    authBtnSecondaryText: { color: C.lavender, fontSize: 15, fontFamily: "Inter_600SemiBold" },
+    guestDivider: {
       width: "100%" as any,
-      marginTop: 8,
-      paddingTop: 20,
-      borderTopWidth: 1,
-      borderTopColor: C.border,
-      gap: 8,
+      height: 1,
+      backgroundColor: C.border,
+      marginVertical: 8,
     },
-    guestSettingRow: {
-      flexDirection: "row" as const,
-      alignItems: "center" as const,
-      gap: 6,
-    },
-    guestSettingLabel: {
-      fontSize: 11,
-      fontFamily: "Inter_500Medium",
-      color: C.textMuted,
-      textTransform: "uppercase" as const,
-      letterSpacing: 0.5,
-    },
-    guestChipRow: {
-      flexDirection: "row" as const,
-      flexWrap: "wrap" as const,
-      gap: 8,
-    },
-    guestChip: {
-      flexDirection: "row" as const,
-      alignItems: "center" as const,
-      gap: 6,
-      paddingHorizontal: 14,
-      paddingVertical: 9,
-      borderRadius: 12,
-      borderWidth: 1.5,
-      borderColor: C.border,
-      backgroundColor: C.card,
-    },
-    guestChipFlag: { fontSize: 16 },
-    guestChipText: {
-      fontSize: 13,
-      fontFamily: "Inter_500Medium",
-      color: C.textMuted,
-    },
-    profile: {
+
+    // ── Profile card ─────────────────────────────────────────────────────────
+    profileCard: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 16,
+      gap: 14,
       backgroundColor: C.card,
       borderRadius: 16,
       padding: 16,
@@ -120,30 +93,71 @@ function makeStyles(C: ColorPalette) {
       borderColor: C.border,
     },
     avatar: {
-      width: 60, height: 60, borderRadius: 30,
+      width: 64, height: 64, borderRadius: 32,
       backgroundColor: C.lavender,
       alignItems: "center", justifyContent: "center",
       overflow: "hidden",
       borderWidth: 2,
       borderColor: C.card2,
     },
-    avatarImage: { width: 60, height: 60, borderRadius: 30 },
-    avatarText: { fontSize: 24, fontFamily: "Inter_700Bold", color: C.bg },
+    avatarImage: { width: 64, height: 64, borderRadius: 32 },
+    avatarText: { fontSize: 26, fontFamily: "Inter_700Bold", color: C.bg },
     profileInfo: { flex: 1, gap: 2 },
-    profileName: { fontSize: 18, fontFamily: "Inter_700Bold", color: C.text },
+    profileName: { fontSize: 17, fontFamily: "Inter_700Bold", color: C.text },
     profileEmail: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textMuted },
     roleBadge: {
-      marginTop: 4,
+      marginTop: 5,
       backgroundColor: C.card2,
       paddingHorizontal: 8,
       paddingVertical: 3,
       borderRadius: 8,
       alignSelf: "flex-start",
     },
-    roleText: {
-      fontSize: 11, fontFamily: "Inter_600SemiBold", color: C.lavender,
-      textTransform: "uppercase", letterSpacing: 0.5,
+    roleText: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: C.lavender, textTransform: "uppercase", letterSpacing: 0.5 },
+
+    // ── Unverified email banner ───────────────────────────────────────────────
+    unverifiedBanner: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      padding: 14,
+      backgroundColor: "#3a2a18",
+      borderRadius: 12,
+      borderLeftWidth: 4,
+      borderLeftColor: "#f0a830",
     },
+    unverifiedTitle: { color: "#f0a830", fontFamily: "Inter_600SemiBold", fontSize: 14 },
+    unverifiedSub: { color: "#b09070", fontSize: 12, marginTop: 2, fontFamily: "Inter_400Regular" },
+    unverifiedActions: { flexDirection: "row", gap: 8, marginTop: 8 },
+    unverifiedBtnPrimary: {
+      paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
+      backgroundColor: "#f0a830",
+    },
+    unverifiedBtnPrimaryText: { color: "#1a0e00", fontSize: 12, fontFamily: "Inter_600SemiBold" },
+    unverifiedBtnSecondary: {
+      paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
+      borderWidth: 1, borderColor: "#f0a83060",
+    },
+    unverifiedBtnSecondaryText: { color: "#f0a830", fontSize: 12, fontFamily: "Inter_500Medium" },
+
+    // ── Partner status card ───────────────────────────────────────────────────
+    partnerCard: {
+      backgroundColor: C.card,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: C.border,
+      padding: 14,
+      gap: 6,
+    },
+    partnerCardRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+    partnerCardLabel: { fontSize: 12, fontFamily: "Inter_400Regular", color: C.textMuted },
+    partnerStatusBadge: {
+      paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20,
+      alignSelf: "flex-start",
+    },
+    partnerStatusText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
+
+    // ── Section cards ────────────────────────────────────────────────────────
     card: {
       backgroundColor: C.card,
       borderRadius: 16,
@@ -151,102 +165,154 @@ function makeStyles(C: ColorPalette) {
       borderColor: C.border,
       overflow: "hidden",
     },
-    settingRow: {
+    sectionHeader: {
+      fontSize: 11,
+      fontFamily: "Inter_600SemiBold",
+      color: C.textMuted,
+      textTransform: "uppercase",
+      letterSpacing: 0.8,
+      marginBottom: 6,
+      marginLeft: 4,
+    },
+    row: {
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: 16,
       paddingVertical: 14,
       gap: 12,
     },
-    settingDivider: {
-      height: 1,
-      backgroundColor: C.border,
-      marginHorizontal: 16,
-    },
-    settingLabel: { flex: 1, fontSize: 15, fontFamily: "Inter_500Medium", color: C.text },
-    settingValue: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textMuted },
-    langToggle: {
-      flexDirection: "row",
-      backgroundColor: C.card2,
-      borderRadius: 10,
-      padding: 2,
-      gap: 2,
-    },
-    langBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-    langBtnActive: { backgroundColor: C.lavender },
-    langBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: C.textMuted },
-    langBtnTextActive: { color: C.bg },
-    tabs: {
-      flexDirection: "row",
-      backgroundColor: C.card,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: C.border,
-      padding: 4,
-      gap: 4,
-    },
-    tabBtn: {
-      flex: 1, flexDirection: "row", alignItems: "center",
-      justifyContent: "center", paddingVertical: 10, borderRadius: 8, gap: 6,
-    },
-    tabBtnActive: { backgroundColor: C.card2 },
-    tabText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textMuted },
-    tabTextActive: { color: C.lavender, fontFamily: "Inter_600SemiBold" },
+    rowLabel: { flex: 1, fontSize: 15, fontFamily: "Inter_500Medium", color: C.text },
+    rowValue: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textMuted },
+    divider: { height: 1, backgroundColor: C.border, marginHorizontal: 16 },
+    iconWrap: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
     badge: {
-      backgroundColor: C.error,
-      borderRadius: 8,
-      minWidth: 18,
-      height: 18,
-      alignItems: "center",
-      justifyContent: "center",
-      paddingHorizontal: 4,
+      backgroundColor: C.error, borderRadius: 8, minWidth: 18, height: 18,
+      alignItems: "center", justifyContent: "center", paddingHorizontal: 4,
     },
     badgeText: { fontSize: 10, fontFamily: "Inter_700Bold", color: C.white },
-    shortcutIconWrap: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
-    empty: { alignItems: "center", justifyContent: "center", paddingVertical: 40, gap: 16 },
-    emptyText: { fontSize: 15, fontFamily: "Inter_500Medium", color: C.textMuted },
-    logoutBtn: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 8,
-      paddingVertical: 16,
-      borderRadius: 12,
-      borderWidth: 1,
-      borderColor: C.error,
-      marginTop: 8,
+
+    // ── Language / theme chips ────────────────────────────────────────────────
+    chipsWrap: { paddingHorizontal: 16, paddingBottom: 14, gap: 8 },
+    chipRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+    chip: {
+      flexDirection: "row", alignItems: "center", gap: 6,
+      paddingHorizontal: 14, paddingVertical: 8,
+      borderRadius: 12, borderWidth: 1.5, borderColor: C.border, backgroundColor: C.card2,
     },
-    logoutText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.error },
+    chipActive: { borderColor: C.lavender, backgroundColor: C.lavender + "20" },
+    chipText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textMuted },
+    chipTextActive: { color: C.text, fontFamily: "Inter_600SemiBold" },
+
+    // ── Logout button ────────────────────────────────────────────────────────
+    logoutBtn: {
+      flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+      paddingVertical: 15, borderRadius: 12, borderWidth: 1, borderColor: C.border,
+    },
+    logoutText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.text },
+
+    // ── Danger zone ──────────────────────────────────────────────────────────
+    dangerZone: {
+      backgroundColor: C.error + "0c",
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: C.error + "40",
+      overflow: "hidden",
+    },
+    dangerHeader: {
+      flexDirection: "row", alignItems: "center", gap: 8,
+      paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10,
+    },
+    dangerTitle: { fontSize: 13, fontFamily: "Inter_700Bold", color: C.error, textTransform: "uppercase", letterSpacing: 0.5 },
+    dangerDesc: {
+      fontSize: 13, lineHeight: 19, fontFamily: "Inter_400Regular",
+      color: C.textMuted, paddingHorizontal: 16, paddingBottom: 14,
+    },
+    dangerDivider: { height: 1, backgroundColor: C.error + "30" },
+    deleteBtn: {
+      flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+      paddingVertical: 15, paddingHorizontal: 16,
+    },
+    deleteBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: C.error },
+
+    // ── Guest settings ────────────────────────────────────────────────────────
+    guestSettings: {
+      width: "100%" as any,
+      paddingTop: 20,
+      gap: 6,
+    },
+    guestSettingLabel: {
+      flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6,
+    },
+    guestSettingLabelText: {
+      fontSize: 11, fontFamily: "Inter_500Medium", color: C.textMuted,
+      textTransform: "uppercase", letterSpacing: 0.5,
+    },
   });
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function partnerStatusColor(status?: string): { bg: string; text: string } {
+  switch (status) {
+    case "approved":  return { bg: "#27ae6020", text: "#27ae60" };
+    case "pending":   return { bg: "#f0a83020", text: "#f0a830" };
+    case "rejected":  return { bg: "#e0525220", text: "#e05252" };
+    default:          return { bg: "#80808020", text: "#808080" };
+  }
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export default function AccountScreen() {
+  // ── Hooks (ALL before any conditional return) ────────────────────────────
   const t = useT();
   const C = useColors();
-  const { user, lang, setLang, logout, unreadCount, isDark, themeMode, setThemeMode, locationNotificationsEnabled, setLocationNotificationsEnabled, selectedCity, nearbyEventsCount, refreshApiEvents, syncMyEventsFromBackend } = useApp();
+  const {
+    user, lang, setLang, logout, unreadCount,
+    themeMode, setThemeMode,
+    locationNotificationsEnabled, setLocationNotificationsEnabled,
+    selectedCity, nearbyEventsCount,
+    refreshApiEvents, syncMyEventsFromBackend,
+  } = useApp();
   const { dataSaverMode, setDataSaverMode } = useNetwork();
   const insets = useSafeAreaInsets();
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const styles = useMemo(() => makeStyles(C), [C]);
 
-  // Recharge favoris/notifications quand l'écran reprend le focus
-  // (notifs marquées lues sur l'autre appareil, nouvel event favori
-  // synchronisé en arrière-plan, statut d'event mis à jour, etc.)
+  const [deletionLoading, setDeletionLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSent, setResendSent] = useState(false);
+
+  // Re-sync on focus
   useFocusEffect(useCallback(() => {
     refreshApiEvents();
     if (user) syncMyEventsFromBackend();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]));
 
-  const [deletionLoading, setDeletionLoading] = useState(false);
+  // ── Callbacks ────────────────────────────────────────────────────────────
 
-  const handleDeleteAccount = () => {
+  const handleLogout = useCallback(() => {
+    const fr = lang === "fr";
+    if (Platform.OS === "web") {
+      if (typeof window !== "undefined" && window.confirm(fr ? "Déconnexion — Êtes-vous sûr ?" : "Log out — Are you sure?")) logout();
+      return;
+    }
+    Alert.alert(
+      fr ? "Déconnexion" : "Log out",
+      fr
+        ? "Êtes-vous sûr de vouloir vous déconnecter ?"
+        : "Are you sure you want to log out?",
+      [
+        { text: fr ? "Annuler" : "Cancel", style: "cancel" },
+        { text: fr ? "Se déconnecter" : "Log out", style: "destructive", onPress: logout },
+      ],
+    );
+  }, [lang, logout]);
+
+  const handleDeleteAccount = useCallback(() => {
     if (!user) return;
-    const isFr = lang === "fr";
-    const title = isFr ? "Supprimer mon compte" : "Delete my account";
-    const message = isFr
-      ? "Votre demande sera traitée sous 30 jours. Toutes vos données et favoris seront définitivement effacés.\n\nCette action est irréversible. Confirmer ?"
-      : "Your request will be processed within 30 days. All your data and favorites will be permanently erased.\n\nThis action cannot be undone. Confirm?";
-
+    const fr = lang === "fr";
     const submit = async () => {
       setDeletionLoading(true);
       try {
@@ -263,366 +329,536 @@ export default function AccountScreen() {
         const data = await res.json().catch(() => ({}));
         if (res.ok) {
           Alert.alert(
-            isFr ? "Demande envoyée" : "Request submitted",
-            isFr
-              ? "Votre demande de suppression a bien été reçue. Elle sera traitée sous 30 jours."
-              : "Your deletion request has been received. It will be processed within 30 days.",
+            fr ? "Demande envoyée" : "Request submitted",
+            fr
+              ? "Votre demande de suppression a été reçue et sera traitée dans un délai maximum de 30 jours. Vous serez notifié par email."
+              : "Your deletion request has been received and will be processed within 30 days. You'll be notified by email.",
             [{ text: "OK", onPress: logout }],
           );
         } else if (res.status === 409) {
           Alert.alert(
-            isFr ? "Demande déjà en cours" : "Request already pending",
-            isFr
+            fr ? "Demande déjà en cours" : "Request already pending",
+            fr
               ? "Une demande de suppression est déjà en cours pour ce compte."
               : "A deletion request is already pending for this account.",
           );
         } else {
-          Alert.alert(t("error"), data?.error ?? (isFr ? "Une erreur est survenue." : "An error occurred."));
+          Alert.alert(
+            t("error"),
+            data?.error ?? (fr ? "Une erreur est survenue." : "An error occurred."),
+          );
         }
       } catch {
-        Alert.alert(t("error"), isFr ? "Impossible de joindre le serveur." : "Could not reach the server.");
+        Alert.alert(t("error"), fr ? "Impossible de joindre le serveur." : "Could not reach the server.");
       } finally {
         setDeletionLoading(false);
       }
     };
 
     if (Platform.OS === "web") {
-      const ok = typeof window !== "undefined" && window.confirm(`${title}\n\n${message}`);
+      const ok = typeof window !== "undefined" && window.confirm(
+        fr
+          ? "Supprimer mon compte — Cette action est irréversible. Confirmer ?"
+          : "Delete my account — This action cannot be undone. Confirm?",
+      );
       if (ok) submit();
       return;
     }
 
-    Alert.alert(title, message, [
-      { text: isFr ? "Annuler" : "Cancel", style: "cancel" },
-      { text: isFr ? "Supprimer" : "Delete", style: "destructive", onPress: submit },
-    ]);
-  };
+    Alert.alert(
+      fr ? "Supprimer mon compte" : "Delete my account",
+      fr
+        ? "Votre demande sera traitée sous 30 jours. Toutes vos données seront définitivement effacées.\n\nCette action est irréversible."
+        : "Your request will be processed within 30 days. All your data will be permanently erased.\n\nThis action cannot be undone.",
+      [
+        { text: fr ? "Annuler" : "Cancel", style: "cancel" },
+        { text: fr ? "Supprimer" : "Delete", style: "destructive", onPress: submit },
+      ],
+    );
+  }, [user, lang, logout, t]);
 
+  const handleResendVerification = useCallback(async () => {
+    if (!user || resendLoading || resendSent) return;
+    setResendLoading(true);
+    try {
+      const endpoint = user.role === "structure"
+        ? `${API_BASE}/partners/resend-verification`
+        : `${API_BASE}/auth/resend-verification`;
+      await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email }),
+      });
+      setResendSent(true);
+      // Navigate to verify-email so the user can enter the code
+      setTimeout(() => {
+        safePush({
+          pathname: "/verify-email",
+          params: { email: user.email, role: user.role === "structure" ? "partner" : "user" },
+        });
+      }, 400);
+    } catch {
+      const fr = lang === "fr";
+      Alert.alert(fr ? "Erreur réseau" : "Network error", fr ? "Impossible d'envoyer le code." : "Could not send the code.");
+    } finally {
+      setResendLoading(false);
+    }
+  }, [user, lang, resendLoading, resendSent]);
 
+  const handleGoVerify = useCallback(() => {
+    if (!user) return;
+    safePush({
+      pathname: "/verify-email",
+      params: { email: user.email, role: user.role === "structure" ? "partner" : "user" },
+    });
+  }, [user]);
+
+  const openWhatsApp = useCallback(() => {
+    Linking.openURL(SUPPORT_WHATSAPP_URL).catch(() =>
+      Alert.alert(t("error"), lang === "fr" ? "Impossible d'ouvrir WhatsApp." : "Could not open WhatsApp."),
+    );
+  }, [lang, t]);
+
+  // ── Avatar URL helper ────────────────────────────────────────────────────
+  const avatarUri = useMemo(() => {
+    const raw = user?.avatarUrl || (user as any)?.profileImage || "";
+    if (!raw) return "";
+    return raw.startsWith("http") || raw.startsWith("data:")
+      ? raw
+      : `${API_BASE}${raw.startsWith("/") ? "" : "/"}${raw}`;
+  }, [user]);
+
+  const fr = lang === "fr";
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Guest view (non connecté)
+  // ─────────────────────────────────────────────────────────────────────────
   if (!user) {
+    const themeOptions: Array<{ mode: "light" | "dark" | "system"; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }> = [
+      { mode: "light",  label: fr ? "Jour"   : "Day",   icon: "sunny",             color: C.gold    },
+      { mode: "dark",   label: fr ? "Nuit"   : "Night", icon: "moon",              color: C.lavender },
+      { mode: "system", label: "Auto",                  icon: "phone-portrait",    color: "#5FD4F5"  },
+    ];
+
     return (
       <ScrollView
         style={styles.root}
-        contentContainerStyle={[styles.authPrompt, { paddingTop: topInset + 20, paddingBottom: 60 }]}
+        contentContainerStyle={[
+          styles.authPrompt,
+          { paddingTop: topInset + 20, paddingBottom: 60 },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         <Ionicons name="person-circle-outline" size={80} color={C.border} />
         <Text style={styles.authTitle}>{t("loginRequired")}</Text>
         <Text style={styles.authSub}>{t("noAccount")}</Text>
-        <TouchableOpacity style={styles.loginBtn} onPress={() => safePush("/auth")}>
-          <Text style={styles.loginBtnText}>{t("login")}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.registerBtn} onPress={() => safePush("/auth")}>
-          <Text style={styles.registerBtnText}>{t("register")}</Text>
-        </TouchableOpacity>
 
-        {/* Settings accessible sans connexion */}
-        <View style={styles.guestSettings}>
-          {/* Langue */}
-          <View style={styles.guestSettingRow}>
-            <Ionicons name="language-outline" size={16} color={C.textMuted} />
-            <Text style={styles.guestSettingLabel}>{t("language")}</Text>
-          </View>
-          <View style={styles.guestChipRow}>
-            <TouchableOpacity
-              style={[styles.guestChip, lang === "fr" && { borderColor: C.lavender, backgroundColor: C.lavender + "18" }]}
-              onPress={() => setLang("fr")}
-            >
-              <Text style={styles.guestChipFlag}>🇫🇷</Text>
-              <Text style={[styles.guestChipText, lang === "fr" && { color: C.text, fontFamily: "Inter_600SemiBold" }]}>
-                Français
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.guestChip, lang === "en" && { borderColor: "#5FD4F5", backgroundColor: "#5FD4F518" }]}
-              onPress={() => setLang("en")}
-            >
-              <Text style={styles.guestChipFlag}>🇬🇧</Text>
-              <Text style={[styles.guestChipText, lang === "en" && { color: C.text, fontFamily: "Inter_600SemiBold" }]}>
-                English
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Thème */}
-          <View style={[styles.guestSettingRow, { marginTop: 12 }]}>
-            <Ionicons name="color-palette-outline" size={16} color={C.textMuted} />
-            <Text style={styles.guestSettingLabel}>{lang === "fr" ? "Thème" : "Theme"}</Text>
-          </View>
-          <View style={styles.guestChipRow}>
-            <TouchableOpacity
-              style={[styles.guestChip, themeMode === "dark" && { borderColor: C.lavender, backgroundColor: C.lavender + "18" }]}
-              onPress={() => setThemeMode("dark")}
-            >
-              <Ionicons name="moon" size={14} color={themeMode === "dark" ? C.lavender : C.textMuted} />
-              <Text style={[styles.guestChipText, themeMode === "dark" && { color: C.text, fontFamily: "Inter_600SemiBold" }]}>
-                {lang === "fr" ? "Nuit" : "Night"}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.guestChip, themeMode === "light" && { borderColor: C.gold, backgroundColor: C.gold + "18" }]}
-              onPress={() => setThemeMode("light")}
-            >
-              <Ionicons name="sunny" size={14} color={themeMode === "light" ? C.gold : C.textMuted} />
-              <Text style={[styles.guestChipText, themeMode === "light" && { color: C.text, fontFamily: "Inter_600SemiBold" }]}>
-                {lang === "fr" ? "Jour" : "Day"}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.guestChip, themeMode === "system" && { borderColor: "#5FD4F5", backgroundColor: "#5FD4F518" }]}
-              onPress={() => setThemeMode("system")}
-            >
-              <Ionicons name="phone-portrait" size={14} color={themeMode === "system" ? "#5FD4F5" : C.textMuted} />
-              <Text style={[styles.guestChipText, themeMode === "system" && { color: C.text, fontFamily: "Inter_600SemiBold" }]}>
-                Auto
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-    );
-  }
-
-  return (
-    <ScrollView
-      style={styles.root}
-      contentContainerStyle={[
-        styles.content,
-        { paddingTop: topInset + 12, paddingBottom: Platform.OS === "web" ? 118 : 100 },
-      ]}
-      showsVerticalScrollIndicator={false}
-    >
-      {/* Profile header */}
-      {(() => {
-        const rawAvatar = user.avatarUrl || (user as any).profileImage || "";
-        const avatarUri = rawAvatar
-          ? (rawAvatar.startsWith("http") || rawAvatar.startsWith("data:") ? rawAvatar : `${API_BASE}${rawAvatar.startsWith("/") ? "" : "/"}${rawAvatar}`)
-          : "";
-        return (
-          <TouchableOpacity style={styles.profile} onPress={() => safePush("/edit-profile")} activeOpacity={0.85}>
-            <View style={styles.avatar}>
-              {avatarUri ? (
-                <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
-              ) : (
-                <Text style={styles.avatarText}>{user.name.charAt(0).toUpperCase()}</Text>
-              )}
-            </View>
-        <View style={styles.profileInfo}>
-          <Text style={styles.profileName}>{user.name}</Text>
-          <Text style={styles.profileEmail}>{user.email}</Text>
-          <View style={styles.roleBadge}>
-            <Text style={styles.roleText}>
-              {user.role === "structure"
-                ? (lang === "fr" ? "Partenaire" : "Partner")
-                : (lang === "fr" ? "Utilisateur" : "User")}
-            </Text>
-          </View>
-        </View>
-            <Ionicons name="chevron-forward" size={22} color={C.textMuted} />
-          </TouchableOpacity>
-        );
-      })()}
-      <TouchableOpacity
-        style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 10, borderWidth: 1, borderColor: C.lavender }}
-        onPress={() => safePush("/edit-profile")}
-      >
-        <Ionicons name="create-outline" size={18} color={C.lavender} />
-        <Text style={{ color: C.lavender, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>{t("editProfile")}</Text>
-      </TouchableOpacity>
-
-      {user.role === "user" && user.emailVerified === false ? (
         <TouchableOpacity
-          onPress={() => safePush({ pathname: "/verify-email", params: { email: user.email, role: "user" } })}
-          style={{ flexDirection: "row", alignItems: "center", gap: 12, padding: 14, backgroundColor: "#3a2a18", borderRadius: 12, marginBottom: 16, borderLeftWidth: 4, borderLeftColor: "#f0a830" }}
+          style={[styles.authBtnPrimary, { marginTop: 8 }]}
+          onPress={() => safePush("/auth?mode=login")}
+          accessibilityLabel={fr ? "Se connecter" : "Log in"}
+          accessibilityRole="button"
         >
-          <Ionicons name="mail-unread" size={22} color="#f0a830" />
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: "#f0a830", fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
-              {lang === "fr" ? "Vérifiez votre email" : "Verify your email"}
-            </Text>
-            <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2 }}>
-              {lang === "fr" ? "Saisissez le code reçu par email" : "Enter the code we sent you"}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={C.textMuted} />
+          <Text style={styles.authBtnPrimaryText}>{t("login")}</Text>
         </TouchableOpacity>
-      ) : null}
 
-      {/* Settings card */}
-      <View style={styles.card}>
-        {/* Language */}
-        <View style={[styles.settingRow, { flexDirection: "column", alignItems: "flex-start", gap: 10 }]}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, alignSelf: "stretch" }}>
-            <Ionicons name="language" size={20} color={C.lavender} />
-            <Text style={styles.settingLabel}>{t("language")}</Text>
-          </View>
-          <View style={[styles.langToggle, { flexWrap: "wrap" }]}>
-            {(Object.keys(LANG_LABELS) as Lang[]).map((code) => (
-              <TouchableOpacity
-                key={code}
-                style={[styles.langBtn, lang === code && styles.langBtnActive]}
-                onPress={() => setLang(code)}
-              >
-                <Text style={[styles.langBtnText, lang === code && styles.langBtnTextActive]}>
-                  {LANG_LABELS[code]}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.settingDivider} />
-
-        {/* WhatsApp Support */}
         <TouchableOpacity
-          style={styles.settingRow}
-          onPress={() => Linking.openURL(SUPPORT_WHATSAPP_URL).catch(() => Alert.alert(t("error"), lang === "fr" ? "Impossible d'ouvrir WhatsApp." : "Could not open WhatsApp."))}
+          style={styles.authBtnSecondary}
+          onPress={() => safePush("/auth?mode=register")}
+          accessibilityLabel={fr ? "Créer un compte" : "Create an account"}
+          accessibilityRole="button"
         >
-          <Ionicons name="logo-whatsapp" size={20} color="#25D366" />
-          <Text style={styles.settingLabel}>
-            {lang === "fr" ? "Support WhatsApp" : "WhatsApp support"}
-          </Text>
-          <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
+          <Text style={styles.authBtnSecondaryText}>{t("register")}</Text>
         </TouchableOpacity>
 
-        <View style={styles.settingDivider} />
+        {/* Guest preferences */}
+        <View style={styles.guestDivider} />
 
-        {/* Privacy policy */}
-        <TouchableOpacity
-          style={styles.settingRow}
-          onPress={() => router.push("/legal/privacy")}
-        >
-          <Ionicons name="shield-checkmark-outline" size={20} color={C.lavender} />
-          <Text style={styles.settingLabel}>
-            {lang === "fr" ? "Politique de confidentialité" : "Privacy policy"}
-          </Text>
-          <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
-        </TouchableOpacity>
-
-        <View style={styles.settingDivider} />
-
-        {/* Terms of use */}
-        <TouchableOpacity
-          style={styles.settingRow}
-          onPress={() => router.push("/legal/terms")}
-        >
-          <Ionicons name="document-text-outline" size={20} color={C.lavender} />
-          <Text style={styles.settingLabel}>
-            {lang === "fr" ? "Conditions d'utilisation" : "Terms of use"}
-          </Text>
-          <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
-        </TouchableOpacity>
-
-        <View style={styles.settingDivider} />
-
-        {/* Dark / Light mode */}
-        <View style={styles.settingRow}>
-          <Ionicons
-            name={isDark ? "moon" : "sunny"}
-            size={20}
-            color={isDark ? C.lavender : C.gold}
-          />
-          <Text style={styles.settingLabel}>
-            {isDark ? (lang === "fr" ? "Mode nuit" : "Night mode") : (lang === "fr" ? "Mode jour" : "Day mode")}
-          </Text>
-          <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-            {/* Three-way: system / dark / light */}
-            <TouchableOpacity
-              onPress={() => setThemeMode(themeMode === "dark" ? "light" : "dark")}
-              style={{
-                width: 52, height: 30, borderRadius: 15,
-                backgroundColor: isDark ? C.lavender : C.gold,
-                justifyContent: "center",
-                paddingHorizontal: 3,
-              }}
-            >
-              <View style={{
-                width: 24, height: 24, borderRadius: 12,
-                backgroundColor: C.bg,
-                alignSelf: isDark ? "flex-end" : "flex-start",
-              }} />
-            </TouchableOpacity>
+        <View style={[styles.guestSettings, { width: "100%" }]}>
+          {/* Language */}
+          <View style={styles.guestSettingLabel}>
+            <Ionicons name="language-outline" size={14} color={C.textMuted} />
+            <Text style={styles.guestSettingLabelText}>{t("language")}</Text>
           </View>
-        </View>
-
-        <View style={styles.settingDivider} />
-
-        {/* System mode toggle */}
-        <TouchableOpacity
-          style={styles.settingRow}
-          onPress={() => setThemeMode(themeMode === "system" ? "dark" : "system")}
-        >
-          <Ionicons name="phone-portrait-outline" size={20} color={C.textMuted} />
-          <Text style={styles.settingLabel}>
-            {lang === "fr" ? "Suivre le système" : "Follow system"}
-          </Text>
-          <Switch
-            value={themeMode === "system"}
-            onValueChange={(v) => setThemeMode(v ? "system" : "dark")}
-            thumbColor={C.card}
-            trackColor={{ false: C.border, true: C.lavender }}
-          />
-        </TouchableOpacity>
-
-        <View style={styles.settingDivider} />
-
-        {/* Économie de données */}
-        <View style={[styles.settingRow, { flexDirection: "column", alignItems: "flex-start", gap: 10 }]}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 12, alignSelf: "stretch" }}>
-            <Ionicons name="cellular-outline" size={20} color={C.textMuted} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.settingLabel}>
-                {lang === "fr" ? "Économie de données" : "Data saver"}
-              </Text>
-              <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: C.textMuted, marginTop: 1, lineHeight: 15 }}>
-                {lang === "fr"
-                  ? "Réduit la qualité des images avec une connexion lente."
-                  : "Reduces image quality on slow connections."}
-              </Text>
-            </View>
+          <View style={styles.chipRow}>
+            {(Object.keys(LANG_LABELS) as Lang[]).map((code) => {
+              const active = lang === code;
+              return (
+                <TouchableOpacity
+                  key={code}
+                  style={[styles.chip, active && styles.chipActive]}
+                  onPress={() => setLang(code)}
+                  accessibilityLabel={LANG_LABELS[code]}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: active }}
+                >
+                  <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                    {LANG_LABELS[code]}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-          <View style={{ flexDirection: "row", gap: 8, paddingLeft: 32 }}>
-            {(["auto", "on", "off"] as DataSaverMode[]).map((mode) => {
-              const labels: Record<DataSaverMode, [string, string]> = {
-                auto: ["Auto", "Auto"],
-                on:   [lang === "fr" ? "Activé" : "On",  lang === "fr" ? "Activé" : "On"],
-                off:  [lang === "fr" ? "Désactivé" : "Off", lang === "fr" ? "Désactivé" : "Off"],
-              };
-              const isActive = dataSaverMode === mode;
+
+          {/* Theme — 3 options */}
+          <View style={[styles.guestSettingLabel, { marginTop: 14 }]}>
+            <Ionicons name="color-palette-outline" size={14} color={C.textMuted} />
+            <Text style={styles.guestSettingLabelText}>{fr ? "Thème" : "Theme"}</Text>
+          </View>
+          <View style={styles.chipRow}>
+            {themeOptions.map(({ mode, label, icon, color }) => {
+              const active = themeMode === mode;
               return (
                 <TouchableOpacity
                   key={mode}
-                  onPress={() => setDataSaverMode(mode)}
-                  style={[styles.guestChip, isActive && { borderColor: C.lavender, backgroundColor: C.lavender + "18" }]}
+                  style={[styles.chip, active && { borderColor: color, backgroundColor: color + "20" }]}
+                  onPress={() => setThemeMode(mode)}
+                  accessibilityLabel={label}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected: active }}
                 >
-                  <Text style={[styles.guestChipText, isActive && { color: C.text, fontFamily: "Inter_600SemiBold" }]}>
-                    {labels[mode][0]}
+                  <Ionicons name={icon} size={14} color={active ? color : C.textMuted} />
+                  <Text style={[styles.chipText, active && { color: C.text, fontFamily: "Inter_600SemiBold" }]}>
+                    {label}
                   </Text>
                 </TouchableOpacity>
               );
             })}
           </View>
         </View>
+      </ScrollView>
+    );
+  }
 
-        {user && user.role === "user" && (
-          <>
-            <View style={styles.settingDivider} />
-            <TouchableOpacity
-              style={styles.settingRow}
-              onPress={() => setLocationNotificationsEnabled(!locationNotificationsEnabled)}
-            >
-              <Ionicons
-                name={locationNotificationsEnabled ? "location" : "location-outline"}
-                size={20}
-                color={locationNotificationsEnabled ? C.lavender : C.textMuted}
-              />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.settingLabel}>
-                  {lang === "fr" ? "Alertes de proximité" : "Nearby alerts"}
+  // ─────────────────────────────────────────────────────────────────────────
+  // Authenticated view
+  // ─────────────────────────────────────────────────────────────────────────
+
+  const isPartner = user.role === "structure";
+  const roleLabel = isPartner
+    ? (fr ? "Partenaire" : "Partner")
+    : (fr ? "Utilisateur" : "User");
+
+  const partnerStatusLabels: Record<string, string> = {
+    approved: fr ? "Approuvé" : "Approved",
+    pending:  fr ? "En attente d'approbation" : "Pending approval",
+    rejected: fr ? "Demande refusée" : "Application rejected",
+  };
+  const psColors = partnerStatusColor(user.partnerStatus);
+
+  const themeOptions: Array<{ mode: "light" | "dark" | "system"; label: string; icon: keyof typeof Ionicons.glyphMap; color: string }> = [
+    { mode: "light",  label: fr ? "Jour"   : "Day",   icon: "sunny",          color: C.gold     },
+    { mode: "dark",   label: fr ? "Nuit"   : "Night", icon: "moon",           color: C.lavender },
+    { mode: "system", label: "Auto",                  icon: "phone-portrait", color: "#5FD4F5"  },
+  ];
+
+  const dataSaverOptions: Array<{ value: DataSaverMode; label: string }> = [
+    { value: "auto", label: "Auto" },
+    { value: "on",   label: fr ? "Activé"    : "On"  },
+    { value: "off",  label: fr ? "Désactivé" : "Off" },
+  ];
+
+  return (
+    <ScrollView
+      style={styles.root}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: topInset + 12, paddingBottom: Platform.OS === "web" ? 120 : 100 },
+      ]}
+      showsVerticalScrollIndicator={false}
+    >
+      {/* ── Profile card ──────────────────────────────────────────────────── */}
+      <TouchableOpacity
+        style={styles.profileCard}
+        onPress={() => safePush("/edit-profile")}
+        activeOpacity={0.85}
+        accessibilityLabel={fr ? "Modifier le profil" : "Edit profile"}
+        accessibilityRole="button"
+      >
+        <View style={styles.avatar}>
+          {avatarUri ? (
+            <Image source={{ uri: avatarUri }} style={styles.avatarImage} contentFit="cover" />
+          ) : (
+            <Text style={styles.avatarText}>{(user.name || user.email).charAt(0).toUpperCase()}</Text>
+          )}
+        </View>
+        <View style={styles.profileInfo}>
+          <Text style={styles.profileName} numberOfLines={1}>{user.name || user.email}</Text>
+          <Text style={styles.profileEmail} numberOfLines={1}>{user.email}</Text>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleText}>{roleLabel}</Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={C.textMuted} />
+      </TouchableOpacity>
+
+      {/* ── Email not verified banner ──────────────────────────────────────── */}
+      {!isPartner && user.emailVerified === false && (
+        <View
+          style={styles.unverifiedBanner}
+          accessibilityRole="alert"
+          accessibilityLabel={fr ? "Email non vérifié" : "Email not verified"}
+        >
+          <Ionicons name="mail-unread" size={22} color="#f0a830" />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.unverifiedTitle}>
+              {fr ? "Email non vérifié" : "Email not verified"}
+            </Text>
+            <Text style={styles.unverifiedSub}>
+              {fr
+                ? "Vérifiez votre boîte de réception (et le dossier Spams)."
+                : "Check your inbox (and your Spam folder)."}
+            </Text>
+            <View style={styles.unverifiedActions}>
+              <TouchableOpacity
+                style={styles.unverifiedBtnPrimary}
+                onPress={handleResendVerification}
+                disabled={resendLoading || resendSent}
+                accessibilityLabel={fr ? "Renvoyer le code" : "Resend code"}
+                accessibilityRole="button"
+              >
+                {resendLoading ? (
+                  <ActivityIndicator size="small" color="#1a0e00" />
+                ) : (
+                  <Text style={styles.unverifiedBtnPrimaryText}>
+                    {resendSent
+                      ? (fr ? "Code envoyé ✓" : "Code sent ✓")
+                      : (fr ? "Renvoyer le code" : "Resend code")}
+                  </Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.unverifiedBtnSecondary}
+                onPress={handleGoVerify}
+                accessibilityLabel={fr ? "Saisir mon code" : "Enter my code"}
+                accessibilityRole="button"
+              >
+                <Text style={styles.unverifiedBtnSecondaryText}>
+                  {fr ? "Saisir le code" : "Enter code"}
                 </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* ── Partner status card ────────────────────────────────────────────── */}
+      {isPartner && user.partnerStatus && (
+        <View style={styles.partnerCard}>
+          <View style={styles.partnerCardRow}>
+            <Ionicons name="briefcase-outline" size={16} color={C.textMuted} />
+            <Text style={styles.partnerCardLabel}>
+              {fr ? "Statut du compte partenaire" : "Partner account status"}
+            </Text>
+          </View>
+          <View style={[styles.partnerStatusBadge, { backgroundColor: psColors.bg }]}>
+            <Text style={[styles.partnerStatusText, { color: psColors.text }]}>
+              {partnerStatusLabels[user.partnerStatus] ?? user.partnerStatus}
+            </Text>
+          </View>
+          {user.partnerStatus === "pending" && (
+            <Text style={[styles.partnerCardLabel, { fontSize: 11, marginTop: 2 }]}>
+              {fr
+                ? "L'équipe NoStress examine votre demande (24–48h)."
+                : "The NoStress team is reviewing your application (24–48h)."}
+            </Text>
+          )}
+          {user.partnerStatus === "rejected" && user.partnerRejectionReason && (
+            <Text style={[styles.partnerCardLabel, { fontSize: 11, marginTop: 2, color: "#e05252" }]}>
+              {user.partnerRejectionReason}
+            </Text>
+          )}
+        </View>
+      )}
+
+      {/* ── Section : Mon compte ───────────────────────────────────────────── */}
+      <Text style={styles.sectionHeader}>{fr ? "Mon compte" : "My account"}</Text>
+      <View style={styles.card}>
+        {/* Modifier le profil */}
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() => safePush("/edit-profile")}
+          accessibilityLabel={fr ? "Modifier le profil" : "Edit profile"}
+          accessibilityRole="button"
+        >
+          <View style={[styles.iconWrap, { backgroundColor: C.lavender + "18" }]}>
+            <Ionicons name="create-outline" size={18} color={C.lavender} />
+          </View>
+          <Text style={styles.rowLabel}>{t("editProfile")}</Text>
+          <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
+        </TouchableOpacity>
+
+        <View style={styles.divider} />
+
+        {/* Changer le mot de passe (dans edit-profile) */}
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() => safePush("/edit-profile")}
+          accessibilityLabel={fr ? "Changer le mot de passe" : "Change password"}
+          accessibilityRole="button"
+        >
+          <View style={[styles.iconWrap, { backgroundColor: C.lavender + "18" }]}>
+            <Ionicons name="lock-closed-outline" size={18} color={C.lavender} />
+          </View>
+          <Text style={styles.rowLabel}>{t("changePassword")}</Text>
+          <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
+        </TouchableOpacity>
+
+        <View style={styles.divider} />
+
+        {/* Notifications */}
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() => safePush("/notifications")}
+          accessibilityLabel={fr ? "Notifications" : "Notifications"}
+          accessibilityRole="button"
+        >
+          <View style={[styles.iconWrap, { backgroundColor: C.lavender + "18" }]}>
+            <Ionicons name="notifications-outline" size={18} color={C.lavender} />
+          </View>
+          <Text style={styles.rowLabel}>{t("notifications")}</Text>
+          {unreadCount > 0 && (
+            <View style={[styles.badge, { marginRight: 4 }]}>
+              <Text style={styles.badgeText}>{unreadCount > 9 ? "9+" : String(unreadCount)}</Text>
+            </View>
+          )}
+          <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
+        </TouchableOpacity>
+
+        <View style={styles.divider} />
+
+        {/* Favoris */}
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() => safePush("/favorites")}
+          accessibilityLabel={fr ? "Mes favoris" : "My favorites"}
+          accessibilityRole="button"
+        >
+          <View style={[styles.iconWrap, { backgroundColor: C.error + "15" }]}>
+            <Ionicons name="heart-outline" size={18} color={C.error} />
+          </View>
+          <Text style={styles.rowLabel}>{t("favorites")}</Text>
+          <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
+        </TouchableOpacity>
+      </View>
+
+      {/* ── Section : Préférences ──────────────────────────────────────────── */}
+      <Text style={styles.sectionHeader}>{fr ? "Préférences" : "Preferences"}</Text>
+      <View style={styles.card}>
+        {/* Langue */}
+        <View style={[styles.row, { alignItems: "flex-start" }]}>
+          <View style={[styles.iconWrap, { backgroundColor: C.textMuted + "18", marginTop: 2 }]}>
+            <Ionicons name="language" size={18} color={C.textMuted} />
+          </View>
+          <View style={{ flex: 1, gap: 10 }}>
+            <Text style={styles.rowLabel}>{t("language")}</Text>
+            <View style={styles.chipRow}>
+              {(Object.keys(LANG_LABELS) as Lang[]).map((code) => {
+                const active = lang === code;
+                return (
+                  <TouchableOpacity
+                    key={code}
+                    style={[styles.chip, { paddingVertical: 6 }, active && styles.chipActive]}
+                    onPress={() => setLang(code)}
+                    accessibilityLabel={LANG_LABELS[code]}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                      {LANG_LABELS[code]}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        {/* Thème — 3 options */}
+        <View style={[styles.row, { alignItems: "flex-start" }]}>
+          <View style={[styles.iconWrap, { backgroundColor: C.textMuted + "18", marginTop: 2 }]}>
+            <Ionicons name="color-palette-outline" size={18} color={C.textMuted} />
+          </View>
+          <View style={{ flex: 1, gap: 10 }}>
+            <Text style={styles.rowLabel}>{fr ? "Thème" : "Theme"}</Text>
+            <View style={styles.chipRow}>
+              {themeOptions.map(({ mode, label, icon, color }) => {
+                const active = themeMode === mode;
+                return (
+                  <TouchableOpacity
+                    key={mode}
+                    style={[styles.chip, { paddingVertical: 6 }, active && { borderColor: color, backgroundColor: color + "20" }]}
+                    onPress={() => setThemeMode(mode)}
+                    accessibilityLabel={label}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Ionicons name={icon} size={13} color={active ? color : C.textMuted} />
+                    <Text style={[styles.chipText, active && { color: C.text, fontFamily: "Inter_600SemiBold" }]}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.divider} />
+
+        {/* Économie de données */}
+        <View style={[styles.row, { alignItems: "flex-start" }]}>
+          <View style={[styles.iconWrap, { backgroundColor: C.textMuted + "18", marginTop: 2 }]}>
+            <Ionicons name="cellular-outline" size={18} color={C.textMuted} />
+          </View>
+          <View style={{ flex: 1, gap: 8 }}>
+            <View>
+              <Text style={styles.rowLabel}>{fr ? "Économie de données" : "Data saver"}</Text>
+              <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: C.textMuted, marginTop: 1 }}>
+                {fr
+                  ? "Réduit la qualité des images sur une connexion lente."
+                  : "Reduces image quality on slow connections."}
+              </Text>
+            </View>
+            <View style={styles.chipRow}>
+              {dataSaverOptions.map(({ value, label }) => {
+                const active = dataSaverMode === value;
+                return (
+                  <TouchableOpacity
+                    key={value}
+                    style={[styles.chip, { paddingVertical: 6 }, active && styles.chipActive]}
+                    onPress={() => setDataSaverMode(value)}
+                    accessibilityLabel={label}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+
+        {/* Alertes de proximité — users only */}
+        {!isPartner && (
+          <>
+            <View style={styles.divider} />
+            <View style={styles.row}>
+              <View style={[styles.iconWrap, { backgroundColor: C.textMuted + "18" }]}>
+                <Ionicons
+                  name={locationNotificationsEnabled ? "location" : "location-outline"}
+                  size={18}
+                  color={locationNotificationsEnabled ? C.lavender : C.textMuted}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.rowLabel}>{fr ? "Alertes de proximité" : "Nearby alerts"}</Text>
                 {selectedCity && nearbyEventsCount > 0 && locationNotificationsEnabled && (
                   <Text style={{ fontSize: 11, fontFamily: "Inter_400Regular", color: C.lavender, marginTop: 1 }}>
-                    {lang === "fr"
+                    {fr
                       ? `${nearbyEventsCount} événement${nearbyEventsCount > 1 ? "s" : ""} à ${selectedCity}`
                       : `${nearbyEventsCount} event${nearbyEventsCount > 1 ? "s" : ""} in ${selectedCity}`}
                   </Text>
@@ -633,80 +869,101 @@ export default function AccountScreen() {
                 onValueChange={setLocationNotificationsEnabled}
                 thumbColor={C.card}
                 trackColor={{ false: C.border, true: C.lavender }}
+                accessibilityLabel={fr ? "Alertes de proximité" : "Nearby alerts"}
               />
-            </TouchableOpacity>
+            </View>
           </>
         )}
       </View>
 
-      {/* Raccourcis — Notifications & Favoris */}
-      <View style={[styles.card, { marginTop: 0 }]}>
+      {/* ── Section : Assistance ───────────────────────────────────────────── */}
+      <Text style={styles.sectionHeader}>{fr ? "Assistance" : "Support"}</Text>
+      <View style={styles.card}>
         <TouchableOpacity
-          style={styles.settingRow}
-          onPress={() => safePush("/notifications")}
+          style={styles.row}
+          onPress={openWhatsApp}
+          accessibilityLabel={fr ? "Contacter le support WhatsApp" : "Contact WhatsApp support"}
+          accessibilityRole="button"
         >
-          <View style={[styles.shortcutIconWrap, { backgroundColor: C.lavender + "18" }]}>
-            <Ionicons name="notifications-outline" size={18} color={C.lavender} />
+          <View style={[styles.iconWrap, { backgroundColor: "#25D36618" }]}>
+            <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
           </View>
-          <Text style={styles.settingLabel}>{t("notifications")}</Text>
-          {unreadCount > 0 && (
-            <View style={[styles.badge, { marginRight: 4 }]}>
-              <Text style={styles.badgeText}>{unreadCount > 9 ? "9+" : String(unreadCount)}</Text>
-            </View>
-          )}
+          <Text style={styles.rowLabel}>{fr ? "Support WhatsApp" : "WhatsApp support"}</Text>
           <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
         </TouchableOpacity>
 
-        <View style={styles.settingDivider} />
+        <View style={styles.divider} />
 
         <TouchableOpacity
-          style={styles.settingRow}
-          onPress={() => safePush("/favorites")}
+          style={styles.row}
+          onPress={() => router.push("/legal/privacy")}
+          accessibilityLabel={fr ? "Politique de confidentialité" : "Privacy policy"}
+          accessibilityRole="button"
         >
-          <View style={[styles.shortcutIconWrap, { backgroundColor: C.error + "15" }]}>
-            <Ionicons name="heart-outline" size={18} color={C.error} />
+          <View style={[styles.iconWrap, { backgroundColor: C.lavender + "18" }]}>
+            <Ionicons name="shield-checkmark-outline" size={18} color={C.lavender} />
           </View>
-          <Text style={styles.settingLabel}>{t("favorites")}</Text>
+          <Text style={styles.rowLabel}>{fr ? "Politique de confidentialité" : "Privacy policy"}</Text>
+          <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
+        </TouchableOpacity>
+
+        <View style={styles.divider} />
+
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() => router.push("/legal/terms")}
+          accessibilityLabel={fr ? "Conditions d'utilisation" : "Terms of use"}
+          accessibilityRole="button"
+        >
+          <View style={[styles.iconWrap, { backgroundColor: C.lavender + "18" }]}>
+            <Ionicons name="document-text-outline" size={18} color={C.lavender} />
+          </View>
+          <Text style={styles.rowLabel}>{fr ? "Conditions d'utilisation" : "Terms of use"}</Text>
           <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
         </TouchableOpacity>
       </View>
 
-      {/* Logout */}
+      {/* ── Déconnexion ────────────────────────────────────────────────────── */}
       <TouchableOpacity
         style={styles.logoutBtn}
-        onPress={() => {
-          const isFr = lang === "fr";
-          if (Platform.OS === "web") {
-            const ok = typeof window !== "undefined" && window.confirm(isFr ? "Déconnexion — Êtes-vous sûr ?" : "Log out — Are you sure?");
-            if (ok) logout();
-            return;
-          }
-          Alert.alert(
-            isFr ? "Déconnexion" : "Log out",
-            isFr ? "Êtes-vous sûr ?" : "Are you sure?",
-            [
-              { text: isFr ? "Annuler" : "Cancel", style: "cancel" },
-              { text: isFr ? "Déconnecter" : "Log out", style: "destructive", onPress: logout },
-            ],
-          );
-        }}
+        onPress={handleLogout}
+        accessibilityLabel={fr ? "Se déconnecter" : "Log out"}
+        accessibilityRole="button"
       >
-        <Ionicons name="log-out-outline" size={20} color={C.error} />
+        <Ionicons name="log-out-outline" size={20} color={C.text} />
         <Text style={styles.logoutText}>{t("logout")}</Text>
       </TouchableOpacity>
 
-      {/* Séparateur entre déconnexion et suppression */}
-      <View style={{ height: 1, backgroundColor: C.border, marginVertical: 8 }} />
-
-      {/* Delete Account — traitement in-app, pas de redirection externe */}
-      <TouchableOpacity
-        style={[styles.logoutBtn, { borderColor: C.error, backgroundColor: C.error + "10", marginTop: 0, opacity: deletionLoading ? 0.6 : 1 }]}
-        onPress={handleDeleteAccount}
-        disabled={deletionLoading}
-      >
-        <Ionicons name="trash-outline" size={20} color={C.error} />
-        <Text style={styles.logoutText}>{deletionLoading ? (lang === "fr" ? "Envoi…" : "Sending…") : t("deleteAccount")}</Text>
-      </TouchableOpacity>
+      {/* ── Zone sensible ──────────────────────────────────────────────────── */}
+      <View style={styles.dangerZone}>
+        <View style={styles.dangerHeader}>
+          <Ionicons name="warning-outline" size={16} color={C.error} />
+          <Text style={styles.dangerTitle}>{fr ? "Zone sensible" : "Danger zone"}</Text>
+        </View>
+        <Text style={styles.dangerDesc}>
+          {fr
+            ? "La suppression de votre compte est irréversible. Une demande sera transmise à notre équipe et traitée sous 30 jours. Toutes vos données et favoris seront définitivement effacés."
+            : "Deleting your account is irreversible. A request will be sent to our team and processed within 30 days. All your data and favorites will be permanently erased."}
+        </Text>
+        <View style={styles.dangerDivider} />
+        <TouchableOpacity
+          style={styles.deleteBtn}
+          onPress={handleDeleteAccount}
+          disabled={deletionLoading}
+          accessibilityLabel={fr ? "Supprimer mon compte" : "Delete my account"}
+          accessibilityRole="button"
+          accessibilityState={{ disabled: deletionLoading }}
+        >
+          {deletionLoading ? (
+            <ActivityIndicator color={C.error} />
+          ) : (
+            <>
+              <Ionicons name="trash-outline" size={18} color={C.error} />
+              <Text style={styles.deleteBtnText}>{t("deleteAccount")}</Text>
+            </>
+          )}
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }
