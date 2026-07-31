@@ -3,7 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Dimensions,
-  Linking,
+
   Modal,
   Platform,
   Pressable,
@@ -28,6 +28,7 @@ import { API_BASE } from "@/lib/apiBase";
 import ReportButton from "@/components/ReportButton";
 import MapPreview from "@/components/MapPreview";
 import ReviewModal from "@/components/ReviewModal";
+import { NavigationOptionsSheet } from "@/components/common/NavigationOptionsSheet";
 
 type Specialty = {
   id: string;
@@ -224,32 +225,7 @@ export default function VenueDetailScreen() {
     Number.isFinite(venue.latitude) &&
     Number.isFinite(venue.longitude);
 
-  const openMaps = () => {
-    const queryText = [venue.name, venue.address, venue.city, venue.country || "Togo"]
-      .filter(Boolean)
-      .join(", ");
-    const query = encodeURIComponent(queryText);
-
-    let url: string;
-    if (hasCoords) {
-      const lat = venue.latitude;
-      const lng = venue.longitude;
-      url = Platform.select({
-        ios: `maps:0,0?q=${query}&ll=${lat},${lng}`,
-        android: `geo:${lat},${lng}?q=${lat},${lng}(${encodeURIComponent(venue.name)})`,
-        default: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
-      }) as string;
-    } else {
-      url = Platform.select({
-        ios: `maps:0,0?q=${query}`,
-        android: `geo:0,0?q=${query}`,
-        default: `https://www.google.com/maps/search/?api=1&query=${query}`,
-      }) as string;
-    }
-    Linking.openURL(url).catch(() => {
-      Linking.openURL(`https://www.google.com/maps/search/?api=1&query=${query}`);
-    });
-  };
+  const [navSheetVisible, setNavSheetVisible] = useState(false);
 
   const typeIcon = getTypeIcon(venue.type || "");
 
@@ -435,7 +411,7 @@ export default function VenueDetailScreen() {
             </View>
           ) : null}
 
-          <TouchableOpacity style={styles.mapsBtn} onPress={openMaps}>
+          <TouchableOpacity style={styles.mapsBtn} onPress={() => setNavSheetVisible(true)}>
             <Ionicons name="navigate" size={18} color={C.bg} />
             <Text style={styles.mapsBtnText}>
               {lang === "fr" ? "Itinéraire / Maps" : "Directions / Maps"}
@@ -643,6 +619,19 @@ export default function VenueDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      <NavigationOptionsSheet
+        visible={navSheetVisible}
+        onClose={() => setNavSheetVisible(false)}
+        venue={{
+          name: venue.name,
+          address: venue.address,
+          city: venue.city,
+          latitude: venue.latitude,
+          longitude: venue.longitude,
+        }}
+        lang={lang as "fr" | "en"}
+      />
 
       <ReviewModal
         visible={reviewModalOpen}

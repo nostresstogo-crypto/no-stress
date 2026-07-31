@@ -281,7 +281,7 @@ export default function VenuesScreen() {
             popularVenues.length > 0 && activeFilterCount === 0 && !filtersOpen ? (
               <View style={styles.popularSection}>
                 <View style={styles.popularHeader}>
-                  <Ionicons name="flame" size={16} color={C.gold} />
+                  <Ionicons name="flame" size={15} color={C.gold} />
                   <Text style={styles.popularTitle}>
                     {lang === "fr" ? "Lieux populaires" : "Popular venues"}
                   </Text>
@@ -292,32 +292,21 @@ export default function VenuesScreen() {
                   contentContainerStyle={styles.popularList}
                 >
                   {popularVenues.map((v: any) => (
-                    <TouchableOpacity
+                    <VenueCard
                       key={String(v.id)}
+                      venue={{
+                        id: `api_${v.id}`,
+                        name: v.name || "",
+                        type: v.type || "",
+                        city: v.city || "",
+                        address: v.address || "",
+                        imageUrl: v.imageUrl || (Array.isArray(v.images) && v.images[0]) || undefined,
+                        blurhash: v.blurhash ?? null,
+                        isVerified: v.isVerified ?? false,
+                      }}
+                      variant="homePremium"
                       onPress={() => safePush(`/venue/api_${v.id}` as any)}
-                      style={[styles.popularCard, { backgroundColor: C.card, borderColor: C.border }]}
-                      activeOpacity={0.85}
-                    >
-                      {v.imageUrl ? (
-                        <Image
-                          source={{ uri: v.imageUrl }}
-                          style={styles.popularCardImage}
-                          contentFit="cover"
-                        />
-                      ) : (
-                        <View style={[styles.popularCardImage, styles.popularCardImagePlaceholder, { backgroundColor: C.border }]}>
-                          <Ionicons name="business-outline" size={28} color={C.textMuted} />
-                        </View>
-                      )}
-                      <View style={styles.popularCardBody}>
-                        <Text style={[styles.popularCardName, { color: C.text }]} numberOfLines={1}>
-                          {v.name}
-                        </Text>
-                        <Text style={[styles.popularCardCity, { color: C.textMuted }]} numberOfLines={1}>
-                          {v.city}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
+                    />
                   ))}
                 </ScrollView>
               </View>
@@ -330,7 +319,11 @@ export default function VenuesScreen() {
             </View>
           }
           renderItem={({ item }) => (
-            <VenueCard venue={item} onPress={() => safePush(`/venue/${item.id}` as any)} />
+            <VenueCard
+              venue={item}
+              variant="venueList"
+              onPress={() => safePush(`/venue/${item.id}` as any)}
+            />
           )}
         />
       )}
@@ -394,15 +387,4 @@ const makeStyles = (C: any) => StyleSheet.create({
   popularHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 12 },
   popularTitle: { fontSize: 15, fontFamily: "Inter_700Bold", color: C.text },
   popularList: { gap: 12, paddingRight: 4 },
-  popularCard: {
-    width: 180,
-    borderRadius: 12,
-    overflow: "hidden",
-    borderWidth: 1,
-  },
-  popularCardImage: { width: "100%", height: 100 },
-  popularCardImagePlaceholder: { alignItems: "center", justifyContent: "center" },
-  popularCardBody: { padding: 10, gap: 2 },
-  popularCardName: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
-  popularCardCity: { fontSize: 11, fontFamily: "Inter_400Regular" },
 });
