@@ -203,6 +203,23 @@ function makeStyles(C: ColorPalette) {
     chipText: { fontSize: 13, fontFamily: "Inter_500Medium", color: C.textMuted },
     chipTextActive: { color: C.text, fontFamily: "Inter_600SemiBold" },
 
+    // ── Renewal banner ───────────────────────────────────────────────────────
+    renewalBanner: {
+      borderRadius: 14,
+      padding: 14,
+      gap: 8,
+    },
+    renewalBannerRow: { flexDirection: "row" as const, alignItems: "flex-start" as const, gap: 10 },
+    renewalBannerTitle: { fontSize: 14, fontFamily: "Inter_700Bold" },
+    renewalBannerSub: { fontSize: 12, fontFamily: "Inter_400Regular", marginTop: 2, lineHeight: 17 },
+    renewalBannerActions: { flexDirection: "row" as const, gap: 8, marginTop: 4 },
+    renewalBannerBtn: {
+      flex: 1, paddingVertical: 9, borderRadius: 10,
+      alignItems: "center" as const, justifyContent: "center" as const,
+    },
+    renewalBannerBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+    renewalBannerDismiss: { padding: 4 },
+
     // ── Logout button ────────────────────────────────────────────────────────
     logoutBtn: {
       flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
@@ -292,6 +309,13 @@ function formatSubscriptionDate(iso: string, fr: boolean): string {
   }
 }
 
+/** Returns how many full days remain until `iso` (negative if already past). */
+function daysUntil(iso: string): number {
+  const now = new Date();
+  const until = new Date(iso);
+  return Math.floor((until.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function AccountScreen() {
@@ -313,6 +337,7 @@ export default function AccountScreen() {
   const [deletionLoading, setDeletionLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendSent, setResendSent] = useState(false);
+  const [renewalDismissed, setRenewalDismissed] = useState(false);
 
   // Re-sync on focus
   useFocusEffect(useCallback(() => {
@@ -739,6 +764,75 @@ export default function AccountScreen() {
           })()}
         </View>
       )}
+
+      {/* ── Subscription renewal banner ────────────────────────────────────── */}
+      {isPartner && !renewalDismissed && (() => {
+        const subState = subscriptionState(user.subscriptionUntil);
+        if (subState !== "expiring_soon" && subState !== "expired") return null;
+        const days = user.subscriptionUntil ? daysUntil(user.subscriptionUntil) : -1;
+        const isCritical = days <= 2;
+        const accentColor = isCritical ? "#e05252" : "#f0c040";
+        const bgColor     = isCritical ? "#2e1010" : "#2a2200";
+        const textColor   = isCritical ? "#f5a0a0" : "#c8a840";
+        const btnBg       = accentColor;
+        const btnText     = isCritical ? "#fff" : "#1a1200";
+
+        const title = subState === "expired"
+          ? (fr ? "Abonnement expiré" : "Subscription expired")
+          : isCritical
+            ? (fr
+                ? `Abonnement expire dans ${days <= 0 ? "moins d'un jour" : `${days} jour${days > 1 ? "s" : ""}`}`
+                : `Subscription expires in ${days <= 0 ? "less than a day" : `${days} day${days !== 1 ? "s" : ""}`}`)
+            : (fr
+                ? `Abonnement expire dans ${days} jour${days > 1 ? "s" : ""}`
+                : `Subscription expires in ${days} day${days !== 1 ? "s" : ""}`);
+
+        const subtitle = user.subscriptionUntil
+          ? (fr
+              ? `Date d'expiration : ${formatSubscriptionDate(user.subscriptionUntil, true)}`
+              : `Expiry date: ${formatSubscriptionDate(user.subscriptionUntil, false)}`)
+          : "";
+
+        return (
+          <View
+            style={[styles.renewalBanner, { backgroundColor: bgColor, borderWidth: 1, borderColor: accentColor + "60" }]}
+            accessibilityRole="alert"
+          >
+            <View style={styles.renewalBannerRow}>
+              <Ionicons
+                name={isCritical ? "warning" : "time-outline"}
+                size={22}
+                color={accentColor}
+                style={{ marginTop: 1 }}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.renewalBannerTitle, { color: accentColor }]}>{title}</Text>
+                <Text style={[styles.renewalBannerSub, { color: textColor }]}>{subtitle}</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.renewalBannerDismiss}
+                onPress={() => setRenewalDismissed(true)}
+                accessibilityLabel={fr ? "Fermer" : "Dismiss"}
+                accessibilityRole="button"
+              >
+                <Ionicons name="close" size={18} color={textColor} />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.renewalBannerActions}>
+              <TouchableOpacity
+                style={[styles.renewalBannerBtn, { backgroundColor: btnBg }]}
+                onPress={openWhatsApp}
+                accessibilityLabel={fr ? "Renouveler via WhatsApp" : "Renew via WhatsApp"}
+                accessibilityRole="button"
+              >
+                <Text style={[styles.renewalBannerBtnText, { color: btnText }]}>
+                  {fr ? "Renouveler l'abonnement" : "Renew subscription"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        );
+      })()}
 
       {/* ── Section : Mon compte ───────────────────────────────────────────── */}
       <Text style={styles.sectionHeader}>{fr ? "Mon compte" : "My account"}</Text>
