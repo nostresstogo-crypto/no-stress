@@ -74,6 +74,7 @@ export default function VenueDetailScreen() {
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [reviewSuccess, setReviewSuccess] = useState(false);
+  const [navSheetVisible, setNavSheetVisible] = useState(false);
 
   const isApi = typeof id === "string" && id.startsWith("api_");
   const apiNumId = isApi ? id.slice(4) : null;
@@ -224,8 +225,6 @@ export default function VenueDetailScreen() {
     venue.longitude != null &&
     Number.isFinite(venue.latitude) &&
     Number.isFinite(venue.longitude);
-
-  const [navSheetVisible, setNavSheetVisible] = useState(false);
 
   const typeIcon = getTypeIcon(venue.type || "");
 
