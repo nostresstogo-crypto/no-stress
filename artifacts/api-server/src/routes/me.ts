@@ -141,6 +141,14 @@ router.post("/users/me/change-password", requireAuth, async (req: any, res) => {
 });
 
 // ── Partner profile ─────────────────────────────────────────────────────────
+router.get("/partners/me", requireAuth, async (req: any, res) => {
+  const id = partnerIdFromAuth(req.auth);
+  if (id == null) return res.status(403).json({ error: "Réservé aux partenaires." });
+  const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.id, id));
+  if (!partner) return res.status(404).json({ error: "Compte introuvable." });
+  res.json({ partner: publicPartner(partner) });
+});
+
 router.patch("/partners/me", requireAuth, async (req: any, res) => {
   const id = partnerIdFromAuth(req.auth);
   if (id == null) return res.status(403).json({ error: "Réservé aux partenaires." });

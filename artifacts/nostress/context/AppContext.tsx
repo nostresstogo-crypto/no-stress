@@ -9,7 +9,7 @@ import React, {
   ReactNode,
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useColorScheme } from "react-native";
+import { useColorScheme, AppState } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
 import { Lang } from "@/constants/i18n";
 import { getThemeColors, ColorPalette } from "@/constants/colors";
@@ -548,6 +548,58 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
     return () => unsubscribe();
   }, [appReady, refreshApiEvents, syncFavoritesFromBackend, user?.role]);
+
+  // Re-fetch partner profile on app resume to keep displayName + other fields fresh
+  const refreshPartnerProfile = useCallback(async () => {
+    if (!tokenRef.current) return;
+    try {
+      const r = await authFetch(`${API_BASE}/partners/me`);
+      if (!r.ok) return;
+      const data = await r.json();
+      const p = data?.partner;
+      if (!p) return;
+      setUserState((prev) => {
+        if (!prev || prev.role !== "structure") return prev;
+        const updated: User = {
+          ...prev,
+          name: p.contactName ?? prev.name,
+          displayName: p.displayName ?? null,
+          phone: p.phone ?? prev.phone,
+          avatarUrl: p.profileImage ?? prev.avatarUrl,
+          partnerStatus: p.status ?? prev.partnerStatus,
+          partnerRejectionReason: p.rejectionReason ?? prev.partnerRejectionReason,
+          emailVerified: p.emailVerified ?? prev.emailVerified,
+        };
+        AsyncStorage.setItem(KEYS.user, JSON.stringify(updated)).catch(() => {});
+        return updated;
+      });
+    } catch {}
+  }, [authFetch]);
+
+  // Also refresh on initial load so cached data is immediately corrected
+  useEffect(() => {
+    if (!appReady) return;
+    if (user?.role === "structure") {
+      refreshPartnerProfile();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appReady]);
+
+  const appStateRef = useRef<string>(AppState.currentState);
+  useEffect(() => {
+    if (!appReady) return;
+    const sub = AppState.addEventListener("change", (nextState) => {
+      const prev = appStateRef.current;
+      appStateRef.current = nextState;
+      // Trigger only on background/inactive → active (app resumed)
+      if (nextState === "active" && prev !== "active") {
+        if (user?.role === "structure") {
+          refreshPartnerProfile();
+        }
+      }
+    });
+    return () => sub.remove();
+  }, [appReady, user?.role, refreshPartnerProfile]);
 
   const addNotification = useCallback(
     (n: Omit<Notification, "id" | "read" | "createdAt">) => {
