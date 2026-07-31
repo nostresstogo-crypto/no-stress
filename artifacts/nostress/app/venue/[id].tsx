@@ -23,12 +23,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { ColorPalette } from "@/constants/colors";
 import { useT, useApp, useColors } from "@/context/AppContext";
+import { useLowDataMode } from "@/context/NetworkContext";
 import { MOCK_VENUES, MOCK_EVENTS } from "@/constants/data";
 import { API_BASE } from "@/lib/apiBase";
 import ReportButton from "@/components/ReportButton";
 import MapPreview from "@/components/MapPreview";
 import ReviewModal from "@/components/ReviewModal";
 import { NavigationOptionsSheet } from "@/components/common/NavigationOptionsSheet";
+import { PremiumMediaGallery } from "@/components/gallery/PremiumMediaGallery";
 
 type Specialty = {
   id: string;
@@ -75,6 +77,8 @@ export default function VenueDetailScreen() {
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [reviewSuccess, setReviewSuccess] = useState(false);
   const [navSheetVisible, setNavSheetVisible] = useState(false);
+  const [descExpanded, setDescExpanded] = useState(false);
+  const lowData = useLowDataMode();
 
   const isApi = typeof id === "string" && id.startsWith("api_");
   const apiNumId = isApi ? id.slice(4) : null;
@@ -228,148 +232,182 @@ export default function VenueDetailScreen() {
 
   const typeIcon = getTypeIcon(venue.type || "");
 
+  // Galerie : image principale + images spécialités
+  const galleryImages: string[] = [];
+  if (venue.imageUrl) galleryImages.push(venue.imageUrl);
+
+  // Description tronquée
+  const DESC_LIMIT = 180;
+  const hasLongDesc = (venue.description?.length ?? 0) > DESC_LIMIT;
+  const displayDesc = hasLongDesc && !descExpanded
+    ? venue.description!.slice(0, DESC_LIMIT) + "…"
+    : venue.description;
+
+  // Actions principales conditionnelles
+  const actions: Array<{ icon: string; label: string; onPress: () => void; color: string }> = [];
+  if (hasCoords) actions.push({ icon: "navigate", label: lang === "fr" ? "Itinéraire" : "Directions", onPress: () => setNavSheetVisible(true), color: C.gold });
+  actions.push({ icon: "share-outline", label: lang === "fr" ? "Partager" : "Share", onPress: handleShare, color: C.lavender });
+  if (user?.role === "user" && isApi) {
+    actions.push({
+      icon: isFavoriteVenue(venue.id) ? "heart" : "heart-outline",
+      label: lang === "fr" ? "Favori" : "Favorite",
+      onPress: () => toggleFavoriteVenue(venue.id),
+      color: isFavoriteVenue(venue.id) ? "#E05C5C" : C.textMuted,
+    });
+  }
+
   return (
     <View style={styles.root}>
       <ScrollView
-        contentContainerStyle={{ paddingBottom: insets.bottom + 32 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 48 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero image */}
-        <View style={styles.hero}>
-          {venue.imageUrl ? (
-            <TouchableOpacity
-              activeOpacity={0.95}
-              onPress={() => setZoomImage({ uri: venue.imageUrl as string, name: venue.name })}
-              accessibilityRole="imagebutton"
-              accessibilityLabel={lang === "fr" ? `Agrandir la photo de ${venue.name}` : `Zoom on ${venue.name}`}
-            >
-              <Image
-                source={{ uri: venue.imageUrl }}
-                style={styles.heroImage}
-                contentFit="cover"
-                placeholder={venue.blurhash ? { blurhash: venue.blurhash } : undefined}
-              />
-            </TouchableOpacity>
-          ) : (
-            <View style={[styles.heroImage, styles.heroPlaceholder]}>
-              <Ionicons name="business" size={72} color={C.lavender} />
-              <Text style={styles.heroPlaceholderLabel}>Aucune photo</Text>
-            </View>
-          )}
+        {/* ── Galerie swipeable ────────────────────────── */}
+        <PremiumMediaGallery
+          images={galleryImages}
+          blurhash={venue.blurhash}
+          height={300}
+          onBack={() => router.back()}
+          isFavorite={user?.role === "user" ? isFavoriteVenue(venue.id) : false}
+          onToggleFav={user?.role === "user" && isApi ? () => toggleFavoriteVenue(venue.id) : undefined}
+          showFavorite={user?.role === "user" && isApi}
+          onShare={handleShare}
+          isVerified={venue.isVerified}
+          lowData={lowData}
+          lang={lang}
+        />
 
-          <LinearGradient
-            colors={["transparent", C.bg]}
-            locations={[0.5, 1.0]}
-            style={styles.heroOverlay}
-          />
-
-          <View style={[styles.heroActions, { top: (Platform.OS === "web" ? 67 : insets.top) + 12 }]}>
-            <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()}>
-              <Ionicons name="arrow-back" size={22} color="#fff" />
-            </TouchableOpacity>
-            <View style={styles.heroRightActions}>
-              {user?.role === "user" && isApi && (
-                <TouchableOpacity
-                  style={styles.iconBtn}
-                  onPress={() => toggleFavoriteVenue(venue.id)}
-                >
-                  <Ionicons
-                    name={isFavoriteVenue(venue.id) ? "heart" : "heart-outline"}
-                    size={22}
-                    color={isFavoriteVenue(venue.id) ? "#E05C5C" : "#fff"}
-                  />
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity style={styles.iconBtn} onPress={handleShare}>
-                <Ionicons name="share-outline" size={22} color="#fff" />
-              </TouchableOpacity>
-              {isApi && user?.role !== "structure" && <ReportButton itemType="venue" itemId={venue.id} variant="icon" />}
-            </View>
-          </View>
-
-          {venue.isVerified && (
-            <View style={styles.verifiedHero}>
-              <Ionicons name="checkmark-circle" size={14} color={C.gold} />
-              <Text style={styles.verifiedHeroText}>
-                {lang === "fr" ? "Vérifié" : "Verified"}
-              </Text>
-            </View>
-          )}
-        </View>
-
+        {/* ── Informations principales ─────────────────── */}
         <View style={styles.body}>
-          <View style={styles.titleRow}>
-            <View style={styles.typeIconWrap}>
-              <Ionicons name={typeIcon as any} size={20} color={C.lavender} />
+
+          {/* Nom + catégorie */}
+          <View style={styles.nameBlock}>
+            <View style={styles.nameRow}>
+              <View style={[styles.typeChip, { backgroundColor: C.lavender + "18", borderColor: C.lavender + "30" }]}>
+                <Ionicons name={typeIcon as any} size={13} color={C.lavender} />
+                {venue.type ? (
+                  <Text style={[styles.typeChipText, { color: C.lavender }]}>{venue.type}</Text>
+                ) : null}
+              </View>
+              {isApi && user?.role !== "structure" && (
+                <ReportButton itemType="venue" itemId={venue.id} variant="icon" />
+              )}
             </View>
-            <View style={styles.titleInfo}>
-              {venue.type ? <Text style={styles.typePill}>{venue.type}</Text> : null}
-              <Text style={styles.venueName}>{venue.name}</Text>
-            </View>
+            <Text style={styles.venueName}>{venue.name}</Text>
+
+            {/* Localisation compacte */}
+            {(venue.city || venue.address) ? (
+              <View style={styles.locationChips}>
+                {venue.city ? (
+                  <View style={[styles.locationChip, { backgroundColor: C.card, borderColor: C.border }]}>
+                    <Ionicons name="location-outline" size={12} color={C.textMuted} />
+                    <Text style={[styles.locationChipText, { color: C.textMuted }]}>
+                      {venue.city}{venue.country ? `, ${venue.country}` : ""}
+                    </Text>
+                  </View>
+                ) : null}
+                {venue.address ? (
+                  <View style={[styles.locationChip, { backgroundColor: C.card, borderColor: C.border }]}>
+                    <Ionicons name="map-outline" size={12} color={C.textMuted} />
+                    <Text style={[styles.locationChipText, { color: C.textMuted }]} numberOfLines={1}>
+                      {venue.address}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : null}
+
+            {/* Note moyenne */}
+            {avgRating != null && (
+              <View style={styles.ratingRow}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Ionicons
+                    key={n}
+                    name={n <= Math.round(avgRating) ? "star" : "star-outline"}
+                    size={14}
+                    color="#F59E0B"
+                  />
+                ))}
+                <Text style={[styles.ratingText, { color: C.text }]}>{avgRating.toFixed(1)}</Text>
+                <Text style={[styles.ratingCount, { color: C.textMuted }]}>({reviews.length})</Text>
+              </View>
+            )}
           </View>
 
-          {venue.address ? (
-            <View style={styles.infoRow}>
-              <View style={styles.infoIconWrap}>
-                <Ionicons name="location" size={16} color={C.gold} />
-              </View>
-              <View style={styles.infoText}>
-                <Text style={styles.infoLabel}>
-                  {lang === "fr" ? "Adresse" : "Address"}
-                </Text>
-                <Text style={styles.infoValue}>{venue.address}</Text>
-              </View>
+          {/* ── Barre d'actions ── */}
+          {actions.length > 0 && (
+            <View style={styles.actionsBar}>
+              {actions.map((a) => (
+                <TouchableOpacity
+                  key={a.label}
+                  style={[styles.actionBtn, { backgroundColor: C.card, borderColor: C.border }]}
+                  onPress={a.onPress}
+                  activeOpacity={0.8}
+                  accessibilityRole="button"
+                  accessibilityLabel={a.label}
+                >
+                  <Ionicons name={a.icon as any} size={18} color={a.color} />
+                  <Text style={[styles.actionBtnText, { color: C.text }]}>{a.label}</Text>
+                </TouchableOpacity>
+              ))}
             </View>
-          ) : null}
+          )}
 
-          {venue.city ? (
-            <View style={styles.infoRow}>
-              <View style={styles.infoIconWrap}>
-                <Ionicons name="map" size={16} color={C.lavender} />
-              </View>
-              <View style={styles.infoText}>
-                <Text style={styles.infoLabel}>
-                  {lang === "fr" ? "Ville" : "City"}
-                </Text>
-                <Text style={styles.infoValue}>
-                  {venue.city}{venue.country ? ` · ${venue.country}` : " · Togo"}
-                </Text>
-              </View>
-            </View>
-          ) : null}
-
-          {(venue.openingTime || venue.closingTime) ? (
-            <View style={styles.infoRow}>
-              <View style={styles.infoIconWrap}>
-                <Ionicons name="time" size={16} color={C.lavender} />
-              </View>
-              <View style={styles.infoText}>
-                <Text style={styles.infoLabel}>
-                  {lang === "fr" ? "Horaires" : "Hours"}
-                </Text>
-                <Text style={styles.infoValue}>
-                  {venue.openingTime || "—"} → {venue.closingTime || "—"}
-                </Text>
-              </View>
-            </View>
-          ) : null}
-
+          {/* ── Description ── */}
           {venue.description ? (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                {lang === "fr" ? "À propos" : "About"}
-              </Text>
-              <Text style={styles.description}>{venue.description}</Text>
+              <Text style={styles.sectionTitle}>{lang === "fr" ? "À propos" : "About"}</Text>
+              <View style={[styles.descCard, { backgroundColor: C.card, borderColor: C.border }]}>
+                <Text style={[styles.description, { color: C.textMuted }]}>{displayDesc}</Text>
+                {hasLongDesc && (
+                  <TouchableOpacity
+                    onPress={() => setDescExpanded(!descExpanded)}
+                    hitSlop={8}
+                    accessibilityRole="button"
+                  >
+                    <Text style={[styles.readMore, { color: C.lavender }]}>
+                      {descExpanded
+                        ? (lang === "fr" ? "Réduire" : "Show less")
+                        : (lang === "fr" ? "Lire plus" : "Read more")}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           ) : null}
 
+          {/* ── Infos pratiques ── */}
+          {(venue.openingTime || venue.closingTime) ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{lang === "fr" ? "Infos pratiques" : "Practical info"}</Text>
+              <View style={[styles.infoCard, { backgroundColor: C.card, borderColor: C.border }]}>
+                <View style={styles.infoRow}>
+                  <View style={[styles.infoIconWrap, { backgroundColor: C.lavender + "18" }]}>
+                    <Ionicons name="time-outline" size={15} color={C.lavender} />
+                  </View>
+                  <View style={styles.infoText}>
+                    <Text style={[styles.infoLabel, { color: C.textMuted }]}>
+                      {lang === "fr" ? "Horaires" : "Hours"}
+                    </Text>
+                    <Text style={[styles.infoValue, { color: C.text }]}>
+                      {venue.openingTime || "—"} → {venue.closingTime || "—"}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          ) : null}
+
+          {/* ── Spécialités ── */}
           {venue.specialties && venue.specialties.length > 0 ? (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>
-                {lang === "fr" ? `Spécialités (${venue.specialties.length})` : `Specialties (${venue.specialties.length})`}
+                {lang === "fr"
+                  ? `Spécialités (${venue.specialties.length})`
+                  : `Specialties (${venue.specialties.length})`}
               </Text>
               {venue.specialties.map((sp) => (
-                <View key={sp.id} style={styles.specialtyRow}>
+                <View key={sp.id} style={[styles.specialtyRow, { backgroundColor: C.card, borderColor: C.border }]}>
                   <TouchableOpacity
                     activeOpacity={0.85}
                     onPress={() => sp.imageUrl && setZoomImage({ uri: sp.imageUrl, name: sp.name })}
@@ -378,16 +416,16 @@ export default function VenueDetailScreen() {
                   >
                     <Image source={{ uri: sp.imageUrl }} style={styles.specialtyImage} contentFit="cover" />
                     <View style={styles.specialtyZoomBadge}>
-                      <Ionicons name="expand" size={12} color="#fff" />
+                      <Ionicons name="expand" size={11} color="#fff" />
                     </View>
                   </TouchableOpacity>
                   <View style={styles.specialtyInfo}>
-                    <Text style={styles.specialtyName} numberOfLines={1}>{sp.name}</Text>
+                    <Text style={[styles.specialtyName, { color: C.text }]} numberOfLines={1}>{sp.name}</Text>
                     {sp.description ? (
-                      <Text style={styles.specialtyDesc} numberOfLines={2}>{sp.description}</Text>
+                      <Text style={[styles.specialtyDesc, { color: C.textMuted }]} numberOfLines={2}>{sp.description}</Text>
                     ) : null}
                     {sp.price != null ? (
-                      <Text style={styles.specialtyPrice}>
+                      <Text style={[styles.specialtyPrice, { color: C.gold }]}>
                         {sp.price.toLocaleString()} FCFA
                       </Text>
                     ) : null}
@@ -397,11 +435,10 @@ export default function VenueDetailScreen() {
             </View>
           ) : null}
 
+          {/* ── Carte & Itinéraire ── */}
           {hasCoords ? (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
-                {lang === "fr" ? "Position" : "Location"}
-              </Text>
+              <Text style={styles.sectionTitle}>{lang === "fr" ? "Position" : "Location"}</Text>
               <MapPreview
                 latitude={venue.latitude as number}
                 longitude={venue.longitude as number}
@@ -410,13 +447,19 @@ export default function VenueDetailScreen() {
             </View>
           ) : null}
 
-          <TouchableOpacity style={styles.mapsBtn} onPress={() => setNavSheetVisible(true)}>
+          <TouchableOpacity
+            style={[styles.mapsBtn, { backgroundColor: C.gold }]}
+            onPress={() => setNavSheetVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel={lang === "fr" ? "Itinéraire" : "Directions"}
+          >
             <Ionicons name="navigate" size={18} color={C.bg} />
-            <Text style={styles.mapsBtnText}>
+            <Text style={[styles.mapsBtnText, { color: C.bg }]}>
               {lang === "fr" ? "Itinéraire / Maps" : "Directions / Maps"}
             </Text>
           </TouchableOpacity>
 
+          {/* ── Événements à venir ── */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>
               {lang === "fr"
@@ -424,59 +467,43 @@ export default function VenueDetailScreen() {
                 : `Upcoming events (${upcomingEvents.length})`}
             </Text>
             {upcomingEvents.length === 0 ? (
-              <View style={styles.emptyEvents}>
-                <Ionicons name="calendar-outline" size={32} color={C.border} />
-                <Text style={styles.emptyEventsText}>
-                  {lang === "fr"
-                    ? "Aucun événement prévu"
-                    : "No upcoming events"}
+              <View style={[styles.emptyEvents, { backgroundColor: C.card, borderColor: C.border }]}>
+                <Ionicons name="calendar-outline" size={28} color={C.border} />
+                <Text style={[styles.emptyEventsText, { color: C.textMuted }]}>
+                  {lang === "fr" ? "Aucun événement prévu" : "No upcoming events"}
                 </Text>
               </View>
             ) : (
               upcomingEvents.map((event) => {
-                const title =
-                  lang === "fr" && event.titleFr ? event.titleFr : event.title;
+                const title = lang === "fr" && event.titleFr ? event.titleFr : event.title;
                 return (
                   <TouchableOpacity
                     key={event.id}
-                    style={styles.eventRow}
+                    style={[styles.eventRow, { backgroundColor: C.card, borderColor: C.border }]}
                     onPress={() => safePush(`/event/${event.id}`)}
                     activeOpacity={0.8}
                   >
                     {event.imageUrl ? (
-                      <Image
-                        source={{ uri: event.imageUrl }}
-                        style={styles.eventThumb}
-                        contentFit="cover"
-                      />
+                      <Image source={{ uri: event.imageUrl }} style={styles.eventThumb} contentFit="cover" />
                     ) : (
-                      <View style={styles.eventDateBox}>
-                        <Text style={styles.eventDay}>
-                          {(event.date || "").split("-")[2] || "—"}
-                        </Text>
-                        <Text style={styles.eventMonth}>
-                          {getMonthShort(event.date || "", lang)}
-                        </Text>
+                      <View style={[styles.eventDateBox, { backgroundColor: C.lavender + "18", borderColor: C.lavender + "40" }]}>
+                        <Text style={[styles.eventDay, { color: C.lavender }]}>{(event.date || "").split("-")[2] || "—"}</Text>
+                        <Text style={[styles.eventMonth, { color: C.lavender }]}>{getMonthShort(event.date || "", lang)}</Text>
                       </View>
                     )}
                     <View style={styles.eventInfo}>
-                      <Text style={styles.eventTitle} numberOfLines={1}>
-                        {title}
-                      </Text>
-                      <Text style={styles.eventDate}>
-                        {formatEventDate(event.date || "", lang)}
-                      </Text>
-                      {event.time ? <Text style={styles.eventTime}>{event.time}</Text> : null}
+                      <Text style={[styles.eventTitle, { color: C.text }]} numberOfLines={1}>{title}</Text>
+                      <Text style={[styles.eventDate, { color: C.textMuted }]}>{formatEventDate(event.date || "", lang)}</Text>
+                      {event.time ? <Text style={[styles.eventTime, { color: C.textMuted }]}>{event.time}</Text> : null}
                     </View>
-                    <View style={styles.eventPriceWrap}>
-                      <Ionicons name="chevron-forward" size={14} color={C.textMuted} />
-                    </View>
+                    <Ionicons name="chevron-forward" size={14} color={C.textMuted} />
                   </TouchableOpacity>
                 );
               })
             )}
           </View>
 
+          {/* ── Événements passés ── */}
           {pastEvents.length > 0 ? (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>
@@ -485,94 +512,79 @@ export default function VenueDetailScreen() {
                   : `Past events (${pastEvents.length})`}
               </Text>
               {pastEvents.map((event) => {
-                const title =
-                  lang === "fr" && event.titleFr ? event.titleFr : event.title;
+                const title = lang === "fr" && event.titleFr ? event.titleFr : event.title;
                 return (
                   <TouchableOpacity
                     key={event.id}
-                    style={[styles.eventRow, { opacity: 0.6 }]}
+                    style={[styles.eventRow, { backgroundColor: C.card, borderColor: C.border, opacity: 0.65 }]}
                     onPress={() => safePush(`/event/${event.id}`)}
                     activeOpacity={0.8}
                   >
                     {event.imageUrl ? (
-                      <Image
-                        source={{ uri: event.imageUrl }}
-                        style={styles.eventThumb}
-                        contentFit="cover"
-                      />
+                      <Image source={{ uri: event.imageUrl }} style={styles.eventThumb} contentFit="cover" />
                     ) : (
-                      <View style={[styles.eventDateBox, { backgroundColor: C.border + "22" }]}>
-                        <Text style={[styles.eventDay, { color: C.textMuted }]}>
-                          {(event.date || "").split("-")[2] || "—"}
-                        </Text>
-                        <Text style={[styles.eventMonth, { color: C.textMuted }]}>
-                          {getMonthShort(event.date || "", lang)}
-                        </Text>
+                      <View style={[styles.eventDateBox, { backgroundColor: C.border + "22", borderColor: C.border }]}>
+                        <Text style={[styles.eventDay, { color: C.textMuted }]}>{(event.date || "").split("-")[2] || "—"}</Text>
+                        <Text style={[styles.eventMonth, { color: C.textMuted }]}>{getMonthShort(event.date || "", lang)}</Text>
                       </View>
                     )}
                     <View style={styles.eventInfo}>
-                      <Text style={styles.eventTitle} numberOfLines={1}>
-                        {title}
-                      </Text>
-                      <Text style={styles.eventDate}>
-                        {formatEventDate(event.date || "", lang)}
-                      </Text>
-                      {event.time ? <Text style={styles.eventTime}>{event.time}</Text> : null}
+                      <Text style={[styles.eventTitle, { color: C.text }]} numberOfLines={1}>{title}</Text>
+                      <Text style={[styles.eventDate, { color: C.textMuted }]}>{formatEventDate(event.date || "", lang)}</Text>
                     </View>
-                    <View style={styles.eventPriceWrap}>
-                      <Ionicons name="chevron-forward" size={14} color={C.textMuted} />
-                    </View>
+                    <Ionicons name="chevron-forward" size={14} color={C.textMuted} />
                   </TouchableOpacity>
                 );
               })}
             </View>
           ) : null}
 
-          {/* ── Avis & Notes ─────────────────────────────── */}
+          {/* ── Avis & Notes ── */}
           {isApi && (
             <View style={styles.section}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <View style={styles.reviewsHeader}>
                 <Text style={styles.sectionTitle}>
                   {lang === "fr" ? "Avis & Notes" : "Reviews"}
                 </Text>
                 {avgRating != null && (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
-                    <Ionicons name="star" size={14} color="#F59E0B" />
-                    <Text style={{ color: C.text, fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
-                      {avgRating.toFixed(1)}
-                    </Text>
-                    <Text style={{ color: C.textMuted, fontSize: 12 }}>({reviews.length})</Text>
+                  <View style={styles.avgRatingRow}>
+                    <Ionicons name="star" size={13} color="#F59E0B" />
+                    <Text style={[styles.avgRatingText, { color: C.text }]}>{avgRating.toFixed(1)}</Text>
+                    <Text style={[styles.avgRatingCount, { color: C.textMuted }]}>({reviews.length})</Text>
                   </View>
                 )}
               </View>
+
               {reviewsLoading ? (
-                <ActivityIndicator color={C.lavender} style={{ marginVertical: 12 }} />
+                <ActivityIndicator color={C.lavender} style={{ marginVertical: 16 }} />
               ) : reviews.length === 0 ? (
-                <Text style={{ color: C.textMuted, fontSize: 14, fontFamily: "Inter_400Regular" }}>
+                <Text style={[styles.noReviews, { color: C.textMuted }]}>
                   {lang === "fr" ? "Aucun avis pour le moment." : "No reviews yet."}
                 </Text>
               ) : (
                 reviews.map((rev: any) => (
                   <View key={rev.id} style={[styles.reviewCard, { backgroundColor: C.card, borderColor: C.border }]}>
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 5 }}>
-                      {[1, 2, 3, 4, 5].map((n) => (
-                        <Ionicons key={n} name="star" size={12} color={n <= rev.rating ? "#F59E0B" : C.border} />
-                      ))}
-                      <Text style={{ color: C.textMuted, fontSize: 11, marginLeft: 6 }}>
+                    <View style={styles.reviewMeta}>
+                      <View style={styles.starsRow}>
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <Ionicons key={n} name="star" size={11} color={n <= rev.rating ? "#F59E0B" : C.border} />
+                        ))}
+                      </View>
+                      <Text style={[styles.reviewDate, { color: C.textMuted }]}>
                         {new Date(rev.createdAt).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US")}
                       </Text>
                     </View>
                     {rev.comment ? (
-                      <Text style={{ color: C.text, fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 }}>
-                        {rev.comment}
-                      </Text>
+                      <Text style={[styles.reviewComment, { color: C.text }]}>{rev.comment}</Text>
                     ) : null}
                   </View>
                 ))
               )}
+
               {!!apiNumId && !(user?.role === "structure" && (apiVenue as any)?.partnerId === user?.id) && (
                 <>
                   <TouchableOpacity
+                    style={[styles.leaveReviewBtn, { backgroundColor: C.lavender }]}
                     onPress={() => {
                       if (!user) {
                         Alert.alert(
@@ -589,24 +601,15 @@ export default function VenueDetailScreen() {
                         setReviewModalOpen(true);
                       }
                     }}
-                    style={{
-                      marginTop: 14,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 8,
-                      backgroundColor: C.lavender,
-                      borderRadius: 12,
-                      paddingVertical: 12,
-                    }}
+                    accessibilityRole="button"
                   >
                     <Ionicons name="star-outline" size={16} color="#fff" />
-                    <Text style={{ color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 14 }}>
+                    <Text style={styles.leaveReviewText}>
                       {lang === "fr" ? "Laisser un avis" : "Leave a review"}
                     </Text>
                   </TouchableOpacity>
                   {reviewSuccess && (
-                    <Text style={{ color: "#22c55e", fontFamily: "Inter_500Medium", fontSize: 13, textAlign: "center", marginTop: 8 }}>
+                    <Text style={[styles.reviewSuccessText, { color: C.success }]}>
                       {lang === "fr"
                         ? "Avis envoyé — il sera examiné par notre équipe."
                         : "Review submitted — it will be reviewed by our team."}
@@ -619,6 +622,7 @@ export default function VenueDetailScreen() {
         </View>
       </ScrollView>
 
+      {/* ── Modals & Sheets ── */}
       <NavigationOptionsSheet
         visible={navSheetVisible}
         onClose={() => setNavSheetVisible(false)}
@@ -647,7 +651,7 @@ export default function VenueDetailScreen() {
         bottomInset={insets.bottom}
       />
 
-      {/* Modal de zoom plein écran sur les images de spécialités. */}
+      {/* Zoom spécialités */}
       <Modal
         visible={!!zoomImage}
         transparent
@@ -657,17 +661,11 @@ export default function VenueDetailScreen() {
       >
         <Pressable style={styles.zoomBackdrop} onPress={() => setZoomImage(null)}>
           {zoomImage ? (
-            <Image
-              source={{ uri: zoomImage.uri }}
-              style={styles.zoomImage}
-              contentFit="contain"
-            />
+            <Image source={{ uri: zoomImage.uri }} style={styles.zoomImage} contentFit="contain" />
           ) : null}
           {zoomImage?.name ? (
             <View style={[styles.zoomCaption, { paddingBottom: Math.max(insets.bottom, 16) }]}>
-              <Text style={styles.zoomCaptionText} numberOfLines={2}>
-                {zoomImage.name}
-              </Text>
+              <Text style={styles.zoomCaptionText} numberOfLines={2}>{zoomImage.name}</Text>
             </View>
           ) : null}
           <TouchableOpacity
@@ -727,369 +725,158 @@ function getMonthShort(dateStr: string, lang: string): string {
 }
 
 const makeStyles = (C: ColorPalette) => StyleSheet.create({
-  root: { flex: 1, backgroundColor: C.bg },
+  root:   { flex: 1, backgroundColor: C.bg },
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16 },
 
-  hero: { position: "relative", height: 260 },
-  heroImage: { width: "100%", height: "100%" },
-  heroPlaceholder: {
-    backgroundColor: C.card,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-  },
-  heroPlaceholderLabel: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    color: C.textMuted,
-    letterSpacing: 0.4,
-  },
-  heroOverlay: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  heroActions: {
-    position: "absolute",
-    left: 20,
-    right: 20,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  heroRightActions: { flexDirection: "row", gap: 8 },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  verifiedHero: {
-    position: "absolute",
-    bottom: 14,
-    right: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: "rgba(14,17,32,0.75)",
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderWidth: 1,
-    borderColor: C.gold + "55",
-  },
-  verifiedHeroText: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-    color: C.gold,
-  },
+  /* ── Body ── */
+  body: { padding: 20, gap: 20 },
 
-  body: { padding: 20, gap: 16 },
-
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 14,
+  /* ── Name block ── */
+  nameBlock: { gap: 10 },
+  nameRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  typeChip: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 12, borderWidth: 1,
   },
-  typeIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: C.lavender + "18",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: C.lavender + "30",
-    flexShrink: 0,
-  },
-  titleInfo: { flex: 1, gap: 4 },
-  typePill: {
-    fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
-    color: C.lavender,
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-  },
+  typeChipText: { fontSize: 12, fontFamily: "Inter_600SemiBold" },
   venueName: {
-    fontSize: 22,
-    fontFamily: "Inter_700Bold",
-    color: C.text,
-    lineHeight: 28,
+    fontSize: 24, fontFamily: "Inter_700Bold", color: C.text, lineHeight: 30,
   },
+  locationChips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  locationChip: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 9, paddingVertical: 5,
+    borderRadius: 10, borderWidth: 1,
+  },
+  locationChipText: { fontSize: 12, fontFamily: "Inter_400Regular", maxWidth: 200 },
+  ratingRow: { flexDirection: "row", alignItems: "center", gap: 3 },
+  ratingText: { fontSize: 13, fontFamily: "Inter_700Bold", marginLeft: 4 },
+  ratingCount: { fontSize: 12, fontFamily: "Inter_400Regular" },
 
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    backgroundColor: C.card,
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: C.border,
+  /* ── Actions bar ── */
+  actionsBar: { flexDirection: "row", gap: 8 },
+  actionBtn: {
+    flex: 1, flexDirection: "column", alignItems: "center",
+    paddingVertical: 12, borderRadius: 14, borderWidth: 1, gap: 5,
   },
-  infoIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    backgroundColor: C.card2,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  infoText: { flex: 1, gap: 2 },
-  infoLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
-    color: C.textMuted,
-  },
-  infoValue: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: C.text,
-  },
+  actionBtnText: { fontSize: 11, fontFamily: "Inter_500Medium" },
 
-  section: { gap: 12 },
-  sectionTitle: {
-    fontSize: 17,
-    fontFamily: "Inter_700Bold",
-    color: C.text,
+  /* ── Section ── */
+  section: { gap: 10 },
+  sectionTitle: { fontSize: 17, fontFamily: "Inter_700Bold", color: C.text },
+
+  /* ── Description ── */
+  descCard: {
+    borderRadius: 14, borderWidth: 1, padding: 14, gap: 8,
   },
   description: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: C.textMuted,
-    lineHeight: 22,
-    backgroundColor: C.card,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: C.border,
+    fontSize: 14, fontFamily: "Inter_400Regular", lineHeight: 22,
   },
+  readMore: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
 
+  /* ── Practical info ── */
+  infoCard: {
+    borderRadius: 14, borderWidth: 1, padding: 14,
+  },
+  infoRow: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  infoIconWrap: {
+    width: 32, height: 32, borderRadius: 10,
+    alignItems: "center", justifyContent: "center", flexShrink: 0,
+  },
+  infoText: { flex: 1, gap: 2 },
+  infoLabel: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  infoValue: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+
+  /* ── Maps button ── */
   mapsBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    backgroundColor: C.gold,
-    borderRadius: 14,
-    paddingVertical: 15,
-    shadowColor: C.gold,
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 4,
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 10, borderRadius: 14, paddingVertical: 15,
+    shadowColor: C.gold, shadowOpacity: 0.25, shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 }, elevation: 4,
   },
-  mapsBtnText: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-    color: C.bg,
-  },
+  mapsBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
 
+  /* ── Events ── */
   emptyEvents: {
-    alignItems: "center",
-    paddingVertical: 28,
-    gap: 10,
-    backgroundColor: C.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
+    alignItems: "center", paddingVertical: 24, gap: 8,
+    borderRadius: 14, borderWidth: 1,
   },
-  emptyEventsText: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: C.textMuted,
-  },
+  emptyEventsText: { fontSize: 13, fontFamily: "Inter_400Regular" },
   eventRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: C.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 12,
-    gap: 12,
+    flexDirection: "row", alignItems: "center",
+    borderRadius: 12, borderWidth: 1, padding: 11, gap: 12,
   },
   eventDateBox: {
-    width: 56,
-    height: 56,
-    borderRadius: 10,
-    backgroundColor: C.lavender + "18",
-    borderWidth: 1,
-    borderColor: C.lavender + "40",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
+    width: 52, height: 52, borderRadius: 10, borderWidth: 1,
+    alignItems: "center", justifyContent: "center", flexShrink: 0,
   },
-  eventThumb: {
-    width: 56,
-    height: 56,
-    borderRadius: 10,
-    backgroundColor: C.bg,
-    flexShrink: 0,
-  },
-  eventDate: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-    color: C.text,
-  },
-  eventDay: {
-    fontSize: 16,
-    fontFamily: "Inter_700Bold",
-    color: C.lavender,
-    lineHeight: 18,
-  },
-  eventMonth: {
-    fontSize: 10,
-    fontFamily: "Inter_600SemiBold",
-    color: C.lavender,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  eventInfo: { flex: 1, gap: 3 },
-  eventTitle: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    color: C.text,
-  },
-  eventTime: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    color: C.textMuted,
-  },
-  eventPriceWrap: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 4,
-  },
-  eventPrice: {
-    fontSize: 13,
-    fontFamily: "Inter_700Bold",
-    color: C.gold,
-    textAlign: "right",
-  },
-  eventPriceSub: {
-    fontSize: 10,
-    fontFamily: "Inter_400Regular",
-    color: C.textMuted,
-  },
+  eventThumb: { width: 52, height: 52, borderRadius: 10, flexShrink: 0 },
+  eventDay:   { fontSize: 15, fontFamily: "Inter_700Bold", lineHeight: 17 },
+  eventMonth: { fontSize: 9, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5 },
+  eventInfo:  { flex: 1, gap: 2 },
+  eventTitle: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  eventDate:  { fontSize: 11, fontFamily: "Inter_400Regular" },
+  eventTime:  { fontSize: 11, fontFamily: "Inter_400Regular" },
+
+  /* ── Specialties ── */
   specialtyRow: {
-    flexDirection: "row",
-    backgroundColor: C.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 10,
-    gap: 12,
-    marginBottom: 8,
+    flexDirection: "row", borderRadius: 12, borderWidth: 1,
+    padding: 10, gap: 12, marginBottom: 8,
   },
-  specialtyImage: {
-    width: 72,
-    height: 72,
-    borderRadius: 10,
-    backgroundColor: C.bg,
-  },
+  specialtyImage: { width: 68, height: 68, borderRadius: 10 },
   specialtyZoomBadge: {
-    position: "absolute",
-    bottom: 4,
-    right: 4,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    alignItems: "center",
-    justifyContent: "center",
+    position: "absolute", bottom: 4, right: 4,
+    width: 20, height: 20, borderRadius: 10,
+    backgroundColor: "rgba(0,0,0,0.6)", alignItems: "center", justifyContent: "center",
   },
+  specialtyInfo: { flex: 1, justifyContent: "center", gap: 3 },
+  specialtyName:  { fontSize: 14, fontFamily: "Inter_600SemiBold" },
+  specialtyDesc:  { fontSize: 12, fontFamily: "Inter_400Regular" },
+  specialtyPrice: { fontSize: 13, fontFamily: "Inter_700Bold", marginTop: 2 },
+
+  /* ── Reviews ── */
+  reviewsHeader:  { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  avgRatingRow:   { flexDirection: "row", alignItems: "center", gap: 3 },
+  avgRatingText:  { fontSize: 14, fontFamily: "Inter_700Bold" },
+  avgRatingCount: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  noReviews:      { fontSize: 14, fontFamily: "Inter_400Regular" },
+  reviewCard: {
+    borderRadius: 12, borderWidth: 1, padding: 12, marginBottom: 8,
+  },
+  reviewMeta:    { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 6 },
+  starsRow:      { flexDirection: "row", gap: 3 },
+  reviewDate:    { fontSize: 11, fontFamily: "Inter_400Regular" },
+  reviewComment: { fontSize: 13, fontFamily: "Inter_400Regular", lineHeight: 19 },
+  leaveReviewBtn: {
+    marginTop: 12, flexDirection: "row", alignItems: "center",
+    justifyContent: "center", gap: 8, borderRadius: 12, paddingVertical: 13,
+  },
+  leaveReviewText:    { color: "#fff", fontFamily: "Inter_600SemiBold", fontSize: 14 },
+  reviewSuccessText:  { fontSize: 13, fontFamily: "Inter_500Medium", textAlign: "center", marginTop: 8 },
+
+  /* ── Zoom modal ── */
   zoomBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.95)",
-    alignItems: "center",
-    justifyContent: "center",
+    flex: 1, backgroundColor: "rgba(0,0,0,0.95)",
+    alignItems: "center", justifyContent: "center",
   },
   zoomImage: {
     width: Dimensions.get("window").width,
     height: Dimensions.get("window").height * 0.85,
   },
   zoomCloseBtn: {
-    position: "absolute",
-    right: 16,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    alignItems: "center",
-    justifyContent: "center",
+    position: "absolute", right: 16,
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center",
   },
   zoomCaption: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    backgroundColor: "rgba(0,0,0,0.5)",
+    position: "absolute", bottom: 0, left: 0, right: 0,
+    paddingHorizontal: 24, paddingTop: 16, backgroundColor: "rgba(0,0,0,0.5)",
   },
-  zoomCaptionText: {
-    color: "#fff",
-    fontSize: 16,
-    fontFamily: "Inter_600SemiBold",
-    textAlign: "center",
-  },
-  specialtyInfo: {
-    flex: 1,
-    justifyContent: "center",
-    gap: 4,
-  },
-  specialtyName: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: C.text,
-  },
-  specialtyDesc: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: C.textMuted,
-  },
-  specialtyPrice: {
-    fontSize: 13,
-    fontFamily: "Inter_700Bold",
-    color: C.gold,
-    marginTop: 2,
-  },
-  freeBadge: {
-    backgroundColor: C.success + "22",
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: C.success + "55",
-  },
-  freeBadgeText: {
-    fontSize: 11,
-    fontFamily: "Inter_600SemiBold",
-    color: C.success,
-  },
+  zoomCaptionText: { color: "#fff", fontSize: 15, fontFamily: "Inter_600SemiBold", textAlign: "center" },
 
-  emptyText: {
-    fontSize: 16,
-    fontFamily: "Inter_500Medium",
-    color: C.textMuted,
-  },
-  backBtn: {
-    backgroundColor: C.lavender,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-  },
-  backBtnText: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: C.bg,
-  },
-  reviewCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
-    marginBottom: 10,
-  },
+  /* ── States ── */
+  emptyText: { fontSize: 16, fontFamily: "Inter_500Medium", color: C.textMuted },
+  backBtn: { backgroundColor: C.lavender, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 24 },
+  backBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.bg },
 });
