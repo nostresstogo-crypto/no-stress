@@ -759,10 +759,10 @@ export default function AccountScreen() {
 
         <View style={styles.divider} />
 
-        {/* Changer le mot de passe (dans edit-profile) */}
+        {/* Changer le mot de passe */}
         <TouchableOpacity
           style={styles.row}
-          onPress={() => safePush("/edit-profile")}
+          onPress={() => safePush("/change-password")}
           accessibilityLabel={fr ? "Changer le mot de passe" : "Change password"}
           accessibilityRole="button"
         >

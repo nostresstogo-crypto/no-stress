@@ -355,6 +355,7 @@ function RootLayoutNav() {
         <Stack.Screen name="reset-password" options={{ headerShown: false, presentation: "card", gestureEnabled: false }} />
         <Stack.Screen name="partner-pending" options={{ headerShown: false, presentation: "card", gestureEnabled: false }} />
         <Stack.Screen name="edit-profile" options={{ headerShown: false, presentation: "modal" }} />
+        <Stack.Screen name="change-password" options={{ headerShown: false, presentation: "modal" }} />
       </Stack>
 
       {showSplash && (

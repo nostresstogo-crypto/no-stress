@@ -49,7 +49,7 @@ export default function EditProfileScreen() {
   const t = useT();
   const C = useColors();
   const insets = useSafeAreaInsets();
-  const { user, setUser, authFetch, lang, logout, refreshPartnerProfile } = useApp();
+  const { user, setUser, authFetch, lang, refreshPartnerProfile } = useApp();
   const styles = useMemo(() => makeStyles(C), [C]);
 
   const isPartner = user?.role === "structure";
@@ -67,11 +67,6 @@ export default function EditProfileScreen() {
   const [firstName, setFirstName] = useState<string>((user as any)?.firstName || "");
   const [lastName, setLastName] = useState<string>((user as any)?.lastName || "");
   const [gender, setGender] = useState<"F" | "M" | "ND" | "">(((user as any)?.gender as any) || "");
-
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [savingPassword, setSavingPassword] = useState(false);
 
   if (!user) {
     router.replace("/auth");
@@ -160,36 +155,6 @@ export default function EditProfileScreen() {
       Alert.alert(e?.message || (lang === "fr" ? "Erreur serveur" : "Server error"));
     } finally {
       setSavingProfile(false);
-    }
-  };
-
-  const changePassword = async () => {
-    if (savingPassword) return;
-    if (!currentPassword || newPassword.length < 8) {
-      Alert.alert(lang === "fr" ? "Le nouveau mot de passe doit faire au moins 8 caractères." : "New password must be at least 8 characters.");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      Alert.alert(t("passwordsDontMatch"));
-      return;
-    }
-    setSavingPassword(true);
-    try {
-      const url = isPartner ? `${API_BASE}/partners/me/change-password` : `${API_BASE}/users/me/change-password`;
-      const r = await authFetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ currentPassword, newPassword }),
-      });
-      const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data?.error || "Erreur");
-      Alert.alert(t("passwordUpdated"), undefined, [
-        { text: "OK", onPress: () => { logout(); } },
-      ]);
-    } catch (e: any) {
-      Alert.alert(e?.message || (lang === "fr" ? "Erreur serveur" : "Server error"));
-    } finally {
-      setSavingPassword(false);
     }
   };
 
@@ -292,29 +257,6 @@ export default function EditProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t("changePassword")}</Text>
-          <View>
-            <Text style={styles.label}>{t("currentPassword")}</Text>
-            <TextInput value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry style={styles.input} placeholderTextColor={C.textMuted} />
-          </View>
-          <View>
-            <Text style={styles.label}>{t("newPassword")}</Text>
-            <TextInput value={newPassword} onChangeText={setNewPassword} secureTextEntry style={styles.input} placeholderTextColor={C.textMuted} />
-          </View>
-          <View>
-            <Text style={styles.label}>{t("confirmNewPassword")}</Text>
-            <TextInput value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry style={styles.input} placeholderTextColor={C.textMuted} />
-            {confirmPassword.length > 0 && newPassword !== confirmPassword ? (
-              <Text style={{ color: "#dc2626", fontSize: 12, marginTop: 4, fontFamily: "Inter_400Regular" }}>
-                {t("passwordsDontMatch")}
-              </Text>
-            ) : null}
-          </View>
-          <TouchableOpacity style={[styles.primaryBtn, savingPassword && styles.primaryBtnDisabled]} onPress={changePassword} disabled={savingPassword}>
-            <Text style={styles.primaryBtnText}>{savingPassword ? "..." : t("save")}</Text>
-          </TouchableOpacity>
-        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
