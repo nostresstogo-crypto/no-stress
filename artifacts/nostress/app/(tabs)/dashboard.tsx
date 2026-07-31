@@ -25,6 +25,7 @@ import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_SUBSCRIPTION_PLANS } from "@/constants/data";
 import { formatDateLocalized, formatDateTimeLocalized, parseDateLocal } from "@/lib/formatDate";
 import { API_BASE } from "@/lib/apiBase";
+import { uploadToStorage, uploadErrorMessage } from "@/lib/imageUpload";
 import { TimeField } from "@/components/DateTimeField";
 
 interface MyVenue {
@@ -47,45 +48,7 @@ interface MyVenue {
 
 const MAX_VENUE_IMAGES = 3;
 
-async function uploadVenueImage(uri: string, apiBase: string): Promise<{ url: string; blurhash: string | null }> {
-  const lowerUri = uri.toLowerCase();
-  const contentType = lowerUri.endsWith(".png") ? "image/png" : lowerUri.endsWith(".webp") ? "image/webp" : "image/jpeg";
-  // Normaliser le nom : pour blob:/data: URIs, le pop() donne soit un UUID
-  // illisible soit un payload base64 énorme. On génère un nom propre.
-  const isOpaqueUri = uri.startsWith("blob:") || uri.startsWith("data:");
-  const ext = contentType === "image/png" ? "png" : contentType === "image/webp" ? "webp" : "jpg";
-  const name = isOpaqueUri
-    ? `upload-${Date.now()}.${ext}`
-    : (uri.split("/").pop() || `upload-${Date.now()}.${ext}`);
-  let blob: Blob;
-  try {
-    const fileResp = await fetch(uri);
-    if (!fileResp.ok) throw new Error(`fetch local ${fileResp.status}`);
-    blob = await fileResp.blob();
-  } catch (e: any) {
-    throw new Error(`Lecture du fichier impossible: ${e?.message || e}`);
-  }
-  const size = (blob as any).size || 0;
-  if (size === 0) throw new Error("Fichier vide ou illisible");
-  if (size > 10 * 1024 * 1024) throw new Error("Le fichier dépasse 10 Mo");
-  const presignResp = await fetch(`${apiBase}/storage/uploads/request-url`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, size, contentType }),
-  });
-  if (!presignResp.ok) {
-    const txt = await presignResp.text().catch(() => "");
-    throw new Error(`Préparation upload échouée (${presignResp.status}): ${txt.slice(0, 120)}`);
-  }
-  const { uploadURL, objectPath } = await presignResp.json();
-  const putResp = await fetch(uploadURL, { method: "PUT", headers: { "Content-Type": contentType }, body: blob });
-  if (!putResp.ok) {
-    const txt = await putResp.text().catch(() => "");
-    throw new Error(`Envoi photo échoué (${putResp.status}): ${txt.slice(0, 120)}`);
-  }
-  const putData = await putResp.json().catch(() => ({}));
-  return { url: `${apiBase}/storage${objectPath}`, blurhash: putData.blurhash ?? null };
-}
+// Upload centralisé → lib/imageUpload.ts
 
 const NS_MY_VENUES_KEY = "ns_my_venues";
 
@@ -245,7 +208,7 @@ export default function DashboardScreen() {
       const isPersisted = /^https?:\/\//i.test(imageUrl) && !imageUrl.startsWith("blob:");
       if (!isPersisted) {
         try {
-          const { url } = await uploadVenueImage(imageUrl, API_BASE);
+          const { url } = await uploadToStorage(imageUrl, { context: "card" });
           imageUrl = url;
         } catch (e: any) {
           console.warn("specialty upload failed", e?.message);
@@ -312,7 +275,7 @@ export default function DashboardScreen() {
           uploaded.push(uri);
         } else {
           try {
-            const { url, blurhash } = await uploadVenueImage(uri, API_BASE);
+            const { url, blurhash } = await uploadToStorage(uri, { context: "gallery" });
             uploaded.push(url);
             if (!firstVenueBlurhash && blurhash) firstVenueBlurhash = blurhash;
           }

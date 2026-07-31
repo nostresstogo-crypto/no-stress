@@ -23,42 +23,10 @@ import { useT, useApp, useColors } from "@/context/AppContext";
 import { CategoryKey } from "@/constants/data";
 import type { MyEvent } from "@/context/AppContext";
 import { API_BASE } from "@/lib/apiBase";
+import { uploadToStorage } from "@/lib/imageUpload";
 import { DateField, TimeField, todayISO } from "@/components/DateTimeField";
 
-async function uploadImageToBackend(uri: string): Promise<{ url: string; blurhash: string | null }> {
-  const lowerUri = uri.toLowerCase();
-  const contentType = lowerUri.endsWith(".png")
-    ? "image/png"
-    : lowerUri.endsWith(".webp")
-    ? "image/webp"
-    : "image/jpeg";
-  const name = uri.split("/").pop() || "upload.jpg";
-
-  const fileResp = await fetch(uri);
-  const blob = await fileResp.blob();
-  const size = (blob as any).size || 0;
-
-  const presignResp = await fetch(`${API_BASE}/storage/uploads/request-url`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, size, contentType }),
-  });
-  if (!presignResp.ok) {
-    const err = await presignResp.json().catch(() => ({}));
-    throw new Error(err.error || "Échec de la préparation de l'upload");
-  }
-  const { uploadURL, objectPath } = await presignResp.json();
-  const putResp = await fetch(uploadURL, {
-    method: "PUT",
-    headers: { "Content-Type": contentType },
-    body: blob,
-  });
-  if (!putResp.ok) {
-    throw new Error("Échec de l'envoi du fichier (HTTP " + putResp.status + ")");
-  }
-  const putData = await putResp.json().catch(() => ({}));
-  return { url: `${API_BASE}/storage${objectPath}`, blurhash: putData.blurhash ?? null };
-}
+// Upload centralisé → lib/imageUpload.ts
 
 type FormData = {
   titleFr: string;
@@ -238,7 +206,7 @@ export default function CreateEventScreen() {
         if (!trimmed) continue;
         if (trimmed.startsWith("file:") || trimmed.startsWith("content:") || trimmed.startsWith("ph:") || trimmed.startsWith("/")) {
           try {
-            const { url, blurhash } = await uploadImageToBackend(trimmed);
+            const { url, blurhash } = await uploadToStorage(trimmed, { context: "gallery" });
             uploadedImages.push(url);
             if (!firstBlurhash && blurhash) firstBlurhash = blurhash;
           } catch (uploadErr: any) {

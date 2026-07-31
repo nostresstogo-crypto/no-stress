@@ -19,25 +19,9 @@ import * as ImagePicker from "expo-image-picker";
 import { useApp, useColors, useT } from "@/context/AppContext";
 import { ColorPalette } from "@/constants/colors";
 import { API_BASE } from "@/lib/apiBase";
+import { uploadToStorage, uploadErrorMessage } from "@/lib/imageUpload";
 
-async function uploadImage(uri: string): Promise<string> {
-  const lower = uri.toLowerCase();
-  const contentType = lower.endsWith(".png") ? "image/png" : lower.endsWith(".webp") ? "image/webp" : "image/jpeg";
-  const name = uri.split("/").pop() || "upload.jpg";
-  const fileResp = await fetch(uri);
-  const blob = await fileResp.blob();
-  const size = (blob as any).size || 0;
-  const presignResp = await fetch(`${API_BASE}/storage/uploads/request-url`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, size, contentType }),
-  });
-  if (!presignResp.ok) throw new Error("upload prep failed");
-  const { uploadURL, objectPath } = await presignResp.json();
-  const putResp = await fetch(uploadURL, { method: "PUT", headers: { "Content-Type": contentType }, body: blob });
-  if (!putResp.ok) throw new Error("upload failed");
-  return `${API_BASE}/storage${objectPath}`;
-}
+// Upload centralisé → lib/imageUpload.ts
 
 function makeStyles(C: ColorPalette) {
   return StyleSheet.create({
@@ -108,10 +92,13 @@ export default function EditProfileScreen() {
     if (result.canceled || !result.assets?.[0]?.uri) return;
     setUploading(true);
     try {
-      const url = await uploadImage(result.assets[0].uri);
+      const { url } = await uploadToStorage(result.assets[0].uri, { context: "avatar" });
       setProfileImage(url);
-    } catch {
-      Alert.alert(lang === "fr" ? "Échec de l'envoi" : "Upload failed");
+    } catch (err: any) {
+      const msg = err && typeof err === "object" && "kind" in err
+        ? uploadErrorMessage(err, lang as "fr" | "en")
+        : (lang === "fr" ? "Échec de l'envoi" : "Upload failed");
+      Alert.alert(lang === "fr" ? "Erreur" : "Error", msg);
     } finally {
       setUploading(false);
     }
