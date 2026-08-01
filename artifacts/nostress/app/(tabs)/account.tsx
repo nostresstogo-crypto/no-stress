@@ -26,6 +26,7 @@ import {
 } from "react-native";
 import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
+import Svg, { Path } from "react-native-svg";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
 import { safePush } from "@/lib/navigation";
@@ -38,7 +39,10 @@ import { API_BASE } from "@/lib/apiBase";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const SUPPORT_WHATSAPP_URL = `https://wa.me/22872770767?text=${encodeURIComponent("Bonjour NoStress, j'ai besoin d'aide.")}`;
+const SUPPORT_WHATSAPP_URL = `https://wa.me/22896847164?text=${encodeURIComponent("Bonjour NoStress, j'ai besoin d'aide.")}`;
+const TIKTOK_URL      = "https://www.tiktok.com/@nostress_events";
+const INSTAGRAM_URL   = "https://www.instagram.com/nostress_events_";
+const FACEBOOK_URL    = "https://www.facebook.com/share/1JP3WvE1Ng/";
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
@@ -1068,6 +1072,53 @@ export default function AccountScreen() {
           </View>
           <Text style={styles.rowLabel}>{fr ? "Support WhatsApp" : "WhatsApp support"}</Text>
           <Ionicons name="chevron-forward" size={18} color={C.textMuted} />
+        </TouchableOpacity>
+
+        <View style={styles.divider} />
+
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() => Linking.openURL(TIKTOK_URL).catch(() => {})}
+          accessibilityLabel="TikTok"
+          accessibilityRole="button"
+        >
+          <View style={[styles.iconWrap, { backgroundColor: "#01000122" }]}>
+            <Svg viewBox="0 0 24 24" width={18} height={18} fill="#010101">
+              <Path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.76a4.85 4.85 0 01-1.01-.07z"/>
+            </Svg>
+          </View>
+          <Text style={styles.rowLabel}>TikTok</Text>
+          <Ionicons name="open-outline" size={16} color={C.textMuted} />
+        </TouchableOpacity>
+
+        <View style={styles.divider} />
+
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() => Linking.openURL(INSTAGRAM_URL).catch(() => {})}
+          accessibilityLabel="Instagram"
+          accessibilityRole="button"
+        >
+          <View style={[styles.iconWrap, { backgroundColor: "#E1306C" + "22" }]}>
+            <Ionicons name="logo-instagram" size={18} color="#E1306C" />
+          </View>
+          <Text style={styles.rowLabel}>Instagram</Text>
+          <Ionicons name="open-outline" size={16} color={C.textMuted} />
+        </TouchableOpacity>
+
+        <View style={styles.divider} />
+
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() => Linking.openURL(FACEBOOK_URL).catch(() => {})}
+          accessibilityLabel="Facebook"
+          accessibilityRole="button"
+        >
+          <View style={[styles.iconWrap, { backgroundColor: "#1877F2" + "22" }]}>
+            <Ionicons name="logo-facebook" size={18} color="#1877F2" />
+          </View>
+          <Text style={styles.rowLabel}>Facebook</Text>
+          <Ionicons name="open-outline" size={16} color={C.textMuted} />
         </TouchableOpacity>
 
         <View style={styles.divider} />
