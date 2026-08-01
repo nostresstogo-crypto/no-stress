@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/nostress-web/static/css/main.a3629f93.css",
-    "main.js": "/nostress-web/static/js/main.0876af3a.js",
+    "main.js": "/nostress-web/static/js/main.d57aaf6f.js",
     "index.html": "/nostress-web/index.html",
     "main.a3629f93.css.map": "/nostress-web/static/css/main.a3629f93.css.map",
-    "main.0876af3a.js.map": "/nostress-web/static/js/main.0876af3a.js.map"
+    "main.d57aaf6f.js.map": "/nostress-web/static/js/main.d57aaf6f.js.map"
   },
   "entrypoints": [
     "static/css/main.a3629f93.css",
-    "static/js/main.0876af3a.js"
+    "static/js/main.d57aaf6f.js"
   ]
 }

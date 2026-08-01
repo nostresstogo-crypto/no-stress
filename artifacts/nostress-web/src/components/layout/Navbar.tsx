@@ -19,7 +19,6 @@ export function Navbar() {
     { href: "/", label: t("nav.home") },
     { href: "/conditions-utilisation", label: t("nav.terms") },
     { href: "/politique-confidentialite", label: t("nav.privacy") },
-    { href: "/suppression-compte", label: t("nav.delete") },
     { href: "/contact", label: t("nav.contact") },
   ];
 

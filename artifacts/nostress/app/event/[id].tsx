@@ -25,6 +25,7 @@ import { useT, useApp, useColors } from "@/context/AppContext";
 import { MOCK_EVENTS } from "@/constants/data";
 import { formatDateLocalized } from "@/lib/formatDate";
 import { API_BASE } from "@/lib/apiBase";
+import { APP_STORE_LINKS } from "@/constants/appLinks";
 import ReportButton from "@/components/ReportButton";
 import ReviewModal from "@/components/ReviewModal";
 import { NavigationOptionsSheet } from "@/components/common/NavigationOptionsSheet";
@@ -208,9 +209,25 @@ export default function EventDetailScreen() {
 
   const handleShare = async () => {
     try {
+      const imageUrl = event.imageUrl
+        ? `${API_BASE}/storage${event.imageUrl}`
+        : null;
+      const downloadLine =
+        lang === "fr"
+          ? `📲 Télécharge l'app NoStress :\nAndroid : ${APP_STORE_LINKS.googlePlay}\niOS : ${APP_STORE_LINKS.appStore}`
+          : `📲 Download the NoStress app:\nAndroid: ${APP_STORE_LINKS.googlePlay}\niOS: ${APP_STORE_LINKS.appStore}`;
+      const parts: string[] = [
+        `${title} — ${formattedDate}`,
+        event.venue
+          ? `📍 ${event.venue}${event.city ? `, ${event.city}` : ""}`
+          : "",
+        ...(imageUrl ? [imageUrl] : []),
+        "",
+        downloadLine,
+      ];
       await Share.share({
         title,
-        message: `${title} - ${formattedDate} at ${event.venue}, ${event.city}`,
+        message: parts.filter(Boolean).join("\n"),
       });
     } catch {}
   };
