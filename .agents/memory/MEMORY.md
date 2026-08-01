@@ -1,1 +1,2 @@
 - [lib-db-dist-build](lib-db-dist-build.md) — lib/db and other lib/* packages need their dist/ built before api-server tsc can resolve exports.
+- [nostress-web-cra-startup](nostress-web-cra-startup.md) — CRA 5 + WDS v4 + Node v24 hangs; serve-build.cjs (static prod-build server) is the only reliable workflow solution.
