@@ -54,6 +54,8 @@ export const partnersTable = pgTable("partners", {
   subscriptionUntil: timestamp("subscription_until"),
   subscriptionStart: timestamp("subscription_start"),
   subscriptionWarningSentAt: timestamp("subscription_warning_sent_at"),
+  subscriptionWarningEmailSentAt: timestamp("subscription_warning_email_sent_at"),
+  subscriptionWarningPushSentAt: timestamp("subscription_warning_push_sent_at"),
   displayName: text("display_name"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
