@@ -32,6 +32,7 @@ import {
   CalendarPlus,
   RefreshCw,
   Ban,
+  BellRing,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -373,6 +374,16 @@ export default function Partners() {
                             {formatDateShort(partner.subscription?.subscriptionStart)} → {formatDateShort(partner.subscription?.subscriptionUntil || partner.subscriptionUntil)}
                           </span>
                         )}
+                        {partner.status === "approved" && (partner.subscriptionWarningEmailSentAt || partner.subscriptionWarningPushSentAt) && (
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span title={partner.subscriptionWarningEmailSentAt ? `Email envoyé le ${formatDateShort(partner.subscriptionWarningEmailSentAt)}` : "Email non envoyé"}>
+                              <Mail className={`w-3 h-3 ${partner.subscriptionWarningEmailSentAt ? "text-blue-400" : "text-muted-foreground/40"}`} />
+                            </span>
+                            <span title={partner.subscriptionWarningPushSentAt ? `Push envoyé le ${formatDateShort(partner.subscriptionWarningPushSentAt)}` : "Push non envoyé"}>
+                              <BellRing className={`w-3 h-3 ${partner.subscriptionWarningPushSentAt ? "text-purple-400" : "text-muted-foreground/40"}`} />
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
@@ -523,6 +534,35 @@ export default function Partners() {
                     </p>
                   </div>
                   <SubscriptionBadge partner={selected} />
+                </div>
+              )}
+
+              {selected.status === "approved" && (selected.subscription?.subscriptionUntil || selected.subscriptionUntil) && (
+                <div className="bg-muted/30 rounded-lg p-3">
+                  <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1.5">
+                    <BellRing className="w-3.5 h-3.5" />
+                    Avertissement d'expiration
+                  </p>
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <Mail className={`w-3.5 h-3.5 ${selected.subscriptionWarningEmailSentAt ? "text-blue-400" : "text-muted-foreground/40"}`} />
+                      <span className="text-xs">
+                        <span className="text-muted-foreground">Email : </span>
+                        {selected.subscriptionWarningEmailSentAt
+                          ? <span className="text-foreground">envoyé le {formatDateShort(selected.subscriptionWarningEmailSentAt)}</span>
+                          : <span className="text-muted-foreground/60">non envoyé</span>}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <BellRing className={`w-3.5 h-3.5 ${selected.subscriptionWarningPushSentAt ? "text-purple-400" : "text-muted-foreground/40"}`} />
+                      <span className="text-xs">
+                        <span className="text-muted-foreground">Push : </span>
+                        {selected.subscriptionWarningPushSentAt
+                          ? <span className="text-foreground">envoyé le {formatDateShort(selected.subscriptionWarningPushSentAt)}</span>
+                          : <span className="text-muted-foreground/60">non envoyé</span>}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               )}
 

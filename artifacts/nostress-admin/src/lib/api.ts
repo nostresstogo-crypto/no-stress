@@ -307,6 +307,8 @@ export interface Partner {
   statusUntil: string | null;
   subscriptionUntil?: string | null;
   subscription?: { active: boolean; subscriptionUntil: string | null; subscriptionStart: string | null; daysRemaining: number };
+  subscriptionWarningEmailSentAt?: string | null;
+  subscriptionWarningPushSentAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
