@@ -39,7 +39,6 @@ EXPO_PUBLIC_HAS_IMAGE_TRANSFORM = "true"
 
 [userenv.development]
 ADMIN_EMAIL = "tamekloes@gmail.com"
-ADMIN_CC_EMAIL = "Bentchambago17@gmail.com"
 
 [userenv.production]
 ADMIN_EMAIL = "nostresstogo@gmail.com"
