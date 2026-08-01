@@ -369,8 +369,8 @@ export default function Partners() {
                       <div className="flex flex-col gap-0.5">
                         <SubscriptionBadge partner={partner} />
                         {partner.status === "approved" && (partner.subscription?.subscriptionUntil || partner.subscriptionUntil) && (
-                          <span className="text-[10px] text-muted-foreground">
-                            exp. {formatDateShort(partner.subscription?.subscriptionUntil || partner.subscriptionUntil)}
+                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                            {formatDateShort(partner.subscription?.subscriptionStart)} → {formatDateShort(partner.subscription?.subscriptionUntil || partner.subscriptionUntil)}
                           </span>
                         )}
                       </div>
