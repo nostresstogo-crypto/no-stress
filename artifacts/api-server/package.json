@@ -8,6 +8,7 @@
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
+    "backfill:blurhash": "node ./build.mjs && node --enable-source-maps ./dist/scripts/backfill-blurhash.mjs",
     "typecheck": "tsc -b ../../lib/db ../../lib/api-zod ../../lib/integrations-openai-ai-server && tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
