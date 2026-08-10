@@ -60,8 +60,8 @@ export default function Contact() {
               <Mail className="w-5 h-5 text-primary mt-0.5 shrink-0" />
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Email</p>
-                <a href="mailto:nostresstogo@gmail.com" className="text-sm font-medium hover:text-primary transition">
-                  nostresstogo@gmail.com
+                <a href="mailto:contact@nostress.tg" className="text-sm font-medium hover:text-primary transition">
+                  contact@nostress.tg
                 </a>
               </div>
             </div>
