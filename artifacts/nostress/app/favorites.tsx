@@ -13,9 +13,9 @@ import React, {
 } from "react";
 import {
   Animated,
+  FlatList,
   Platform,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -255,16 +255,24 @@ export default function FavoritesScreen() {
       </View>
 
       {/* ── Content ── */}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={[s.content, { paddingBottom: Platform.OS === "web" ? 118 : 100 }]}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.lavender} />
-        }
-      >
-        {activeTab === "events" ? (
-          evCount === 0 ? (
+      {activeTab === "events" ? (
+        <FlatList
+          data={favoriteEvents}
+          keyExtractor={(e) => e.id}
+          style={{ flex: 1 }}
+          contentContainerStyle={[s.content, s.listPadding, { paddingBottom: Platform.OS === "web" ? 118 : 100 }, evCount === 0 && { flex: 1 }]}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.lavender} />
+          }
+          renderItem={({ item: event }) => (
+            <EventCard
+              event={event}
+              variant="homeCompact"
+              onPress={() => safePush(`/event/${event.id}`)}
+            />
+          )}
+          ListEmptyComponent={
             <EmptyState
               C={C}
               icon="heart-outline"
@@ -273,75 +281,87 @@ export default function FavoritesScreen() {
                 ? "Appuyez sur ❤ sur un événement pour l'ajouter ici."
                 : "Tap ❤ on an event to save it here."}
             />
-          ) : (
-            <View style={s.list}>
-              {favoriteEvents.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={event}
-                  variant="homeCompact"
-                  onPress={() => safePush(`/event/${event.id}`)}
-                />
-              ))}
-            </View>
-          )
+          }
+          removeClippedSubviews
+          maxToRenderPerBatch={6}
+          windowSize={5}
+          initialNumToRender={8}
+        />
+      ) : (
+        /* Venues tab */
+        loadingVenues && vlCount > 0 ? (
+          <FlatList
+            data={favoriteVenues}
+            keyExtractor={(vid) => vid}
+            style={{ flex: 1 }}
+            contentContainerStyle={[s.content, s.listPadding, { paddingBottom: Platform.OS === "web" ? 118 : 100 }]}
+            showsVerticalScrollIndicator={false}
+            renderItem={() => <SkeletonRow C={C} />}
+            removeClippedSubviews
+            maxToRenderPerBatch={6}
+            windowSize={5}
+            initialNumToRender={8}
+          />
         ) : (
-          /* Venues tab */
-          loadingVenues && vlCount > 0 ? (
-            <View style={s.list}>
-              {favoriteVenues.map((_, i) => <SkeletonRow key={i} C={C} />)}
-            </View>
-          ) : vlCount === 0 ? (
-            <EmptyState
-              C={C}
-              icon="location-outline"
-              title={lang === "fr" ? "Aucun lieu favori" : "No favorite venues"}
-              subtitle={lang === "fr"
-                ? "Retrouvez vos lieux préférés ici après les avoir ajoutés."
-                : "Your saved venues will appear here."}
-            />
-          ) : (
-            <View style={s.list}>
-              {favoriteVenues.map((vid) => {
-                const numId = vid.startsWith("api_") ? vid.slice(4) : vid;
-                const navId = vid.startsWith("api_") ? vid : `api_${vid}`;
-                const detail = venueDetails[numId];
+          <FlatList
+            data={favoriteVenues}
+            keyExtractor={(vid) => vid}
+            style={{ flex: 1 }}
+            contentContainerStyle={[s.content, s.listPadding, { paddingBottom: Platform.OS === "web" ? 118 : 100 }, vlCount === 0 && { flex: 1 }]}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.lavender} />
+            }
+            renderItem={({ item: vid }) => {
+              const numId = vid.startsWith("api_") ? vid.slice(4) : vid;
+              const navId = vid.startsWith("api_") ? vid : `api_${vid}`;
+              const detail = venueDetails[numId];
 
-                if (!detail) {
-                  // Not yet loaded — show compact placeholder row
-                  return (
-                    <TouchableOpacity
-                      key={vid}
-                      style={[s.venueRow, { backgroundColor: C.card, borderColor: C.border }]}
-                      onPress={() => safePush(`/venue/${navId}`)}
-                      activeOpacity={0.85}
-                    >
-                      <View style={[s.venueIconWrap, { backgroundColor: C.card2 }]}>
-                        <Ionicons name="business-outline" size={20} color={C.textMuted} />
-                      </View>
-                      <Text style={[s.venueRowName, { color: C.text }]} numberOfLines={1}>
-                        {lang === "fr" ? `Lieu #${numId}` : `Venue #${numId}`}
-                      </Text>
-                      <Ionicons name="chevron-forward" size={16} color={C.textMuted} />
-                    </TouchableOpacity>
-                  );
-                }
-
+              if (!detail) {
                 return (
-                  <VenueCard
-                    key={vid}
-                    venue={detail}
-                    variant="compact"
+                  <TouchableOpacity
+                    style={[s.venueRow, { backgroundColor: C.card, borderColor: C.border }]}
                     onPress={() => safePush(`/venue/${navId}`)}
-                    isFavorite={isFavoriteVenue(vid)}
-                    onToggleFavorite={() => toggleFavoriteVenue(vid)}
-                  />
+                    activeOpacity={0.85}
+                  >
+                    <View style={[s.venueIconWrap, { backgroundColor: C.card2 }]}>
+                      <Ionicons name="business-outline" size={20} color={C.textMuted} />
+                    </View>
+                    <Text style={[s.venueRowName, { color: C.text }]} numberOfLines={1}>
+                      {lang === "fr" ? `Lieu #${numId}` : `Venue #${numId}`}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={C.textMuted} />
+                  </TouchableOpacity>
                 );
-              })}
-            </View>
-          )
-        )}
-      </ScrollView>
+              }
+
+              return (
+                <VenueCard
+                  venue={detail}
+                  variant="compact"
+                  onPress={() => safePush(`/venue/${navId}`)}
+                  isFavorite={isFavoriteVenue(vid)}
+                  onToggleFavorite={() => toggleFavoriteVenue(vid)}
+                />
+              );
+            }}
+            ListEmptyComponent={
+              <EmptyState
+                C={C}
+                icon="location-outline"
+                title={lang === "fr" ? "Aucun lieu favori" : "No favorite venues"}
+                subtitle={lang === "fr"
+                  ? "Retrouvez vos lieux préférés ici après les avoir ajoutés."
+                  : "Your saved venues will appear here."}
+              />
+            }
+            removeClippedSubviews
+            maxToRenderPerBatch={6}
+            windowSize={5}
+            initialNumToRender={8}
+          />
+        )
+      )}
     </View>
   );
 }
@@ -421,6 +441,7 @@ const s = StyleSheet.create({
   /* Content */
   content: { paddingTop: 16 },
   list: { paddingHorizontal: 20, gap: 0 },
+  listPadding: { paddingHorizontal: 20 },
 
   /* Venue compact fallback row */
   venueRow: {

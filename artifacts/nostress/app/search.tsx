@@ -470,6 +470,10 @@ export default function SearchScreen() {
           }
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
+          removeClippedSubviews
+          maxToRenderPerBatch={6}
+          windowSize={5}
+          initialNumToRender={8}
         />
       ) : (
         <FlatList
@@ -505,6 +509,10 @@ export default function SearchScreen() {
           }
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
+          removeClippedSubviews
+          maxToRenderPerBatch={6}
+          windowSize={5}
+          initialNumToRender={8}
         />
       )}
 
