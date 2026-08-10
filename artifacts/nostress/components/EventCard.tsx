@@ -220,6 +220,8 @@ export function EventCard({ event, onPress, horizontal = false, variant }: Event
             placeholderKind="event"
             fallbackIconSize={24}
             debugContext="EventCard.homeCompact"
+            thumbWidth={80}
+            thumbHeight={80}
           />
           {safeCategory ? (
             <View style={styles.compactCatBadge}>
@@ -292,6 +294,8 @@ export function EventCard({ event, onPress, horizontal = false, variant }: Event
           placeholderKind="event"
           fallbackIconSize={32}
           debugContext="EventCard.default"
+          thumbWidth={480}
+          thumbHeight={320}
         />
         <TouchableOpacity
           style={styles.favBtn}
