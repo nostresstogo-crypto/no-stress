@@ -120,6 +120,21 @@ export const api = {
         totalVenues: number;
       }>("/admin/stats"),
   },
+  notifications: {
+    partnerNotifications: (missedOnly: boolean) =>
+      request<{ notifications: Array<{
+        id: number;
+        partnerId: number;
+        partnerName: string;
+        partnerEmail: string;
+        type: string;
+        titleFr: string;
+        bodyFr: string;
+        pushSent: number;
+        readAt: string | null;
+        createdAt: string;
+      }> }>(`/admin/partner-notifications?missed=${missedOnly}`),
+  },
   partners: {
     list: (status?: string) =>
       request<Partner[]>(`/partners${status ? `?status=${status}` : ""}`),

@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
-import { eq, sql, and, desc, ilike, or, inArray } from "drizzle-orm";
-import { db, adminsTable, partnersTable, eventsTable, deletionRequestsTable, usersTable, venuesTable, reviewsTable } from "@workspace/db";
+import { eq, sql, and, desc, ilike, or, inArray, isNull } from "drizzle-orm";
+import { db, adminsTable, partnersTable, eventsTable, deletionRequestsTable, usersTable, venuesTable, reviewsTable, partnerNotificationsTable } from "@workspace/db";
 import {
   hashPassword,
   verifyPassword,
@@ -907,6 +907,38 @@ router.delete("/admin/reviews/:id", requireAdmin, async (req, res) => {
   const [deleted] = await db.delete(reviewsTable).where(eq(reviewsTable.id, id)).returning();
   if (!deleted) return res.status(404).json({ error: "Avis introuvable." });
   return res.json({ message: "Avis supprimé.", deleted: { ...deleted, id: String(deleted.id) } });
+});
+
+/* ─── Admin: partner notification delivery log ───────────────────────────── */
+
+// GET /api/admin/partner-notifications?missed=true — list partner notifications with partner info
+// missed=true → only notifications where push_sent = 0
+router.get("/admin/partner-notifications", requireAdmin, async (req, res) => {
+  const missedOnly = req.query.missed === "true";
+  const limit = Math.min(200, Math.max(1, parseInt(String(req.query.limit ?? "100"), 10) || 100));
+  const offset = Math.max(0, parseInt(String(req.query.offset ?? "0"), 10) || 0);
+
+  const rows = await db
+    .select({
+      id: partnerNotificationsTable.id,
+      partnerId: partnerNotificationsTable.partnerId,
+      type: partnerNotificationsTable.type,
+      titleFr: partnerNotificationsTable.titleFr,
+      bodyFr: partnerNotificationsTable.bodyFr,
+      pushSent: partnerNotificationsTable.pushSent,
+      readAt: partnerNotificationsTable.readAt,
+      createdAt: partnerNotificationsTable.createdAt,
+      partnerName: partnersTable.businessName,
+      partnerEmail: partnersTable.email,
+    })
+    .from(partnerNotificationsTable)
+    .innerJoin(partnersTable, eq(partnerNotificationsTable.partnerId, partnersTable.id))
+    .where(missedOnly ? eq(partnerNotificationsTable.pushSent, 0) : undefined)
+    .orderBy(desc(partnerNotificationsTable.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  return res.json({ notifications: rows });
 });
 
 export { requireAdmin, requireSuperAdmin };

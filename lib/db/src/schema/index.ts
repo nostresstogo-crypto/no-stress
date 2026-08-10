@@ -335,5 +335,22 @@ export const reviewsTable = pgTable("reviews", {
 export type Review = typeof reviewsTable.$inferSelect;
 export type InsertReview = typeof reviewsTable.$inferInsert;
 
+export const partnerNotificationsTable = pgTable("partner_notifications", {
+  id: serial("id").primaryKey(),
+  partnerId: integer("partner_id").notNull().references(() => partnersTable.id, { onDelete: "cascade" }),
+  type: text("type").notNull(), // account_approved | account_rejected | event_deleted | subscription_extended | password_changed
+  titleFr: text("title_fr").notNull(),
+  titleEn: text("title_en").notNull(),
+  bodyFr: text("body_fr").notNull(),
+  bodyEn: text("body_en").notNull(),
+  data: jsonb("data"),
+  pushSent: integer("push_sent").notNull().default(0), // number of push tokens the notification was delivered to (0 = no token found)
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type PartnerNotification = typeof partnerNotificationsTable.$inferSelect;
+export type InsertPartnerNotification = typeof partnerNotificationsTable.$inferInsert;
+
 export * from "./conversations";
 export * from "./messages";

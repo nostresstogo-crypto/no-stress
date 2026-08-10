@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull, desc, sql } from "drizzle-orm";
 import {
   db,
   usersTable,
@@ -8,6 +8,7 @@ import {
   eventsTable,
   venuesTable,
   reviewsTable,
+  partnerNotificationsTable,
 } from "@workspace/db";
 import {
   requireAuth,
@@ -394,6 +395,65 @@ router.get("/partners/me/stats", requireAuth, async (req: any, res) => {
   }
 
   return res.json({ reviewCount, averageRating });
+});
+
+/* ─── Partner: in-app notification inbox ─────────────────────────────────── */
+
+// GET /api/partners/me/notifications — fetch recent notifications (newest first)
+router.get("/partners/me/notifications", requireAuth, async (req: any, res) => {
+  const partnerId = partnerIdFromAuth(req.auth);
+  if (partnerId == null) return res.status(403).json({ error: "Réservé aux partenaires." });
+
+  const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit ?? "50"), 10) || 50));
+  const offset = Math.max(0, parseInt(String(req.query.offset ?? "0"), 10) || 0);
+
+  const rows = await db
+    .select()
+    .from(partnerNotificationsTable)
+    .where(eq(partnerNotificationsTable.partnerId, partnerId))
+    .orderBy(desc(partnerNotificationsTable.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  const unreadCount = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(partnerNotificationsTable)
+    .where(and(eq(partnerNotificationsTable.partnerId, partnerId), isNull(partnerNotificationsTable.readAt)))
+    .then((r) => r[0]?.count ?? 0);
+
+  return res.json({ notifications: rows, unreadCount });
+});
+
+// PATCH /api/partners/me/notifications/read — mark notifications as read
+// Body: { ids?: number[] } — if omitted, mark all as read
+router.patch("/partners/me/notifications/read", requireAuth, async (req: any, res) => {
+  const partnerId = partnerIdFromAuth(req.auth);
+  if (partnerId == null) return res.status(403).json({ error: "Réservé aux partenaires." });
+
+  const ids: number[] | undefined = req.body?.ids;
+  const now = new Date();
+
+  if (Array.isArray(ids) && ids.length > 0) {
+    await db
+      .update(partnerNotificationsTable)
+      .set({ readAt: now })
+      .where(and(
+        eq(partnerNotificationsTable.partnerId, partnerId),
+        isNull(partnerNotificationsTable.readAt),
+        inArray(partnerNotificationsTable.id, ids),
+      ));
+  } else {
+    // mark all unread
+    await db
+      .update(partnerNotificationsTable)
+      .set({ readAt: now })
+      .where(and(
+        eq(partnerNotificationsTable.partnerId, partnerId),
+        isNull(partnerNotificationsTable.readAt),
+      ));
+  }
+
+  return res.json({ message: "Notifications marquées comme lues." });
 });
 
 export default router;

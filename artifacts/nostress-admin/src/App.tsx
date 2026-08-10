@@ -17,6 +17,7 @@ import Settings from "@/pages/Settings";
 import Managers from "@/pages/Managers";
 import Users from "@/pages/Users";
 import Reviews from "@/pages/Reviews";
+import Notifications from "@/pages/Notifications";
 
 const queryClient = new QueryClient();
 
@@ -82,6 +83,9 @@ function Router() {
       </Route>
       <Route path="/avis">
         <ProtectedRoute component={Reviews} />
+      </Route>
+      <Route path="/notifications">
+        <ProtectedRoute component={Notifications} />
       </Route>
       <Route path="/profil">
         <ProtectedRoute component={Profile} />

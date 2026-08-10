@@ -19,6 +19,7 @@ import {
   UsersRound,
   UserX,
   Star,
+  Bell,
 } from "lucide-react";
 
 const superadminNavItems = [
@@ -28,6 +29,7 @@ const superadminNavItems = [
   { href: "/publications", label: "Publications", icon: FileText },
   { href: "/utilisateurs", label: "Utilisateurs", icon: UserX },
   { href: "/avis", label: "Avis & Notes", icon: Star },
+  { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/suppressions", label: "Suppressions de compte", icon: Trash2 },
   { href: "/statistiques", label: "Statistiques", icon: BarChart2 },
   { href: "/gestionnaires", label: "Gestionnaires", icon: UsersRound },
@@ -42,6 +44,7 @@ const gestionnaireNavItems = [
   { href: "/publications", label: "Publications", icon: FileText },
   { href: "/utilisateurs", label: "Utilisateurs", icon: UserX },
   { href: "/avis", label: "Avis & Notes", icon: Star },
+  { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/profil", label: "Mon profil", icon: UserCog },
 ];
 

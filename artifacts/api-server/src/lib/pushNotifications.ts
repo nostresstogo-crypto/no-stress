@@ -4,9 +4,57 @@ import {
   eventsTable,
   venuesTable,
   favoritesTable,
+  partnerNotificationsTable,
 } from "@workspace/db";
 import { and, eq, ilike, inArray, sql } from "drizzle-orm";
 import { logger } from "./logger.js";
+
+/* ─── persist a notification for a partner (always, regardless of push token) ── */
+
+// Inserts the inbox row immediately (pushSent = 0) and returns its id so the
+// caller can update it with the real delivery count once Expo has responded.
+async function persistPartnerNotification(input: {
+  partnerId: number;
+  type: string;
+  titleFr: string;
+  titleEn: string;
+  bodyFr: string;
+  bodyEn: string;
+  data?: Record<string, unknown>;
+}): Promise<number | null> {
+  try {
+    const [row] = await db
+      .insert(partnerNotificationsTable)
+      .values({
+        partnerId: input.partnerId,
+        type: input.type,
+        titleFr: input.titleFr,
+        titleEn: input.titleEn,
+        bodyFr: input.bodyFr,
+        bodyEn: input.bodyEn,
+        data: input.data ?? null,
+        pushSent: 0, // updated after push attempt
+      })
+      .returning({ id: partnerNotificationsTable.id });
+    return row?.id ?? null;
+  } catch (err) {
+    logger.warn({ err, partnerId: input.partnerId, type: input.type }, "[push] persistPartnerNotification failed");
+    return null;
+  }
+}
+
+// Updates pushSent on an already-persisted notification row once Expo responds.
+async function updatePushSent(notificationId: number | null, pushSent: number): Promise<void> {
+  if (notificationId == null) return;
+  try {
+    await db
+      .update(partnerNotificationsTable)
+      .set({ pushSent })
+      .where(eq(partnerNotificationsTable.id, notificationId));
+  } catch (err) {
+    logger.warn({ err, notificationId }, "[push] updatePushSent failed");
+  }
+}
 
 export type ExpoPushMessage = {
   to: string;
@@ -66,9 +114,10 @@ export async function deletePushToken(token: string): Promise<void> {
 
 /* ─── low-level send ──────────────────────────────────────────────────── */
 
-// Returns true if at least one chunk was accepted by Expo (2xx), false if all failed.
-async function sendExpoPush(messages: ExpoPushMessage[]): Promise<boolean> {
-  if (messages.length === 0) return true;
+// Returns the number of tokens Expo accepted (tickets without DeviceNotRegistered errors
+// in 2xx chunks). Returns 0 when all chunks fail or every token is unregistered.
+async function sendExpoPush(messages: ExpoPushMessage[]): Promise<number> {
+  if (messages.length === 0) return 0;
 
   const chunks: ExpoPushMessage[][] = [];
   for (let i = 0; i < messages.length; i += 100) {
@@ -83,7 +132,7 @@ async function sendExpoPush(messages: ExpoPushMessage[]): Promise<boolean> {
   if (EXPO_ACCESS_TOKEN) headers["Authorization"] = `Bearer ${EXPO_ACCESS_TOKEN}`;
 
   const tokensToDelete = new Set<string>();
-  let anySuccess = false;
+  let totalSent = 0;
 
   for (const chunk of chunks) {
     try {
@@ -96,16 +145,26 @@ async function sendExpoPush(messages: ExpoPushMessage[]): Promise<boolean> {
         logger.warn({ status: res.status }, "[push] expo send non-2xx");
         continue;
       }
-      anySuccess = true;
       const json = (await res.json()) as {
         data?: Array<{ status: string; details?: { error?: string } }>;
       };
       const tickets = json.data ?? [];
+      // Validate ticket-to-message cardinality before trusting counts
+      if (tickets.length !== chunk.length) {
+        logger.warn({ chunkLen: chunk.length, ticketLen: tickets.length }, "[push] ticket count mismatch — skipping delivery count for chunk");
+        continue;
+      }
+      // Count only tickets Expo explicitly confirmed as "ok"
+      let chunkOk = 0;
       tickets.forEach((ticket, idx) => {
-        if (ticket.status === "error" && ticket.details?.error === "DeviceNotRegistered") {
+        if (ticket.status === "ok") {
+          chunkOk++;
+        } else if (ticket.status === "error" && ticket.details?.error === "DeviceNotRegistered") {
           tokensToDelete.add(chunk[idx]!.to);
         }
+        // Any other error status (invalid credentials, message, etc.) is not counted
       });
+      totalSent += chunkOk;
     } catch (err) {
       logger.warn({ err }, "[push] expo send failed");
     }
@@ -122,7 +181,7 @@ async function sendExpoPush(messages: ExpoPushMessage[]): Promise<boolean> {
     }
   }
 
-  return anySuccess;
+  return totalSent;
 }
 
 /* ─── helpers ────────────────────────────────────────────────────────── */
@@ -338,11 +397,11 @@ export async function notifyPartnerSubscriptionExpiring(input: {
     channelId: "default",
     data: { type: "subscription_expiring", daysRemaining: String(daysRemaining), screen: "/(tabs)/account" },
   }));
-  const ok = await sendExpoPush(messages);
-  if (!ok) {
+  const sent = await sendExpoPush(messages);
+  if (sent === 0) {
     throw new Error(`[push] all Expo chunks rejected for partner ${input.partnerId}`);
   }
-  logger.info({ partnerId: input.partnerId, daysRemaining }, "[push] subscription expiry warning sent");
+  logger.info({ partnerId: input.partnerId, daysRemaining, sent }, "[push] subscription expiry warning sent");
 }
 
 /* ─── 6. Rappel avant événement → users ayant mis en favori ─────────── */
@@ -499,20 +558,27 @@ export async function notifyPartnerReviewApproved(input: {
 /* ─── 9. Compte partenaire approuvé par l'admin ─────────────────────── */
 
 export async function notifyPartnerAccountApproved(partnerId: number): Promise<void> {
+  const titleFr = "✅ Compte approuvé !";
+  const titleEn = "✅ Account approved!";
+  const bodyFr = "Votre compte NoStress a été validé. Vous pouvez maintenant publier vos événements et profiter de votre abonnement.";
+  const bodyEn = "Your NoStress account has been approved. You can now publish your events and enjoy your subscription.";
   try {
+    // Persist first — the inbox entry exists even if push subsequently fails
+    const notifId = await persistPartnerNotification({ partnerId, type: "account_approved", titleFr, titleEn, bodyFr, bodyEn, data: { screen: "/(tabs)/account" } });
     const recipients = await tokensForPartnerId(partnerId);
-    if (recipients.length === 0) return;
-
-    const messages = buildMessages(recipients, (lang) => ({
-      title: lang === "fr" ? "✅ Compte approuvé !" : "✅ Account approved!",
-      body: lang === "fr"
-        ? "Votre compte NoStress a été validé. Vous pouvez maintenant publier vos événements et profiter de votre abonnement."
-        : "Your NoStress account has been approved. You can now publish your events and enjoy your subscription.",
-      channelId: "default",
-      data: { type: "account_approved", screen: "/(tabs)/account" },
-    }));
-    await sendExpoPush(messages);
-    logger.info({ partnerId }, "[push] partner account approved sent");
+    if (recipients.length > 0) {
+      const messages = buildMessages(recipients, (lang) => ({
+        title: lang === "fr" ? titleFr : titleEn,
+        body: lang === "fr" ? bodyFr : bodyEn,
+        channelId: "default",
+        data: { type: "account_approved", screen: "/(tabs)/account" },
+      }));
+      const pushSent = await sendExpoPush(messages);
+      await updatePushSent(notifId, pushSent);
+      logger.info({ partnerId, pushSent }, "[push] partner account approved sent");
+    } else {
+      logger.info({ partnerId }, "[push] partner account approved: no push tokens, inbox only");
+    }
   } catch (err) {
     logger.warn({ err, partnerId }, "[push] notifyPartnerAccountApproved failed");
   }
@@ -524,25 +590,29 @@ export async function notifyPartnerAccountRejected(
   partnerId: number,
   reason: string | null,
 ): Promise<void> {
+  const reasonPartFr = reason ? ` Motif : ${reason}` : "";
+  const reasonPartEn = reason ? ` Reason: ${reason}` : "";
+  const titleFr = "❌ Demande non approuvée";
+  const titleEn = "❌ Application not approved";
+  const bodyFr = `Votre demande de compte partenaire NoStress n'a pas été acceptée.${reasonPartFr}`;
+  const bodyEn = `Your NoStress partner account application was not accepted.${reasonPartEn}`;
   try {
+    // Persist first — the inbox entry exists even if push subsequently fails
+    const notifId = await persistPartnerNotification({ partnerId, type: "account_rejected", titleFr, titleEn, bodyFr, bodyEn, data: { screen: "/(tabs)/account" } });
     const recipients = await tokensForPartnerId(partnerId);
-    if (recipients.length === 0) return;
-
-    const messages = buildMessages(recipients, (lang) => {
-      const reasonPart = reason
-        ? lang === "fr" ? ` Motif : ${reason}` : ` Reason: ${reason}`
-        : "";
-      return {
-        title: lang === "fr" ? "❌ Demande non approuvée" : "❌ Application not approved",
-        body: lang === "fr"
-          ? `Votre demande de compte partenaire NoStress n'a pas été acceptée.${reasonPart}`
-          : `Your NoStress partner account application was not accepted.${reasonPart}`,
+    if (recipients.length > 0) {
+      const messages = buildMessages(recipients, (lang) => ({
+        title: lang === "fr" ? titleFr : titleEn,
+        body: lang === "fr" ? bodyFr : bodyEn,
         channelId: "default",
         data: { type: "account_rejected", screen: "/(tabs)/account" },
-      };
-    });
-    await sendExpoPush(messages);
-    logger.info({ partnerId }, "[push] partner account rejected sent");
+      }));
+      const pushSent = await sendExpoPush(messages);
+      await updatePushSent(notifId, pushSent);
+      logger.info({ partnerId, pushSent }, "[push] partner account rejected sent");
+    } else {
+      logger.info({ partnerId }, "[push] partner account rejected: no push tokens, inbox only");
+    }
   } catch (err) {
     logger.warn({ err, partnerId }, "[push] notifyPartnerAccountRejected failed");
   }
@@ -555,26 +625,31 @@ export async function notifyPartnerEventDeleted(input: {
   eventTitle: string | null;
   reason: string | null;
 }): Promise<void> {
+  const nameFr = input.eventTitle || "Votre publication";
+  const nameEn = input.eventTitle || "Your event";
+  const reasonPartFr = input.reason ? ` Motif : ${input.reason}` : "";
+  const reasonPartEn = input.reason ? ` Reason: ${input.reason}` : "";
+  const titleFr = "⚠️ Publication supprimée";
+  const titleEn = "⚠️ Event removed";
+  const bodyFr = `« ${nameFr} » a été retiré par l'équipe NoStress.${reasonPartFr}`;
+  const bodyEn = `"${nameEn}" was removed by the NoStress team.${reasonPartEn}`;
   try {
+    // Persist first — the inbox entry exists even if push subsequently fails
+    const notifId = await persistPartnerNotification({ partnerId: input.partnerId, type: "event_deleted", titleFr, titleEn, bodyFr, bodyEn, data: { screen: "/(tabs)/events" } });
     const recipients = await tokensForPartnerId(input.partnerId);
-    if (recipients.length === 0) return;
-
-    const messages = buildMessages(recipients, (lang) => {
-      const name = input.eventTitle || (lang === "fr" ? "Votre publication" : "Your event");
-      const reasonPart = input.reason
-        ? lang === "fr" ? ` Motif : ${input.reason}` : ` Reason: ${input.reason}`
-        : "";
-      return {
-        title: lang === "fr" ? "⚠️ Publication supprimée" : "⚠️ Event removed",
-        body: lang === "fr"
-          ? `« ${name} » a été retiré par l'équipe NoStress.${reasonPart}`
-          : `"${name}" was removed by the NoStress team.${reasonPart}`,
+    if (recipients.length > 0) {
+      const messages = buildMessages(recipients, (lang) => ({
+        title: lang === "fr" ? titleFr : titleEn,
+        body: lang === "fr" ? bodyFr : bodyEn,
         channelId: "default",
         data: { type: "event_deleted", screen: "/(tabs)/events" },
-      };
-    });
-    await sendExpoPush(messages);
-    logger.info({ partnerId: input.partnerId }, "[push] partner event deleted sent");
+      }));
+      const pushSent = await sendExpoPush(messages);
+      await updatePushSent(notifId, pushSent);
+      logger.info({ partnerId: input.partnerId, pushSent }, "[push] partner event deleted sent");
+    } else {
+      logger.info({ partnerId: input.partnerId }, "[push] partner event deleted: no push tokens, inbox only");
+    }
   } catch (err) {
     logger.warn({ err, partnerId: input.partnerId }, "[push] notifyPartnerEventDeleted failed");
   }
@@ -587,24 +662,30 @@ export async function notifyPartnerSubscriptionExtended(input: {
   months: number;
   newUntil: Date;
 }): Promise<void> {
+  const newUntilFr = input.newUntil.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const newUntilEn = input.newUntil.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  const { months } = input;
+  const titleFr = "✅ Abonnement prolongé";
+  const titleEn = "✅ Subscription extended";
+  const bodyFr = `Votre abonnement NoStress a été prolongé de ${months} mois. Nouvelle expiration : ${newUntilFr}.`;
+  const bodyEn = `Your NoStress subscription has been extended by ${months} month${months > 1 ? "s" : ""}. New expiry: ${newUntilEn}.`;
   try {
+    // Persist first — the inbox entry exists even if push subsequently fails
+    const notifId = await persistPartnerNotification({ partnerId: input.partnerId, type: "subscription_extended", titleFr, titleEn, bodyFr, bodyEn, data: { screen: "/(tabs)/account" } });
     const recipients = await tokensForPartnerId(input.partnerId);
-    if (recipients.length === 0) return;
-
-    const newUntilFr = input.newUntil.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
-    const newUntilEn = input.newUntil.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
-    const { months } = input;
-
-    const messages = buildMessages(recipients, (lang) => ({
-      title: lang === "fr" ? "✅ Abonnement prolongé" : "✅ Subscription extended",
-      body: lang === "fr"
-        ? `Votre abonnement NoStress a été prolongé de ${months} mois. Nouvelle expiration : ${newUntilFr}.`
-        : `Your NoStress subscription has been extended by ${months} month${months > 1 ? "s" : ""}. New expiry: ${newUntilEn}.`,
-      channelId: "default",
-      data: { type: "subscription_extended", screen: "/(tabs)/account" },
-    }));
-    await sendExpoPush(messages);
-    logger.info({ partnerId: input.partnerId, months }, "[push] subscription extended sent");
+    if (recipients.length > 0) {
+      const messages = buildMessages(recipients, (lang) => ({
+        title: lang === "fr" ? titleFr : titleEn,
+        body: lang === "fr" ? bodyFr : bodyEn,
+        channelId: "default",
+        data: { type: "subscription_extended", screen: "/(tabs)/account" },
+      }));
+      const pushSent = await sendExpoPush(messages);
+      await updatePushSent(notifId, pushSent);
+      logger.info({ partnerId: input.partnerId, months, pushSent }, "[push] subscription extended sent");
+    } else {
+      logger.info({ partnerId: input.partnerId }, "[push] subscription extended: no push tokens, inbox only");
+    }
   } catch (err) {
     logger.warn({ err, partnerId: input.partnerId }, "[push] notifyPartnerSubscriptionExtended failed");
   }

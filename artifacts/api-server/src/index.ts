@@ -4,6 +4,7 @@ import { logger } from "./lib/logger";
 import { startEventCleanupScheduler } from "./lib/eventCleanup";
 import { startSubscriptionExpiryScheduler } from "./lib/subscriptions";
 import { startEventRemindersScheduler } from "./lib/eventReminders";
+import { runMigrations } from "./lib/migrations.js";
 
 const rawPort = process.env["PORT"];
 
@@ -38,15 +39,23 @@ function startKeepalive(serverPort: number) {
   logger.info({ pingUrl }, "[keepalive] auto-ping démarré (toutes les 4 min)");
 }
 
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
-  }
+// Run idempotent DDL migrations before accepting traffic
+runMigrations()
+  .then(() => {
+    app.listen(port, (err) => {
+      if (err) {
+        logger.error({ err }, "Error listening on port");
+        process.exit(1);
+      }
 
-  logger.info({ port }, "Server listening");
-  startEventCleanupScheduler();
-  startSubscriptionExpiryScheduler();
-  startEventRemindersScheduler();
-  startKeepalive(port);
-});
+      logger.info({ port }, "Server listening");
+      startEventCleanupScheduler();
+      startSubscriptionExpiryScheduler();
+      startEventRemindersScheduler();
+      startKeepalive(port);
+    });
+  })
+  .catch((err) => {
+    logger.error({ err }, "[migrations] fatal — server will not start");
+    process.exit(1);
+  });

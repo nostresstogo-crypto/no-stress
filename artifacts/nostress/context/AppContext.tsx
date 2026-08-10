@@ -591,11 +591,81 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, [authFetch]);
 
+  // Fetch server-persisted notifications for partners and merge into local state.
+  // Must be defined before the effects that reference it to avoid a TDZ error.
+  const fetchPartnerNotifications = useCallback(async () => {
+    if (!tokenRef.current) return;
+    try {
+      const r = await authFetch(`${API_BASE}/partners/me/notifications?limit=50`);
+      if (!r.ok) return;
+      const data = await r.json();
+      const remote: Array<{
+        id: number;
+        type: string;
+        titleFr: string;
+        titleEn: string;
+        bodyFr: string;
+        bodyEn: string;
+        data?: Record<string, unknown>;
+        readAt: string | null;
+        createdAt: string;
+      }> = Array.isArray(data?.notifications) ? data.notifications : [];
+      if (remote.length === 0) return;
+
+      setNotifications((prev) => {
+        // Build a lookup of server notifications by their local id key
+        const remoteById = new Map(remote.map((sn) => [`srv_${sn.id}`, sn]));
+
+        // 1. Update read state on already-cached server notifications
+        let anyChanged = false;
+        const reconciled = prev.map((n) => {
+          if (!n.id.startsWith("srv_")) return n;
+          const sn = remoteById.get(n.id);
+          if (!sn) return n; // no longer in server window — keep as-is
+          const serverRead = sn.readAt !== null;
+          if (n.read === serverRead) return n;
+          anyChanged = true;
+          return { ...n, read: serverRead };
+        });
+
+        // 2. Add server notifications not yet in local state
+        const existingIds = new Set(reconciled.map((n) => n.id));
+        const toAdd: Notification[] = [];
+        for (const sn of remote) {
+          const localId = `srv_${sn.id}`;
+          if (existingIds.has(localId)) continue;
+          anyChanged = true;
+          toAdd.push({
+            id: localId,
+            title: sn.titleEn,
+            titleFr: sn.titleFr,
+            body: sn.bodyEn,
+            bodyFr: sn.bodyFr,
+            read: sn.readAt !== null,
+            createdAt: sn.createdAt,
+            // extra fields consumed by notifications screen
+            ...(sn.type ? { type: "account" as any } : {}),
+            ...(sn.data?.screen ? { destination: sn.data.screen } : {}),
+          } as any);
+        }
+
+        if (!anyChanged) return prev;
+
+        const merged = [...toAdd, ...reconciled].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+        AsyncStorage.setItem(KEYS.notifications, JSON.stringify(merged)).catch(() => {});
+        return merged;
+      });
+    } catch {}
+  }, [authFetch]);
+
   // Also refresh on initial load so cached data is immediately corrected
   useEffect(() => {
     if (!appReady) return;
     if (user?.role === "structure") {
       refreshPartnerProfile();
+      fetchPartnerNotifications();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appReady]);
@@ -610,11 +680,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (nextState === "active" && prev !== "active") {
         if (user?.role === "structure") {
           refreshPartnerProfile();
+          fetchPartnerNotifications();
         }
       }
     });
     return () => sub.remove();
-  }, [appReady, user?.role, refreshPartnerProfile]);
+  }, [appReady, user?.role, refreshPartnerProfile, fetchPartnerNotifications]);
+
+  // Fetch server inbox whenever a partner identity becomes active (login / account switch).
+  // This fires independently of appReady so a partner logging in mid-session gets their inbox.
+  useEffect(() => {
+    if (!appReady || !user || user.role !== "structure" || !tokenRef.current) return;
+    fetchPartnerNotifications();
+    // Intentionally watch user.id only — changing role (e.g. structure→null) is logout, handled separately.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const addNotification = useCallback(
     (n: Omit<Notification, "id" | "read" | "createdAt">) => {
@@ -636,7 +716,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       AsyncStorage.setItem(KEYS.notifications, JSON.stringify(next));
       return next;
     });
-  }, []);
+    // Also mark server-persisted notifications as read for partners
+    if (tokenRef.current) {
+      authFetch(`${API_BASE}/partners/me/notifications/read`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      }).catch(() => {});
+    }
+  }, [authFetch]);
 
   const logout = useCallback(async () => {
     const rt = refreshRef.current;
@@ -654,6 +742,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     refreshRef.current = null;
     setFavorites([]);
     setFavoriteVenues([]);
+    // Remove partner-private server notifications (srv_*) from state and storage
+    // to prevent cross-account data disclosure on shared devices.
+    setNotifications((prev) => {
+      const next = prev.filter((n) => !n.id.startsWith("srv_"));
+      AsyncStorage.setItem(KEYS.notifications, JSON.stringify(next)).catch(() => {});
+      return next;
+    });
     await AsyncStorage.multiRemove([KEYS.user, KEYS.token, KEYS.refreshToken, KEYS.favorites, KEYS.favoriteVenues]);
   }, []);
 
