@@ -33,6 +33,7 @@ import { LocationPickerModal } from "@/components/LocationPickerModal";
 import { EventCard } from "@/components/EventCard";
 import { VenueCard } from "@/components/VenueCard";
 import { PremiumHeroCarousel } from "@/components/home/PremiumHeroCarousel";
+import { AIAssistantLogo } from "@/components/AIAssistantLogo";
 import { API_BASE } from "@/lib/apiBase";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -390,20 +391,15 @@ export default function HomeScreen() {
             >
               <Ionicons name="search-outline" size={18} color={C.textMuted} />
             </TouchableOpacity>
-            {/* Filtres */}
+            {/* Assistant IA */}
             <TouchableOpacity
-              onPress={openFilters}
-              style={[s.headerActionBtn, { backgroundColor: activeFilterCount > 0 ? C.lavender : C.card, borderColor: activeFilterCount > 0 ? C.lavender : C.border }]}
-              accessibilityLabel={lang === "fr" ? "Filtres" : "Filters"}
+              onPress={() => safePush("/ai-assistant")}
+              style={[s.aiBtn, { backgroundColor: C.gold + "18", borderColor: C.gold + "55" }]}
+              accessibilityLabel={lang === "fr" ? "Assistant IA" : "AI Assistant"}
               accessibilityRole="button"
               hitSlop={8}
             >
-              <Ionicons name="options-outline" size={18} color={activeFilterCount > 0 ? "#fff" : C.textMuted} />
-              {activeFilterCount > 0 && (
-                <View style={[s.headerBadge, { backgroundColor: C.error }]}>
-                  <Text style={s.headerBadgeText}>{activeFilterCount}</Text>
-                </View>
-              )}
+              <AIAssistantLogo size={20} color={C.gold} noAnimation />
             </TouchableOpacity>
             {/* Favoris */}
             <TouchableOpacity
@@ -473,6 +469,39 @@ export default function HomeScreen() {
           ) : (
             <PremiumHeroCarousel events={carouselEvents} lang={lang} />
           )}
+        </View>
+
+        {/* ── Filter strip ── */}
+        <View style={s.filterStrip}>
+          <TouchableOpacity
+            onPress={openFilters}
+            style={[
+              s.filterStripBtn,
+              {
+                backgroundColor: activeFilterCount > 0 ? C.lavender : C.card,
+                borderColor: activeFilterCount > 0 ? C.lavender : C.border,
+              },
+            ]}
+            accessibilityLabel={lang === "fr" ? "Filtres" : "Filters"}
+            accessibilityRole="button"
+            hitSlop={6}
+          >
+            <Ionicons
+              name="options-outline"
+              size={15}
+              color={activeFilterCount > 0 ? "#fff" : C.textMuted}
+            />
+            <Text
+              style={[
+                s.filterStripText,
+                { color: activeFilterCount > 0 ? "#fff" : C.textMuted },
+              ]}
+            >
+              {activeFilterCount > 0
+                ? (lang === "fr" ? `Filtres (${activeFilterCount})` : `Filters (${activeFilterCount})`)
+                : (lang === "fr" ? "Filtres" : "Filters")}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <Animated.View style={{ opacity: fadeAnim }}>
@@ -776,6 +805,35 @@ const s = StyleSheet.create({
   },
   headerBadgeText: {
     fontSize: 9, fontFamily: "Inter_700Bold", color: "#fff",
+  },
+
+  /* AI Assistant button — pill style to stand out from round action buttons */
+  aiBtn: {
+    width: 36, height: 36, borderRadius: 18, borderWidth: 1,
+    alignItems: "center", justifyContent: "center",
+  },
+
+  /* Filter strip below carousel */
+  filterStrip: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    marginBottom: 20,
+    gap: 8,
+  },
+  filterStripBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  filterStripText: {
+    fontFamily: Fonts.semiBold,
+    fontSize: FontSize.sm,
+    letterSpacing: LetterSpacing.normal,
   },
 
   /* Search bar */

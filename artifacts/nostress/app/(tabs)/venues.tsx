@@ -130,27 +130,34 @@ export default function VenuesScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={[styles.header, { paddingTop: topInset + 12 }]}>
+      <View style={[styles.header, { paddingTop: topInset + 10 }]}>
         <View style={styles.titleRow}>
-          <Text style={styles.headerTitle}>{t("venues")}</Text>
+          <View style={styles.titleBlock}>
+            <Text style={styles.headerTitle}>{lang === "fr" ? "Lieux" : "Venues"}</Text>
+            <Text style={styles.headerSubtitle}>
+              {lang === "fr" ? "Découvrez les meilleurs endroits" : "Discover the best spots"}
+            </Text>
+          </View>
           <TouchableOpacity
             onPress={() => setFiltersOpen((v) => !v)}
             style={[styles.filterToggle, filtersOpen && styles.filterToggleActive]}
-            accessibilityLabel={t("language") === "Langue" ? "Filtres" : "Filters"}
+            accessibilityLabel={lang === "fr" ? "Filtres" : "Filters"}
           >
-            <Ionicons name="options-outline" size={18} color={filtersOpen ? C.bg : C.text} />
-            <Text style={[styles.filterToggleText, filtersOpen && { color: C.bg }]}>
-              {filtersOpen ? "Masquer" : "Filtres"}
+            <Ionicons name="options-outline" size={16} color={filtersOpen ? "#fff" : C.text} />
+            <Text style={[styles.filterToggleText, filtersOpen && { color: "#fff" }]}>
+              {filtersOpen
+                ? (lang === "fr" ? "Fermer" : "Close")
+                : (lang === "fr" ? "Filtres" : "Filters")}
             </Text>
-            {activeFilterCount > 0 && (
+            {activeFilterCount > 0 && !filtersOpen && (
               <View style={styles.filterCountBadge}>
                 <Text style={styles.filterCountBadgeText}>{activeFilterCount}</Text>
               </View>
             )}
             <Ionicons
               name={filtersOpen ? "chevron-up" : "chevron-down"}
-              size={16}
-              color={filtersOpen ? C.bg : C.textMuted}
+              size={14}
+              color={filtersOpen ? "#fff" : C.textMuted}
             />
           </TouchableOpacity>
         </View>
@@ -344,16 +351,18 @@ const makeStyles = (C: any) => StyleSheet.create({
   root: { flex: 1, backgroundColor: C.bg },
   header: {
     backgroundColor: C.bg,
-    paddingHorizontal: 14,
-    paddingBottom: 10,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: C.border,
-    gap: 10,
+    gap: 12,
   },
-  headerTitle: { fontSize: 28, fontFamily: "Inter_700Bold", color: C.text, marginBottom: 4, flex: 1 },
   titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  titleBlock: { flex: 1, gap: 2 },
+  headerTitle: { fontSize: 26, fontFamily: "Inter_700Bold", color: C.text, letterSpacing: -0.5 },
+  headerSubtitle: { fontSize: 13, fontFamily: "Inter_400Regular", color: C.textMuted, letterSpacing: 0.1 },
   filterToggle: {
-    flexDirection: "row", alignItems: "center", gap: 6,
+    flexDirection: "row", alignItems: "center", gap: 5,
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20,
     borderWidth: 1, borderColor: C.border, backgroundColor: C.card,
   },
@@ -364,7 +373,7 @@ const makeStyles = (C: any) => StyleSheet.create({
     backgroundColor: C.gold, alignItems: "center", justifyContent: "center",
   },
   filterCountBadgeText: { color: C.bg, fontSize: 10, fontFamily: "Inter_700Bold" },
-  activeSummary: { flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center", paddingTop: 4 },
+  activeSummary: { flexDirection: "row", flexWrap: "wrap", gap: 8, alignItems: "center" },
   activeSummaryText: { fontSize: 12, color: C.textMuted, fontFamily: "Inter_500Medium" },
   filterLabel: { fontSize: 11, color: C.textMuted, fontFamily: "Inter_600SemiBold", textTransform: "uppercase", letterSpacing: 0.5, marginTop: 6 },
   row: { flexDirection: "row", gap: 8 },
