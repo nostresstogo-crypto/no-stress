@@ -496,6 +496,147 @@ export async function notifyPartnerReviewApproved(input: {
   }
 }
 
+/* ─── 9. Compte partenaire approuvé par l'admin ─────────────────────── */
+
+export async function notifyPartnerAccountApproved(partnerId: number): Promise<void> {
+  try {
+    const recipients = await tokensForPartnerId(partnerId);
+    if (recipients.length === 0) return;
+
+    const messages = buildMessages(recipients, (lang) => ({
+      title: lang === "fr" ? "✅ Compte approuvé !" : "✅ Account approved!",
+      body: lang === "fr"
+        ? "Votre compte NoStress a été validé. Vous pouvez maintenant publier vos événements et profiter de votre abonnement."
+        : "Your NoStress account has been approved. You can now publish your events and enjoy your subscription.",
+      channelId: "default",
+      data: { type: "account_approved", screen: "/(tabs)/account" },
+    }));
+    await sendExpoPush(messages);
+    logger.info({ partnerId }, "[push] partner account approved sent");
+  } catch (err) {
+    logger.warn({ err, partnerId }, "[push] notifyPartnerAccountApproved failed");
+  }
+}
+
+/* ─── 10. Compte partenaire rejeté par l'admin ────────────────────────── */
+
+export async function notifyPartnerAccountRejected(
+  partnerId: number,
+  reason: string | null,
+): Promise<void> {
+  try {
+    const recipients = await tokensForPartnerId(partnerId);
+    if (recipients.length === 0) return;
+
+    const messages = buildMessages(recipients, (lang) => {
+      const reasonPart = reason
+        ? lang === "fr" ? ` Motif : ${reason}` : ` Reason: ${reason}`
+        : "";
+      return {
+        title: lang === "fr" ? "❌ Demande non approuvée" : "❌ Application not approved",
+        body: lang === "fr"
+          ? `Votre demande de compte partenaire NoStress n'a pas été acceptée.${reasonPart}`
+          : `Your NoStress partner account application was not accepted.${reasonPart}`,
+        channelId: "default",
+        data: { type: "account_rejected", screen: "/(tabs)/account" },
+      };
+    });
+    await sendExpoPush(messages);
+    logger.info({ partnerId }, "[push] partner account rejected sent");
+  } catch (err) {
+    logger.warn({ err, partnerId }, "[push] notifyPartnerAccountRejected failed");
+  }
+}
+
+/* ─── 11. Événement supprimé par l'admin ─────────────────────────────── */
+
+export async function notifyPartnerEventDeleted(input: {
+  partnerId: number;
+  eventTitle: string | null;
+  reason: string | null;
+}): Promise<void> {
+  try {
+    const recipients = await tokensForPartnerId(input.partnerId);
+    if (recipients.length === 0) return;
+
+    const messages = buildMessages(recipients, (lang) => {
+      const name = input.eventTitle || (lang === "fr" ? "Votre publication" : "Your event");
+      const reasonPart = input.reason
+        ? lang === "fr" ? ` Motif : ${input.reason}` : ` Reason: ${input.reason}`
+        : "";
+      return {
+        title: lang === "fr" ? "⚠️ Publication supprimée" : "⚠️ Event removed",
+        body: lang === "fr"
+          ? `« ${name} » a été retiré par l'équipe NoStress.${reasonPart}`
+          : `"${name}" was removed by the NoStress team.${reasonPart}`,
+        channelId: "default",
+        data: { type: "event_deleted", screen: "/(tabs)/events" },
+      };
+    });
+    await sendExpoPush(messages);
+    logger.info({ partnerId: input.partnerId }, "[push] partner event deleted sent");
+  } catch (err) {
+    logger.warn({ err, partnerId: input.partnerId }, "[push] notifyPartnerEventDeleted failed");
+  }
+}
+
+/* ─── 12. Abonnement étendu par l'admin ──────────────────────────────── */
+
+export async function notifyPartnerSubscriptionExtended(input: {
+  partnerId: number;
+  months: number;
+  newUntil: Date;
+}): Promise<void> {
+  try {
+    const recipients = await tokensForPartnerId(input.partnerId);
+    if (recipients.length === 0) return;
+
+    const newUntilFr = input.newUntil.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+    const newUntilEn = input.newUntil.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+    const { months } = input;
+
+    const messages = buildMessages(recipients, (lang) => ({
+      title: lang === "fr" ? "✅ Abonnement prolongé" : "✅ Subscription extended",
+      body: lang === "fr"
+        ? `Votre abonnement NoStress a été prolongé de ${months} mois. Nouvelle expiration : ${newUntilFr}.`
+        : `Your NoStress subscription has been extended by ${months} month${months > 1 ? "s" : ""}. New expiry: ${newUntilEn}.`,
+      channelId: "default",
+      data: { type: "subscription_extended", screen: "/(tabs)/account" },
+    }));
+    await sendExpoPush(messages);
+    logger.info({ partnerId: input.partnerId, months }, "[push] subscription extended sent");
+  } catch (err) {
+    logger.warn({ err, partnerId: input.partnerId }, "[push] notifyPartnerSubscriptionExtended failed");
+  }
+}
+
+/* ─── 13. Mot de passe modifié ───────────────────────────────────────── */
+
+export async function notifyPasswordChanged(input: {
+  id: number;
+  role: "user" | "partner";
+}): Promise<void> {
+  try {
+    const recipients = input.role === "partner"
+      ? await tokensForPartnerId(input.id)
+      : await tokensForUserIds([input.id]);
+    if (recipients.length === 0) return;
+
+    const messages = buildMessages(recipients, (lang) => ({
+      title: lang === "fr" ? "🔒 Mot de passe modifié" : "🔒 Password changed",
+      body: lang === "fr"
+        ? "Votre mot de passe NoStress vient d'être modifié. Si vous n'êtes pas à l'origine de cette action, contactez-nous."
+        : "Your NoStress password has just been changed. If you didn't do this, please contact us.",
+      channelId: "default",
+      data: { type: "password_changed" },
+    }));
+    await sendExpoPush(messages);
+    logger.info({ id: input.id, role: input.role }, "[push] password changed sent");
+  } catch (err) {
+    logger.warn({ err, id: input.id, role: input.role }, "[push] notifyPasswordChanged failed");
+  }
+}
+
 /* ─── 8. Validation/rejet pour un partenaire ─────────────────────────── */
 
 export async function notifyPartnerStatus(input: {

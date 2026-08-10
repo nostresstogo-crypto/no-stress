@@ -94,6 +94,12 @@ async function handlePartnerResetPassword(req: any, res: any) {
 }
 import { requireAdmin, requireSuperAdmin } from "./admin.js";
 import { computeNewSubscriptionUntil, subscriptionInfo } from "../lib/subscriptions.js";
+import {
+  notifyPartnerAccountApproved,
+  notifyPartnerAccountRejected,
+  notifyPartnerEventDeleted,
+  notifyPartnerSubscriptionExtended,
+} from "../lib/pushNotifications.js";
 
 const router: IRouter = Router();
 
@@ -539,6 +545,8 @@ router.post("/admin/partners/:id/approve", requireAdmin, async (req: any, res) =
   // Await email synchronously so the admin sees a clear failure if SMTP is down,
   // and can use /admin/partners/:id/resend-credentials to retry rather than leaving
   // the partner locked out silently.
+  // Fire-and-forget push: account approved + subscription activated.
+  notifyPartnerAccountApproved(partner.id).catch(() => {});
   try {
     await sendPartnerApprovalEmail(partner.email, partner.contactName, partner.businessName, newPassword);
     return res.json({ message: "Partenaire approuvé avec succès.", partner: serializePartner(partner) });
@@ -574,6 +582,7 @@ router.post("/admin/partners/:id/extend-subscription", requireSuperAdmin, async 
     .set({ subscriptionUntil: newUntil, updatedAt: new Date() })
     .where(eq(partnersTable.id, id))
     .returning();
+  notifyPartnerSubscriptionExtended({ partnerId: id, months, newUntil }).catch(() => {});
   return res.json({
     message: `Abonnement étendu de ${months} mois. Nouvelle date d'expiration : ${newUntil.toLocaleDateString("fr-FR")}.`,
     partner: serializePartner(updated),
@@ -680,6 +689,7 @@ router.post("/admin/partners/:id/reject", requireSuperAdmin, async (req: any, re
     .returning();
   if (!partner) return res.status(404).json({ error: "Partenaire introuvable." });
   sendPartnerRejectionEmail(partner.email, partner.contactName, partner.businessName, rejectionReason).catch(() => {});
+  notifyPartnerAccountRejected(partner.id, rejectionReason).catch(() => {});
   return res.json({ message: "Partenaire rejeté.", partner: serializePartner(partner) });
 });
 
@@ -744,6 +754,13 @@ router.delete("/admin/events/:id", requireSuperAdmin, async (req: any, res) => {
   const autoMessage = `Bonjour ${partner?.businessName ?? "Partenaire"},\n\nNous avons supprimé votre publication "${deleted.title}" car elle ne respecte pas nos Conditions Générales d'Utilisation et/ou notre charte éthique.\n\nMotif : ${deleteReason}\n\nNoStress s'engage à offrir un contenu de qualité, sûr et respectueux à tous ses utilisateurs.\n\n⚠️ Avertissement : En cas de récidive, votre compte partenaire pourra être suspendu ou supprimé.\n\nPour toute question, contactez notre équipe à nostresstogo@gmail.com.\n\nCordialement,\nL'équipe NoStress`;
   if (partner?.email) {
     sendPublicationWarningEmail(partner.email, partner.businessName, deleted.title, deleteReason).catch(() => {});
+  }
+  if (deleted.partnerId != null) {
+    notifyPartnerEventDeleted({
+      partnerId: deleted.partnerId,
+      eventTitle: deleted.titleFr || deleted.title,
+      reason: deleteReason,
+    }).catch(() => {});
   }
   return res.json({ message: "Publication supprimée et avertissement envoyé au partenaire.", notification: autoMessage, deleted: { ...deleted, id: String(deleted.id) } });
 });

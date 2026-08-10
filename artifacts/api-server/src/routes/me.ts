@@ -15,6 +15,7 @@ import {
   verifyPassword,
   revokeAllForSubject,
 } from "../lib/auth-utils.js";
+import { notifyPasswordChanged } from "../lib/pushNotifications.js";
 
 const router: IRouter = Router();
 
@@ -138,6 +139,7 @@ router.post("/users/me/change-password", requireAuth, async (req: any, res) => {
   await db.update(usersTable).set({ passwordHash: newHash }).where(eq(usersTable.id, id));
   // Invalidate all other sessions; current refresh token is also revoked, mobile must re-login.
   await revokeAllForSubject(`u_${id}`);
+  notifyPasswordChanged({ id, role: "user" }).catch(() => {});
   return res.json({ message: "Mot de passe modifié. Reconnectez-vous." });
 });
 
@@ -225,6 +227,7 @@ router.post("/partners/me/change-password", requireAuth, async (req: any, res) =
     .set({ passwordHash: newHash, updatedAt: new Date() })
     .where(eq(partnersTable.id, id));
   await revokeAllForSubject(`p_${id}`);
+  notifyPasswordChanged({ id, role: "partner" }).catch(() => {});
   return res.json({ message: "Mot de passe modifié. Reconnectez-vous." });
 });
 
