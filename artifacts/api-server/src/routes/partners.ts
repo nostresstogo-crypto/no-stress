@@ -99,6 +99,7 @@ import {
   notifyPartnerAccountRejected,
   notifyPartnerEventDeleted,
   notifyPartnerSubscriptionExtended,
+  notifyPartnerSubscriptionUpdated,
 } from "../lib/pushNotifications.js";
 
 const router: IRouter = Router();
@@ -636,6 +637,9 @@ router.patch("/admin/partners/:id/subscription", requireSuperAdmin, async (req: 
     .set(updateFields)
     .where(eq(partnersTable.id, id))
     .returning();
+
+  // Fire-and-forget — an Expo outage must never block the admin response.
+  notifyPartnerSubscriptionUpdated({ partnerId: id, newUntil: untilDate }).catch(() => {});
 
   return res.json({
     message: `Abonnement mis à jour. Expiration : ${untilDate.toLocaleDateString("fr-FR")}.`,

@@ -691,7 +691,41 @@ export async function notifyPartnerSubscriptionExtended(input: {
   }
 }
 
-/* ─── 13. Mot de passe modifié ───────────────────────────────────────── */
+/* ─── 13. Abonnement mis à jour manuellement par l'admin ─────────────── */
+
+export async function notifyPartnerSubscriptionUpdated(input: {
+  partnerId: number;
+  newUntil: Date;
+}): Promise<void> {
+  const newUntilFr = input.newUntil.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  const newUntilEn = input.newUntil.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  const titleFr = "✅ Abonnement mis à jour";
+  const titleEn = "✅ Subscription updated";
+  const bodyFr = `Votre abonnement NoStress a été mis à jour. Nouvelle expiration : ${newUntilFr}.`;
+  const bodyEn = `Your NoStress subscription has been updated. New expiry: ${newUntilEn}.`;
+  try {
+    // Persist first — the inbox entry exists even if push subsequently fails
+    const notifId = await persistPartnerNotification({ partnerId: input.partnerId, type: "subscription_updated", titleFr, titleEn, bodyFr, bodyEn, data: { screen: "/(tabs)/account" } });
+    const recipients = await tokensForPartnerId(input.partnerId);
+    if (recipients.length > 0) {
+      const messages = buildMessages(recipients, (lang) => ({
+        title: lang === "fr" ? titleFr : titleEn,
+        body: lang === "fr" ? bodyFr : bodyEn,
+        channelId: "default",
+        data: { type: "subscription_updated", screen: "/(tabs)/account" },
+      }));
+      const pushSent = await sendExpoPush(messages);
+      await updatePushSent(notifId, pushSent);
+      logger.info({ partnerId: input.partnerId, pushSent }, "[push] subscription updated sent");
+    } else {
+      logger.info({ partnerId: input.partnerId }, "[push] subscription updated: no push tokens, inbox only");
+    }
+  } catch (err) {
+    logger.warn({ err, partnerId: input.partnerId }, "[push] notifyPartnerSubscriptionUpdated failed");
+  }
+}
+
+/* ─── 14. Mot de passe modifié ───────────────────────────────────────── */
 
 export async function notifyPasswordChanged(input: {
   id: number;
