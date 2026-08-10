@@ -523,15 +523,18 @@ export default function Partners() {
                 <div className="bg-muted/30 rounded-lg p-3 flex items-center justify-between">
                   <div>
                     <p className="text-xs text-muted-foreground mb-0.5">Abonnement (3 mois gratuits depuis l'approbation)</p>
-                    <p className="text-sm text-foreground">
-                      {(() => {
-                        const until = selected.subscription?.subscriptionUntil || selected.subscriptionUntil || null;
-                        const start = selected.subscription?.subscriptionStart || null;
-                        if (!until) return "Aucun abonnement actif";
-                        if (start) return `Du ${formatDateShort(start)} au ${formatDateShort(until)}`;
-                        return `Expire le ${formatDateShort(until)}`;
-                      })()}
-                    </p>
+                    {(() => {
+                      const until = selected.subscription?.subscriptionUntil || selected.subscriptionUntil || null;
+                      const start = selected.subscription?.subscriptionStart || null;
+                      if (!until) {
+                        return <p className="text-sm text-muted-foreground">Aucun abonnement actif</p>;
+                      }
+                      return (
+                        <p className="text-sm text-foreground font-mono">
+                          {formatDateShort(start)} → {formatDateShort(until)}
+                        </p>
+                      );
+                    })()}
                   </div>
                   <SubscriptionBadge partner={selected} />
                 </div>
