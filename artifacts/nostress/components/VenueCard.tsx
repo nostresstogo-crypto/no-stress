@@ -235,6 +235,8 @@ export function VenueCard({ venue, onPress, compact = false, variant, isFavorite
           placeholderKind="venue"
           fallbackIconSize={36}
           noSkeleton
+          thumbWidth={200}
+          thumbHeight={200}
           debugContext="VenueCard.homePremium"
         />
         <LinearGradient
@@ -298,6 +300,8 @@ export function VenueCard({ venue, onPress, compact = false, variant, isFavorite
           contentFit="cover"
           placeholderKind="venue"
           fallbackIconSize={28}
+          thumbWidth={100}
+          thumbHeight={100}
           debugContext="VenueCard.venueList"
         />
 
@@ -367,6 +371,8 @@ export function VenueCard({ venue, onPress, compact = false, variant, isFavorite
           placeholderKind="venue"
           fallbackIconSize={52}
           noSkeleton
+          thumbWidth={480}
+          thumbHeight={240}
           debugContext="VenueCard.venueFeatured"
         />
         <LinearGradient
@@ -426,6 +432,8 @@ export function VenueCard({ venue, onPress, compact = false, variant, isFavorite
         contentFit="cover"
         placeholderKind="venue"
         fallbackIconSize={isCompact ? 28 : 44}
+        thumbWidth={isCompact ? 80 : 480}
+        thumbHeight={isCompact ? 80 : 160}
         debugContext={isCompact ? "VenueCard.compact" : "VenueCard.default"}
       />
       <View style={[styles.info, isCompact && styles.compactInfo]}>

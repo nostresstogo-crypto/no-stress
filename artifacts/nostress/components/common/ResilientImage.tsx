@@ -27,7 +27,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { useColors } from "@/context/AppContext";
 import { useLowDataMode } from "@/context/NetworkContext";
-import { normalizeImageUrl } from "@/lib/imageUrl";
+import { normalizeImageUrl, thumbUrl } from "@/lib/imageUrl";
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 const MAX_RETRIES = 2;
@@ -59,6 +59,13 @@ interface ResilientImageProps {
   debugContext?: string;
   /** Taille de l'icône de fallback (px) */
   fallbackIconSize?: number;
+  /**
+   * Largeur cible du thumbnail (px).  Quand défini, l'URL est transformée via
+   * /storage/transform si EXPO_PUBLIC_HAS_IMAGE_TRANSFORM=true.
+   */
+  thumbWidth?: number;
+  /** Hauteur cible du thumbnail (px). Facultatif, combiné avec thumbWidth. */
+  thumbHeight?: number;
 }
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
@@ -110,16 +117,22 @@ export function ResilientImage({
   noRetry = false,
   debugContext,
   fallbackIconSize = 28,
+  thumbWidth,
+  thumbHeight,
 }: ResilientImageProps) {
   const C = useColors();
   // En mode économique : pas de skeleton (économise du CPU), blurhash prioritaire
   const lowData = useLowDataMode();
 
-  // Normaliser l'URL au premier rendu et quand l'URI change
+  // Normaliser l'URL au premier rendu et quand l'URI change.
+  // Si thumbWidth est défini, on passe par thumbUrl pour le redimensionnement.
   const normalized = React.useMemo(
-    () => normalizeImageUrl(uri),
+    () =>
+      thumbWidth
+        ? thumbUrl(uri, thumbWidth, thumbHeight)
+        : normalizeImageUrl(uri),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [uri],
+    [uri, thumbWidth, thumbHeight],
   );
 
   const [status, setStatus] = useState<"loading" | "success" | "error">(

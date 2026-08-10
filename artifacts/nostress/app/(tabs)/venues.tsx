@@ -274,6 +274,11 @@ export default function VenuesScreen() {
           keyExtractor={(v) => v.id}
           contentContainerStyle={[styles.list, { paddingBottom: Platform.OS === "web" ? 118 : 100 }]}
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews
+          maxToRenderPerBatch={6}
+          updateCellsBatchingPeriod={50}
+          initialNumToRender={8}
+          windowSize={5}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.lavender} />
           }
