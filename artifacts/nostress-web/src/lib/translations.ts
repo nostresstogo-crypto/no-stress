@@ -115,6 +115,7 @@ const fr: Record<string, string> = {
   "contact.location": "Localisation",
   "contact.response": "Réponse",
   "contact.response.value": "Sous 48h ouvrables",
+  "contact.follow": "Suivez-nous :",
   "contact.success.title": "Message envoyé !",
   "contact.success.body":
     "Merci de nous avoir contactés. Nous avons bien reçu votre message et vous répondrons dans les plus brefs délais.",
@@ -298,6 +299,7 @@ const en: Record<string, string> = {
   "contact.location": "Location",
   "contact.response": "Response",
   "contact.response.value": "Within 48 business hours",
+  "contact.follow": "Follow us:",
   "contact.success.title": "Message sent!",
   "contact.success.body":
     "Thank you for reaching out. We have received your message and will reply as soon as possible.",
