@@ -7,6 +7,7 @@ import { Button } from "components/ui/button";
 import { Label } from "components/ui/label";
 import { CheckCircle2, Mail, MapPin, Send, AlertCircle, MessageCircle } from "lucide-react";
 import { useLanguage } from "lib/i18n";
+import { CONTACT_EMAIL } from "lib/constants";
 
 const API_BASE =
   process.env.REACT_APP_API_BASE ||
@@ -60,8 +61,8 @@ export default function Contact() {
               <Mail className="w-5 h-5 text-primary mt-0.5 shrink-0" />
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Email</p>
-                <a href="mailto:contact@nostress.tg" className="text-sm font-medium hover:text-primary transition">
-                  contact@nostress.tg
+                <a href={`mailto:${CONTACT_EMAIL}`} className="text-sm font-medium hover:text-primary transition">
+                  {CONTACT_EMAIL}
                 </a>
               </div>
             </div>

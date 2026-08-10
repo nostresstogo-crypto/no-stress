@@ -1,6 +1,7 @@
 import React from "react";
 import { Link } from "wouter";
 import { useLanguage } from "lib/i18n";
+import { CONTACT_EMAIL } from "lib/constants";
 
 export function Footer() {
   const { t } = useLanguage();
@@ -45,7 +46,7 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-4 text-foreground">{t("footer.contact")}</h4>
             <ul className="space-y-2 text-muted-foreground">
-              <li>contact@nostress.tg</li>
+              <li>{CONTACT_EMAIL}</li>
               <li>Lomé, Togo</li>
             </ul>
             <div className="flex gap-3 mt-4">
