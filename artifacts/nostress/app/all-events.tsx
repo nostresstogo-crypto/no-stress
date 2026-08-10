@@ -35,6 +35,7 @@ export default function AllEventsScreen() {
 
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
+  const [quartier, setQuartier] = useState("");
   const [category, setCategory] = useState("");
   const [radiusKm, setRadiusKm] = useState<number | null>(null);
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -45,14 +46,16 @@ export default function AllEventsScreen() {
     let n = 0;
     if (country) n++;
     if (city) n++;
+    if (quartier) n++;
     if (category) n++;
     if (coords && radiusKm) n++;
     return n;
-  }, [country, city, category, coords, radiusKm]);
+  }, [country, city, quartier, category, coords, radiusKm]);
 
   const resetFilters = useCallback(() => {
     setCountry("");
     setCity("");
+    setQuartier("");
     setCategory("");
     setRadiusKm(null);
     setCoords(null);
@@ -64,6 +67,7 @@ export default function AllEventsScreen() {
     const params = new URLSearchParams();
     if (city.trim()) params.set("city", city.trim());
     if (country.trim()) params.set("country", country.trim());
+    if (quartier.trim()) params.set("quartier", quartier.trim());
     if (category) params.set("category", category);
     if (radiusKm && coords) {
       params.set("lat", String(coords.lat));
@@ -79,7 +83,7 @@ export default function AllEventsScreen() {
     } finally {
       setLoading(false);
     }
-  }, [city, country, category, radiusKm, coords]);
+  }, [city, country, quartier, category, radiusKm, coords]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -149,6 +153,7 @@ export default function AllEventsScreen() {
         <View style={styles.activeSummary}>
           {country ? <Text style={styles.activeSummaryText}>{country}</Text> : null}
           {city ? <Text style={styles.activeSummaryText}>{city}</Text> : null}
+          {quartier ? <Text style={styles.activeSummaryText}>{quartier}</Text> : null}
           {category ? <Text style={styles.activeSummaryText}>{t(category as any)}</Text> : null}
           {coords && radiusKm ? <Text style={styles.activeSummaryText}>{radiusKm} km</Text> : null}
           <TouchableOpacity onPress={resetFilters} hitSlop={6}>
@@ -208,6 +213,18 @@ export default function AllEventsScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
+
+        <Text style={styles.filterLabel}>{isFr ? "Quartier" : "Neighborhood"}</Text>
+        <TextInput
+          style={styles.input}
+          placeholder={isFr ? "Ex: Agoè, Bè, Tokoin..." : "Ex: Downtown, Midtown..."}
+          placeholderTextColor="#888"
+          value={quartier}
+          onChangeText={setQuartier}
+          returnKeyType="search"
+          onSubmitEditing={() => load()}
+          clearButtonMode="while-editing"
+        />
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingVertical: 8 }}>
           <TouchableOpacity

@@ -320,12 +320,12 @@ router.post("/auth/register", registerLimiter, async (req, res) => {
       verificationCodeExpires: verificationCodeExpiry(),
     });
   // No token issued — user must verify email first.
+  sendVerificationCodeEmail(email, name, code).catch(() => {});
   return res.status(201).json({
     pendingVerification: true,
     email,
     message: "Code de vérification envoyé par email.",
   });
-  sendVerificationCodeEmail(email, name, code).catch(() => {});
 });
 
 const refreshLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, key: "refresh" });

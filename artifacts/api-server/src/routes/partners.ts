@@ -556,8 +556,8 @@ router.post("/admin/partners/:id/extend-subscription", requireSuperAdmin, async 
   const id = parseInt(req.params.id, 10);
   if (!Number.isFinite(id)) return res.status(404).json({ error: "Partenaire introuvable." });
   const months = Number(req.body?.months);
-  if (![1, 2, 3, 6].includes(months)) {
-    return res.status(400).json({ error: "Durée invalide. Choisissez 1, 2, 3 ou 6 mois." });
+  if (![1, 2, 3, 6, 12].includes(months)) {
+    return res.status(400).json({ error: "Durée invalide. Choisissez 1, 2, 3, 6 ou 12 mois." });
   }
   const [partner] = await db.select().from(partnersTable).where(eq(partnersTable.id, id));
   if (!partner) return res.status(404).json({ error: "Partenaire introuvable." });

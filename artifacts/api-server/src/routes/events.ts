@@ -68,7 +68,7 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 }
 
 router.get("/events", async (req, res) => {
-  const { city, country, category, partnerId, venueId, includeArchived, archivedOnly, page = 1, limit = 20, lat, lng, radiusKm } = req.query;
+  const { city, country, category, quartier, partnerId, venueId, includeArchived, archivedOnly, page = 1, limit = 20, lat, lng, radiusKm } = req.query;
   const activeIds = await getActivePartnerIds();
   if (activeIds.length === 0) return res.json({ events: [], total: 0, page: Number(page), limit: Number(limit) });
   const conds: any[] = [eq(eventsTable.status, "approved"), inArray(eventsTable.partnerId, activeIds)];
@@ -81,6 +81,7 @@ router.get("/events", async (req, res) => {
     if (Number.isFinite(vid)) conds.push(eq(eventsTable.venueId, vid));
   }
   if (city) conds.push(ilike(eventsTable.city, `%${String(city)}%`));
+  if (quartier) conds.push(ilike(eventsTable.quartier, `%${String(quartier)}%`));
   if (category) conds.push(eq(eventsTable.category, String(category)));
   // Visibilité publique :
   // - par défaut, on ne montre QUE les événements à venir (date >= aujourd'hui),
@@ -191,6 +192,7 @@ router.post("/partners/me/events", requireAuth, async (req: any, res) => {
   const {
     title, titleFr, description, descriptionFr, date, time, city, category,
     imageUrl, images, price, currency, latitude, longitude, ticketTypes, venueId,
+    quartier, endDate, endTime, contact, externalLink,
   } = req.body || {};
   if (!title || !date) {
     return res.status(400).json({ error: "Le titre et la date sont obligatoires." });
@@ -239,6 +241,11 @@ router.post("/partners/me/events", requireAuth, async (req: any, res) => {
       latitude: latitude != null ? Number(latitude) : (venue.latitude ?? null),
       longitude: longitude != null ? Number(longitude) : (venue.longitude ?? null),
       ticketTypes: ticketTypes ?? null,
+      quartier: quartier || null,
+      endDate: endDate || null,
+      endTime: endTime || null,
+      contact: contact || null,
+      externalLink: externalLink || null,
       status: "approved",
     })
     .returning();
@@ -272,7 +279,7 @@ router.patch("/partners/me/events/:id", requireAuth, async (req: any, res) => {
     return res.status(409).json({ error: "Impossible de modifier un événement passé." });
   }
   const allowed: any = {};
-  for (const k of ["title", "titleFr", "description", "descriptionFr", "date", "time", "city", "category", "price", "currency", "ticketTypes", "latitude", "longitude"]) {
+  for (const k of ["title", "titleFr", "description", "descriptionFr", "date", "time", "city", "category", "price", "currency", "ticketTypes", "latitude", "longitude", "quartier", "endDate", "endTime", "contact", "externalLink"]) {
     if (k in req.body) allowed[k] = req.body[k];
   }
   if ("date" in allowed && allowed.date < todayISO()) {

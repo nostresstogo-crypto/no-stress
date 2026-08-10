@@ -481,7 +481,7 @@ export default function HomeScreen() {
           {(popularLoading || popularEvents.length > 0) && (
             <View style={s.section}>
               <SectionHeader
-                title={lang === "fr" ? "À ne pas manquer" : "Not to be missed"}
+                title={lang === "fr" ? "Boom événement" : "Boom event"}
                 seeAllLabel={lang === "fr" ? "Voir tout →" : "See all →"}
                 onSeeAll={() => safePush("/all-events")}
                 icon={<Ionicons name="flame" size={17} color={C.gold} />}
@@ -523,7 +523,7 @@ export default function HomeScreen() {
           {(allLoading || upcomingEvents.length > 0) && (
             <View style={s.section}>
               <SectionHeader
-                title={lang === "fr" ? "Prochainement" : "Coming soon"}
+                title={lang === "fr" ? "Événements à venir" : "Coming soon"}
                 seeAllLabel={lang === "fr" ? "Voir tout →" : "See all →"}
                 onSeeAll={() => safePush("/all-events")}
                 icon={<Ionicons name="calendar-outline" size={16} color={C.lavender} />}

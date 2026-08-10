@@ -34,10 +34,16 @@ type FormData = {
   category: CategoryKey | "";
   venue: string;
   venueId: string;
+  quartier: string;
   date: string;
   time: string;
+  isMultiDay: boolean;
+  endDate: string;
+  endTime: string;
   descriptionFr: string;
   descriptionEn: string;
+  contact: string;
+  externalLink: string;
   priceFCFA: string;
   isFree: boolean;
   images: string[];
@@ -53,10 +59,16 @@ const INITIAL_FORM: FormData = {
   category: "",
   venue: "",
   venueId: "",
+  quartier: "",
   date: "",
   time: "",
+  isMultiDay: false,
+  endDate: "",
+  endTime: "",
   descriptionFr: "",
   descriptionEn: "",
+  contact: "",
+  externalLink: "",
   priceFCFA: "",
   isFree: false,
   images: [],
@@ -104,10 +116,16 @@ export default function CreateEventScreen() {
           category: (ev.category as CategoryKey) || "",
           venue: ev.venue || "",
           venueId: ev.venueId ? String(ev.venueId) : "",
+          quartier: ev.quartier || "",
           date: ev.date || "",
           time: ev.time || "",
+          isMultiDay: !!(ev.endDate),
+          endDate: ev.endDate || "",
+          endTime: ev.endTime || "",
           descriptionFr: ev.description || "",
           descriptionEn: ev.description || "",
+          contact: ev.contact || "",
+          externalLink: ev.externalLink || "",
           priceFCFA: ev.price != null ? String(ev.price) : "",
           isFree: !ev.price || Number(ev.price) === 0,
           images: evImages,
@@ -186,6 +204,19 @@ export default function CreateEventScreen() {
     } else if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(trimmedTime)) {
       newErrors.time = lang === "fr" ? "Format attendu : HH:MM (24h)" : "Expected format: HH:MM (24h)";
     }
+    if (form.isMultiDay) {
+      const trimmedEndDate = form.endDate.trim();
+      if (!trimmedEndDate) {
+        newErrors.endDate = t("requiredField");
+      } else {
+        const m2 = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmedEndDate);
+        if (!m2) {
+          newErrors.endDate = lang === "fr" ? "Format attendu : AAAA-MM-JJ" : "Expected format: YYYY-MM-DD";
+        } else if (trimmedEndDate < form.date.trim()) {
+          newErrors.endDate = lang === "fr" ? "La date de fin doit être après la date de début." : "End date must be after start date.";
+        }
+      }
+    }
     // Price field removed from UI — no validation needed (always submitted as 0/free).
     if (!form.descriptionFr.trim()) newErrors.descriptionFr = t("requiredField");
     setErrors(newErrors);
@@ -232,6 +263,11 @@ export default function CreateEventScreen() {
         venueId: form.venueId || null,
         date: form.date.trim(),
         time: form.time.trim(),
+        quartier: form.quartier.trim() || null,
+        endDate: form.isMultiDay ? form.endDate.trim() || null : null,
+        endTime: form.isMultiDay ? form.endTime.trim() || null : null,
+        contact: form.contact.trim() || null,
+        externalLink: form.externalLink.trim() || null,
         price: priceFCFA,
         currency: "FCFA",
         imageUrl: finalImageUrl,
@@ -457,6 +493,17 @@ export default function CreateEventScreen() {
           )}
         </Field>
 
+        {/* Quartier */}
+        <Field label={lang === "fr" ? "Quartier" : "Neighborhood"} fieldStyles={fieldStyles}>
+          <TextInput
+            style={styles.input}
+            placeholder={lang === "fr" ? "Ex: Agoè, Bè, Tokoin..." : "Ex: Downtown, Midtown..."}
+            placeholderTextColor={C.textMuted}
+            value={form.quartier}
+            onChangeText={(v) => setField("quartier", v)}
+          />
+        </Field>
+
         {/* Date & time row */}
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
@@ -492,6 +539,63 @@ export default function CreateEventScreen() {
           </View>
         </View>
 
+        {/* Multi-day event */}
+        <View style={[styles.row, { alignItems: "center", justifyContent: "space-between", paddingHorizontal: 4, paddingVertical: 8 }]}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 14, fontFamily: "Inter_600SemiBold", color: C.text }}>
+              {lang === "fr" ? "Événement sur plusieurs jours" : "Multi-day event"}
+            </Text>
+            <Text style={{ fontSize: 11, color: C.textMuted, marginTop: 2 }}>
+              {lang === "fr" ? "Activez si l'événement dure plus d'un jour" : "Enable if event spans multiple days"}
+            </Text>
+          </View>
+          <Switch
+            value={form.isMultiDay}
+            onValueChange={(v) => {
+              setField("isMultiDay", v);
+              if (!v) { setField("endDate", ""); setField("endTime", ""); }
+            }}
+            trackColor={{ false: C.border, true: C.lavender }}
+            thumbColor={form.isMultiDay ? "#fff" : C.textMuted}
+          />
+        </View>
+
+        {form.isMultiDay && (
+          <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+              <Field label={lang === "fr" ? "Date de fin" : "End date"} required error={(errors as any).endDate} fieldStyles={fieldStyles}>
+                <DateField
+                  style={[styles.input, (errors as any).endDate && styles.inputError]}
+                  placeholder="AAAA-MM-JJ"
+                  placeholderTextColor={C.textMuted}
+                  textColor={C.text}
+                  value={form.endDate}
+                  onChange={(v) => setField("endDate", v)}
+                  min={form.date || todayISO()}
+                  hasError={!!(errors as any).endDate}
+                  errorBorderColor={C.error || "#e54848"}
+                  lang={lang as "fr" | "en"}
+                />
+              </Field>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Field label={lang === "fr" ? "Heure de fin" : "End time"} fieldStyles={fieldStyles}>
+                <TimeField
+                  style={styles.input}
+                  placeholder="23:59"
+                  placeholderTextColor={C.textMuted}
+                  textColor={C.text}
+                  value={form.endTime}
+                  onChange={(v) => setField("endTime", v)}
+                  hasError={false}
+                  errorBorderColor={C.error || "#e54848"}
+                  lang={lang as "fr" | "en"}
+                />
+              </Field>
+            </View>
+          </View>
+        )}
+
         {/* Section 2 — Détails */}
         <SectionHeader icon="information-circle" label={t("formSectionDetails")} sectionStyles={sectionStyles} C={C} />
 
@@ -518,6 +622,30 @@ export default function CreateEventScreen() {
             multiline
             numberOfLines={4}
             textAlignVertical="top"
+          />
+        </Field>
+
+        {/* Contact & external link */}
+        <Field label={lang === "fr" ? "Contact" : "Contact"} fieldStyles={fieldStyles}>
+          <TextInput
+            style={styles.input}
+            placeholder={lang === "fr" ? "Téléphone, WhatsApp ou email..." : "Phone, WhatsApp or email..."}
+            placeholderTextColor={C.textMuted}
+            value={form.contact}
+            onChangeText={(v) => setField("contact", v)}
+            autoCapitalize="none"
+          />
+        </Field>
+
+        <Field label={lang === "fr" ? "Lien externe" : "External link"} fieldStyles={fieldStyles}>
+          <TextInput
+            style={styles.input}
+            placeholder="https://..."
+            placeholderTextColor={C.textMuted}
+            value={form.externalLink}
+            onChangeText={(v) => setField("externalLink", v)}
+            keyboardType="url"
+            autoCapitalize="none"
           />
         </Field>
 

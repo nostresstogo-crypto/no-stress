@@ -1168,22 +1168,23 @@ export default function DashboardScreen() {
             {user.role === "structure" && partnerCheck === "approved" && subscription && (() => {
               const expired = !subscription.active;
               const warning = !expired && subscription.daysRemaining <= 14;
-              if (!expired && !warning) return null;
-              const color = expired ? C.error : "#F59E0B";
-              const icon = expired ? "alert-circle" : "time-outline";
+              const color = expired ? C.error : warning ? "#F59E0B" : C.success || "#22c55e";
+              const icon = expired ? "alert-circle" : warning ? "time-outline" : "checkmark-circle-outline";
               const untilStr = subscription.subscriptionUntil
                 ? (parseDateLocal(subscription.subscriptionUntil) ?? new Date(subscription.subscriptionUntil)).toLocaleDateString(lang === "fr" ? "fr-FR" : "en-US")
                 : null;
               const title = expired
                 ? (lang === "fr" ? "Abonnement expiré" : "Subscription expired")
-                : (lang === "fr" ? `Abonnement bientôt expiré (${subscription.daysRemaining} j)` : `Subscription expiring soon (${subscription.daysRemaining} d)`);
+                : warning
+                  ? (lang === "fr" ? `Abonnement bientôt expiré (${subscription.daysRemaining} j)` : `Subscription expiring soon (${subscription.daysRemaining} d)`)
+                  : (lang === "fr" ? "Abonnement actif" : "Active subscription");
               const desc = expired
                 ? (lang === "fr"
                     ? "Vos lieux et événements ne sont plus visibles sur la plateforme et vous ne pouvez plus les modifier. Contactez NoStress pour renouveler."
                     : "Your venues and events are no longer visible and cannot be edited. Contact NoStress to renew.")
                 : (lang === "fr"
-                    ? `Votre abonnement gratuit prend fin le ${untilStr}. Pensez à le renouveler pour rester visible.`
-                    : `Your free subscription ends on ${untilStr}. Renew to stay visible.`);
+                    ? `Votre abonnement gratuit prend fin le ${untilStr}.${warning ? " Pensez à le renouveler pour rester visible." : ""}`
+                    : `Your free subscription ends on ${untilStr}.${warning ? " Renew to stay visible." : ""}`);
               return (
                 <View style={{
                   marginHorizontal: 16,

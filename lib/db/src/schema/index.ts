@@ -147,6 +147,11 @@ export const eventsTable = pgTable("events", {
   ticketTypes: jsonb("ticket_types"),
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
+  quartier: text("quartier"),
+  endDate: text("end_date"),
+  endTime: text("end_time"),
+  contact: text("contact"),
+  externalLink: text("external_link"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
