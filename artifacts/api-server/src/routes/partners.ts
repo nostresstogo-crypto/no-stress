@@ -211,6 +211,7 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
     // Re-submission for an unverified partner: refresh data + regenerate OTP.
     // Atomic update guarded by `email_verified IS NULL` to prevent a TOCTOU race
     // where the partner verifies their email between our SELECT above and this UPDATE.
+    const resubDate = new Date();
     const updated = await db
       .update(partnersTable)
       .set({
@@ -224,7 +225,10 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
         websiteUrl: websiteUrl || null,
         verificationCode: code,
         verificationCodeExpires: verificationCodeExpiry(),
-        updatedAt: new Date(),
+        // Reset the 3-month trial from the new submission date.
+        subscriptionStart: resubDate,
+        subscriptionUntil: computeNewSubscriptionUntil(resubDate),
+        updatedAt: resubDate,
       })
       .where(and(eq(partnersTable.id, existingByEmail.id), isNull(partnersTable.emailVerified)))
       .returning();
@@ -260,6 +264,7 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
     });
   } else {
     try {
+      const registrationDate = new Date();
       [partner] = await db
         .insert(partnersTable)
         .values({
@@ -276,6 +281,9 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
           websiteUrl: websiteUrl || null,
           verificationCode: code,
           verificationCodeExpires: verificationCodeExpiry(),
+          // 3-month free trial starts on registration day.
+          subscriptionStart: registrationDate,
+          subscriptionUntil: computeNewSubscriptionUntil(registrationDate),
         })
         .returning();
       isNewRegistration = true;
@@ -301,6 +309,7 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
           .from(partnersTable)
           .where(eq(partnersTable.email, email));
         if (racing && !racing.emailVerified) {
+          const raceDate = new Date();
           const updated = await db
             .update(partnersTable)
             .set({
@@ -314,7 +323,9 @@ router.post("/partners/register", partnerRegisterLimiter, async (req, res) => {
               websiteUrl: websiteUrl || null,
               verificationCode: code,
               verificationCodeExpires: verificationCodeExpiry(),
-              updatedAt: new Date(),
+              subscriptionStart: raceDate,
+              subscriptionUntil: computeNewSubscriptionUntil(raceDate),
+              updatedAt: raceDate,
             })
             .where(and(eq(partnersTable.id, racing.id), isNull(partnersTable.emailVerified)))
             .returning();
@@ -522,10 +533,7 @@ router.post("/admin/partners/:id/approve", requireAdmin, async (req: any, res) =
       status: "approved",
       rejectionReason: null,
       passwordHash: newHash,
-      // Grant 3 months of free subscription starting at approval. Reset on each approve
-      // so re-approving a previously-rejected partner restarts the trial cleanly.
-      subscriptionUntil: computeNewSubscriptionUntil(),
-      subscriptionStart: new Date(),
+      // Subscription is already set at registration — do not reset it here.
       updatedAt: new Date(),
     })
     .where(eq(partnersTable.id, id))
