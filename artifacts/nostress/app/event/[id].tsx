@@ -220,6 +220,7 @@ export default function EventDetailScreen() {
         event.venue
           ? `📍 ${event.venue}${event.city ? `, ${event.city}` : ""}`
           : "",
+        description ? description : "",
         "",
         downloadLine,
       ];

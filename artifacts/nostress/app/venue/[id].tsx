@@ -142,6 +142,7 @@ export default function VenueDetailScreen() {
           : `📲 Download the NoStress app:\nAndroid: ${APP_STORE_LINKS.googlePlay}\niOS: ${APP_STORE_LINKS.appStore}`;
       const parts: string[] = [
         `${venue.name} — ${venue.city}`,
+        venue.description ? venue.description : "",
         "",
         downloadLine,
       ];
