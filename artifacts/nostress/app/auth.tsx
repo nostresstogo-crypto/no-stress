@@ -23,6 +23,7 @@ import React, {
 } from "react";
 import {
   ActivityIndicator,
+  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -544,6 +545,7 @@ export default function AuthScreen() {
 
   // ── Handlers localisation ────────────────────────────────────
   const handleSelectCountry = useCallback((_key: string, label: string, item: LocationSearchResult) => {
+    Keyboard.dismiss();
     const display = item.emoji ? `${item.emoji} ${label}` : label;
     setCountry(label); setCountryQuery(display); setCountryLocked(true); setCountryResults([]);
     setCity(""); setLatitude(""); setLongitude("");
@@ -557,6 +559,7 @@ export default function AuthScreen() {
   }, []);
 
   const handleSelectCity = useCallback((_key: string, label: string, item: LocationSearchResult) => {
+    Keyboard.dismiss();
     setCity(label); setCityQuery(label); setCityLocked(true); setCityResults([]);
     setLatitude(item.lat != null ? String(item.lat) : "");
     setLongitude(item.lng != null ? String(item.lng) : "");
@@ -632,6 +635,7 @@ export default function AuthScreen() {
       if (!res.ok) {
         if (data?.needsVerification) {
           setLoading(false);
+          Keyboard.dismiss();
           dismissAndReplace({ pathname: "/verify-email", params: { email: data.email || cleanEmail, role: data.role === "partner" ? "partner" : "user" } } as any);
           return;
         }
@@ -641,6 +645,7 @@ export default function AuthScreen() {
         }
         if (data?.partnerStatus === "pending") {
           setLoading(false);
+          Keyboard.dismiss();
           dismissAndReplace({ pathname: "/partner-pending", params: { email: data.email || cleanEmail } } as any);
           return;
         }
@@ -666,6 +671,7 @@ export default function AuthScreen() {
       return;
     }
     setLoading(false);
+    Keyboard.dismiss();
     dismissAndReplace("/(tabs)");
   }
 
@@ -694,6 +700,7 @@ export default function AuthScreen() {
         setLoading(false); return;
       }
       setLoading(false);
+      Keyboard.dismiss();
       dismissAndReplace({ pathname: "/verify-email", params: { email: cleanEmail, role: "user" } } as any);
     } catch {
       setGlobalError(lang === "fr" ? "Erreur réseau. Vérifiez votre connexion." : "Network error. Check your connection.");
@@ -748,6 +755,7 @@ export default function AuthScreen() {
         setLoading(false); return;
       }
       setLoading(false);
+      Keyboard.dismiss();
       dismissAndReplace({ pathname: "/verify-email", params: { email: cleanEmail, role: "partner" } } as any);
     } catch {
       setGlobalError(lang === "fr" ? "Erreur réseau. Vérifiez votre connexion." : "Network error. Check your connection.");
