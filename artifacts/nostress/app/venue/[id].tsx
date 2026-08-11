@@ -27,6 +27,7 @@ import { useLowDataMode } from "@/context/NetworkContext";
 import { MOCK_VENUES, MOCK_EVENTS } from "@/constants/data";
 import { API_BASE } from "@/lib/apiBase";
 import { APP_STORE_LINKS } from "@/constants/appLinks";
+import { shareWithImage } from "@/lib/shareWithImage";
 import ReportButton from "@/components/ReportButton";
 import MapPreview from "@/components/MapPreview";
 import ReviewModal from "@/components/ReviewModal";
@@ -141,13 +142,13 @@ export default function VenueDetailScreen() {
           : `📲 Download the NoStress app:\nAndroid: ${APP_STORE_LINKS.googlePlay}\niOS: ${APP_STORE_LINKS.appStore}`;
       const parts: string[] = [
         `${venue.name} — ${venue.city}`,
-        ...(imageUrl ? [imageUrl] : []),
         "",
         downloadLine,
       ];
-      await Share.share({
+      await shareWithImage({
         title: venue.name,
         message: parts.filter(Boolean).join("\n"),
+        imageUrl,
       });
     } catch {}
   };

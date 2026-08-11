@@ -26,6 +26,7 @@ import { MOCK_EVENTS } from "@/constants/data";
 import { formatDateLocalized } from "@/lib/formatDate";
 import { API_BASE } from "@/lib/apiBase";
 import { APP_STORE_LINKS } from "@/constants/appLinks";
+import { shareWithImage } from "@/lib/shareWithImage";
 import ReportButton from "@/components/ReportButton";
 import ReviewModal from "@/components/ReviewModal";
 import { NavigationOptionsSheet } from "@/components/common/NavigationOptionsSheet";
@@ -219,13 +220,13 @@ export default function EventDetailScreen() {
         event.venue
           ? `📍 ${event.venue}${event.city ? `, ${event.city}` : ""}`
           : "",
-        ...(imageUrl ? [imageUrl] : []),
         "",
         downloadLine,
       ];
-      await Share.share({
+      await shareWithImage({
         title,
         message: parts.filter(Boolean).join("\n"),
+        imageUrl,
       });
     } catch {}
   };
