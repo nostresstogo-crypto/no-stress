@@ -24,30 +24,25 @@ export function safeReplace(href: Href) {
 }
 
 /**
- * Use when navigating away from a modal screen on iOS.
- * Dismisses the current modal first, then pushes the next route.
- * Without this, iOS keeps the modal on top and the new screen never appears.
+ * Navigates away from a modal screen by dismissing it first, then pushing
+ * the next route. Required on both iOS and Android: calling push/replace
+ * from inside a modal without dismissing first causes the modal to remain
+ * on top (iOS) or crashes/restarts the app (Android).
  */
 export function dismissAndPush(href: Href) {
   const target = withUniqueParam(href);
-  if (Platform.OS === "ios") {
-    try {
-      (router as any).dismiss?.();
-    } catch {}
-    setTimeout(() => router.push(target), 80);
-  } else {
-    router.push(target);
-  }
+  try {
+    (router as any).dismiss?.();
+  } catch {}
+  // iOS needs a slightly longer delay for the dismiss animation to complete.
+  setTimeout(() => router.push(target), Platform.OS === "ios" ? 80 : 50);
 }
 
 export function dismissAndReplace(href: Href) {
   const target = withUniqueParam(href);
-  if (Platform.OS === "ios") {
-    try {
-      (router as any).dismiss?.();
-    } catch {}
-    setTimeout(() => router.replace(target), 80);
-  } else {
-    router.replace(target);
-  }
+  try {
+    (router as any).dismiss?.();
+  } catch {}
+  // iOS needs a slightly longer delay for the dismiss animation to complete.
+  setTimeout(() => router.replace(target), Platform.OS === "ios" ? 80 : 50);
 }
