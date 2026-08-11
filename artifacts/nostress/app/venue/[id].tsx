@@ -134,9 +134,7 @@ export default function VenueDetailScreen() {
   const handleShare = async () => {
     try {
       if (!venue) return;
-      const imageUrl = venue.imageUrl
-        ? `${API_BASE}/storage${venue.imageUrl}`
-        : null;
+      const imageUrl = venue.imageUrl || null;
       const downloadLine =
         lang === "fr"
           ? `📲 Télécharge l'app NoStress :\nAndroid : ${APP_STORE_LINKS.googlePlay}\niOS : ${APP_STORE_LINKS.appStore}`
