@@ -210,7 +210,7 @@ export default function EventDetailScreen() {
 
   const handleShare = async () => {
     try {
-      const imageUrl = event.imageUrl || null;
+      const imageUrl = gallery[activeIdx] || event.imageUrl || null;
       const downloadLine =
         lang === "fr"
           ? `📲 Télécharge l'app NoStress :\nAndroid : ${APP_STORE_LINKS.googlePlay}\niOS : ${APP_STORE_LINKS.appStore}`
