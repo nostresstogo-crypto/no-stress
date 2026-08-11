@@ -29,6 +29,16 @@ const migrations: Array<{ name: string; sql: string }> = [
         ON partner_notifications (created_at DESC);
     `,
   },
+  {
+    name: "events_add_quartier_multiday_contact_link",
+    sql: `
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS quartier      TEXT;
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS end_date      TEXT;
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS end_time      TEXT;
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS contact       TEXT;
+      ALTER TABLE events ADD COLUMN IF NOT EXISTS external_link TEXT;
+    `,
+  },
 ];
 
 export async function runMigrations(): Promise<void> {
