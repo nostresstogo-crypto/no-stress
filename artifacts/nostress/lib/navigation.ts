@@ -24,29 +24,32 @@ export function safeReplace(href: Href) {
 }
 
 /**
- * Navigates away from a modal screen by dismissing it first, then navigating
- * once the dismiss animation has fully completed.
+ * Navigates away from a modal screen to a new route.
  *
- * WHY a fixed timeout rather than InteractionManager:
- * With newArchEnabled (Fabric/JSI), native-driven dismiss animations are not
- * registered with the InteractionManager, so runAfterInteractions() fires
- * immediately — before the animation completes — causing the same navigation
- * stack corruption as calling replace() with no delay at all.
+ * Uses router.dismissTo() — expo-router v6's dedicated API for this exact
+ * pattern. It dispatches a single POP_TO action that atomically dismisses
+ * the modal stack and navigates to the target, with no setTimeout and no
+ * dependency on animation timing systems.
  *
- * A 500 ms delay on Android is well above the longest modal dismiss animation
- * (~300 ms on the slowest devices) and is unconditionally reliable across
- * both old and new architecture production builds.
+ * Previous approaches that failed on Android production (newArchEnabled):
+ * - router.replace() directly → corrupts navigation stack (no dismiss)
+ * - router.dismiss() + InteractionManager → fires before native animation
+ *   completes because new arch animations bypass InteractionManager
+ * - router.dismiss() + setTimeout(500ms) → black screen on production;
+ *   replace() after dismiss replaces the root /(tabs) navigator which
+ *   Android production Stack navigator doesn't handle correctly
  */
-const DISMISS_DELAY_MS = Platform.OS === "ios" ? 80 : 500;
-
 export function dismissAndReplace(href: Href) {
   const target = withUniqueParam(href);
-  router.dismiss();
-  setTimeout(() => router.replace(target), DISMISS_DELAY_MS);
+  (router as any).dismissTo(target);
 }
 
+/**
+ * Navigates away from a modal screen by dismissing it first, then pushing
+ * the next route. Uses a platform-appropriate delay after dismiss.
+ */
 export function dismissAndPush(href: Href) {
   const target = withUniqueParam(href);
   router.dismiss();
-  setTimeout(() => router.push(target), DISMISS_DELAY_MS);
+  setTimeout(() => router.push(target), Platform.OS === "ios" ? 80 : 500);
 }
