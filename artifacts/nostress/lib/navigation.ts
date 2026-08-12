@@ -1,4 +1,4 @@
-import { InteractionManager, Platform } from "react-native";
+import { Platform } from "react-native";
 import { router } from "expo-router";
 
 type Href = string | { pathname: string; params?: Record<string, any> };
@@ -27,33 +27,26 @@ export function safeReplace(href: Href) {
  * Navigates away from a modal screen by dismissing it first, then navigating
  * once the dismiss animation has fully completed.
  *
- * On iOS, router.dismiss() triggers a slide-down animation (~80ms).
- * On Android, the modal dismiss animation can take 200-350ms depending on
- * the device — calling router.replace() too early (while the animation is
- * still playing) corrupts the navigation stack and crashes/restarts the app.
+ * WHY a fixed timeout rather than InteractionManager:
+ * With newArchEnabled (Fabric/JSI), native-driven dismiss animations are not
+ * registered with the InteractionManager, so runAfterInteractions() fires
+ * immediately — before the animation completes — causing the same navigation
+ * stack corruption as calling replace() with no delay at all.
  *
- * Using InteractionManager.runAfterInteractions() defers the replacement until
- * React Native signals that all in-flight animations are done, making this
- * safe on every device regardless of animation speed.
+ * A 500 ms delay on Android is well above the longest modal dismiss animation
+ * (~300 ms on the slowest devices) and is unconditionally reliable across
+ * both old and new architecture production builds.
  */
+const DISMISS_DELAY_MS = Platform.OS === "ios" ? 80 : 500;
+
 export function dismissAndReplace(href: Href) {
   const target = withUniqueParam(href);
   router.dismiss();
-  // One rAF tick lets React Navigation register the dismiss animation,
-  // then runAfterInteractions waits for it to fully complete before replacing.
-  requestAnimationFrame(() => {
-    InteractionManager.runAfterInteractions(() => {
-      router.replace(target);
-    });
-  });
+  setTimeout(() => router.replace(target), DISMISS_DELAY_MS);
 }
 
 export function dismissAndPush(href: Href) {
   const target = withUniqueParam(href);
   router.dismiss();
-  requestAnimationFrame(() => {
-    InteractionManager.runAfterInteractions(() => {
-      router.push(target);
-    });
-  });
+  setTimeout(() => router.push(target), DISMISS_DELAY_MS);
 }
