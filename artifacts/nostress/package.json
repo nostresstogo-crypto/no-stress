@@ -68,6 +68,7 @@
     "expo-sharing": "^14.0.8",
     "expo-speech": "^14.0.8",
     "expo-speech-recognition": "^0.2.25",
+    "expo-updates": "^57.0.13",
     "react-native-webview": "^13.15.0"
   }
 }
