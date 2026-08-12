@@ -1,4 +1,4 @@
-import { Platform } from "react-native";
+import { InteractionManager, Platform } from "react-native";
 import { router } from "expo-router";
 
 type Href = string | { pathname: string; params?: Record<string, any> };
@@ -24,25 +24,36 @@ export function safeReplace(href: Href) {
 }
 
 /**
- * Navigates away from a modal screen by dismissing it first, then pushing
- * the next route. Required on both iOS and Android: calling push/replace
- * from inside a modal without dismissing first causes the modal to remain
- * on top (iOS) or crashes/restarts the app (Android).
+ * Navigates away from a modal screen by dismissing it first, then navigating
+ * once the dismiss animation has fully completed.
+ *
+ * On iOS, router.dismiss() triggers a slide-down animation (~80ms).
+ * On Android, the modal dismiss animation can take 200-350ms depending on
+ * the device — calling router.replace() too early (while the animation is
+ * still playing) corrupts the navigation stack and crashes/restarts the app.
+ *
+ * Using InteractionManager.runAfterInteractions() defers the replacement until
+ * React Native signals that all in-flight animations are done, making this
+ * safe on every device regardless of animation speed.
  */
-export function dismissAndPush(href: Href) {
-  const target = withUniqueParam(href);
-  try {
-    (router as any).dismiss?.();
-  } catch {}
-  // iOS needs a slightly longer delay for the dismiss animation to complete.
-  setTimeout(() => router.push(target), Platform.OS === "ios" ? 80 : 50);
-}
-
 export function dismissAndReplace(href: Href) {
   const target = withUniqueParam(href);
-  try {
-    (router as any).dismiss?.();
-  } catch {}
-  // iOS needs a slightly longer delay for the dismiss animation to complete.
-  setTimeout(() => router.replace(target), Platform.OS === "ios" ? 80 : 50);
+  router.dismiss();
+  // One rAF tick lets React Navigation register the dismiss animation,
+  // then runAfterInteractions waits for it to fully complete before replacing.
+  requestAnimationFrame(() => {
+    InteractionManager.runAfterInteractions(() => {
+      router.replace(target);
+    });
+  });
+}
+
+export function dismissAndPush(href: Href) {
+  const target = withUniqueParam(href);
+  router.dismiss();
+  requestAnimationFrame(() => {
+    InteractionManager.runAfterInteractions(() => {
+      router.push(target);
+    });
+  });
 }
