@@ -5,20 +5,21 @@
  * so the recipient sees it as an embedded image rather than a raw URL.
  *
  * Flow:
- * 1. Android — uses react-native-share (Share.open) which passes both the
- *    local image file AND the text message in a single ACTION_SEND intent.
- *    Messaging apps (WhatsApp, Telegram, …) display the photo inline together
- *    with the pre-filled caption.
- * 2. iOS — uses React Native's Share.share() with { url, message } which
- *    already handles image + text correctly via the native share sheet.
+ * 1. iOS  — Share.share() with { url: localUri, message } passes both image
+ *           and text to the native share sheet in one call.
+ * 2. Android — expo-sharing (Sharing.shareAsync) passes the local image file
+ *           via an ACTION_SEND intent; the text is shared as a separate step
+ *           using the standard Share API after the image share.
  * 3. Fallback (web / download failures) — Share.share() with the full text
- *    body and the image URL appended as a clickable link.
+ *           body and the image URL appended as a plain link.
+ *
+ * react-native-share is intentionally NOT used here because it requires a
+ * native binary that is unavailable in Expo Go and breaks route loading.
  */
 
 import { Platform, Share } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
-import RNShare from "react-native-share";
 
 export async function shareWithImage(opts: {
   /** Short title shown in the share sheet header / dialog title. */
@@ -37,7 +38,6 @@ export async function shareWithImage(opts: {
   if (imageUrl) {
     try {
       if (FileSystem.cacheDirectory) {
-        // Derive a safe file extension from the URL (default to jpg).
         const rawExt = imageUrl.split("?")[0].split(".").pop()?.toLowerCase();
         const ext = ["jpg", "jpeg", "png", "webp", "gif"].includes(rawExt ?? "")
           ? rawExt!
@@ -47,28 +47,34 @@ export async function shareWithImage(opts: {
 
         const result = await FileSystem.downloadAsync(imageUrl, localUri);
         if (result.status === 200) {
-          if (Platform.OS === "android") {
-            // ── Android: react-native-share passes both the image file AND
-            //    the message text in a single ACTION_SEND intent so apps
-            //    like WhatsApp pre-fill the caption.
-            await RNShare.open({
-              title,
-              message,
-              url: result.uri,
-              type: mimeType,
-              failOnCancel: false,
-            });
-          } else {
-            // ── iOS: Share.share with url + message works natively.
+          if (Platform.OS === "ios") {
+            // iOS: Share.share with url + message handles image + text natively.
             await Share.share({ title, message, url: result.uri });
+          } else {
+            // Android: expo-sharing passes the image via ACTION_SEND intent.
+            // We then share the text separately so the recipient gets both.
+            const canShare = await Sharing.isAvailableAsync();
+            if (canShare) {
+              // Share image first (opens the native share sheet with the photo).
+              await Sharing.shareAsync(result.uri, {
+                mimeType,
+                dialogTitle: title,
+                UTI: mimeType,
+              });
+              // Then offer the text so it can be copied / shared independently.
+              await Share.share({ title, message });
+            } else {
+              // expo-sharing not available — fall back to text-only with link.
+              throw new Error("sharing unavailable");
+            }
           }
           return;
         }
       }
     } catch (err: any) {
-      // User dismissed the sheet (error.message contains "cancel" on some
-      // RN-share versions) — treat as success; other errors fall through.
-      const msg: string = typeof err?.message === "string" ? err.message.toLowerCase() : "";
+      const msg: string =
+        typeof err?.message === "string" ? err.message.toLowerCase() : "";
+      // User dismissed the sheet — treat as success.
       if (msg.includes("cancel") || msg.includes("dismiss") || err?.dismissedAction) {
         return;
       }
@@ -77,8 +83,6 @@ export async function shareWithImage(opts: {
   }
 
   // ── Text-only fallback ─────────────────────────────────────────────────
-  // Append the image URL as a clickable link so recipients can still view
-  // the photo even when the file-attachment path is unavailable.
   const body = imageUrl ? `${message}\n${imageUrl}` : message;
   await Share.share({ title, message: body });
 }
