@@ -3,6 +3,15 @@
     "name": "NoStress",
     "slug": "nostress",
     "version": "2.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/b372c0cb-009a-40b0-bd7c-720947a2a462",
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "nostress",
