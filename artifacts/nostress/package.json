@@ -7,7 +7,11 @@
     "dev": "EXPO_PACKAGER_PROXY_URL=https://$REPLIT_EXPO_DEV_DOMAIN EXPO_PUBLIC_DOMAIN=$REPLIT_DEV_DOMAIN EXPO_PUBLIC_REPL_ID=$REPL_ID REACT_NATIVE_PACKAGER_HOSTNAME=$REPLIT_DEV_DOMAIN pnpm exec expo start --localhost --port $PORT",
     "build": "node scripts/build.js",
     "serve": "node server/serve.js",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "update:preview": "EXPO_PUBLIC_API_BASE=https://api.no-stress.net/api npx eas update --channel preview",
+    "update:staging": "EXPO_PUBLIC_API_BASE=https://api.no-stress.net/api npx eas update --channel preview",
+    "update:test": "EXPO_PUBLIC_API_BASE=https://test.api.no-stress.net/api npx eas update --channel test",
+    "update:production": "EXPO_PUBLIC_API_BASE=https://api.no-stress.net/api npx eas update --channel production"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
