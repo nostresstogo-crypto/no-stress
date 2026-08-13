@@ -8,10 +8,10 @@
     "build": "node scripts/build.js",
     "serve": "node server/serve.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "update:preview": "EXPO_PUBLIC_API_BASE=https://api.no-stress.net/api npx eas update --channel preview",
-    "update:staging": "EXPO_PUBLIC_API_BASE=https://api.no-stress.net/api npx eas update --channel preview",
-    "update:test": "EXPO_PUBLIC_API_BASE=https://test.api.no-stress.net/api npx eas update --channel test",
-    "update:production": "EXPO_PUBLIC_API_BASE=https://api.no-stress.net/api npx eas update --channel production"
+    "update:preview": "node scripts/eas-update.js preview",
+    "update:staging": "node scripts/eas-update.js staging",
+    "update:test": "node scripts/eas-update.js test",
+    "update:production": "node scripts/eas-update.js production"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
