@@ -49,9 +49,10 @@ export function dismissAndReplace(href: Href) {
   const hrefStr = typeof href === "string" ? href : (href as any).pathname;
 
   if (hrefStr === "/(tabs)") {
-    // Login success: tabs is already the root screen underneath the modal.
-    // Just dismiss — no extra navigation needed.
-    router.dismiss();
+    // Login success: pop everything back to the root (tabs) screen.
+    // dismissAll() is more reliable than dismiss() on Android new arch when
+    // the AppContext auth state update fires concurrently with the navigation.
+    (router as any).dismissAll?.();
     return;
   }
 
