@@ -58,6 +58,32 @@
       }
     }
   },
+  "update": {
+    "preview": {
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_API_BASE": "https://api.no-stress.net/api"
+      }
+    },
+    "staging": {
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_API_BASE": "https://api.no-stress.net/api"
+      }
+    },
+    "test": {
+      "channel": "test",
+      "env": {
+        "EXPO_PUBLIC_API_BASE": "https://test.api.no-stress.net/api"
+      }
+    },
+    "production": {
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_API_BASE": "https://api.no-stress.net/api"
+      }
+    }
+  },
   "submit": {
     "production": {
       "ios": {
