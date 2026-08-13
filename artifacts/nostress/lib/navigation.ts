@@ -26,22 +26,50 @@ export function safeReplace(href: Href) {
 /**
  * Navigates away from a modal screen to a new route.
  *
- * Uses router.dismissTo() — expo-router v6's dedicated API for this exact
- * pattern. It dispatches a single POP_TO action that atomically dismisses
- * the modal stack and navigates to the target, with no setTimeout and no
- * dependency on animation timing systems.
+ * Strategy:
+ * - Target "/(tabs)": dismiss the modal — (tabs) is already underneath. Done.
+ * - Any other target (verify-email, partner-pending, …): push the new screen
+ *   ON TOP of the modal in the root stack — no dismiss, no timing dependency.
  *
- * Previous approaches that failed on Android production (newArchEnabled):
- * - router.replace() directly → corrupts navigation stack (no dismiss)
+ *   Stack after push: [(tabs) → auth (modal) → verify-email (card)]
+ *   The user sees verify-email full-screen. The screens underneath are hidden.
+ *   When verify-email / partner-pending finish, they call dismissAllAndGoHome()
+ *   which pops everything back to (tabs) cleanly.
+ *
+ * Why previous approaches failed on Android production (newArchEnabled):
+ * - router.replace() directly inside the modal → black screen (no dismiss)
  * - router.dismiss() + InteractionManager → fires before native animation
- *   completes because new arch animations bypass InteractionManager
- * - router.dismiss() + setTimeout(500ms) → black screen on production;
- *   replace() after dismiss replaces the root /(tabs) navigator which
- *   Android production Stack navigator doesn't handle correctly
+ *   completes (new arch animations bypass InteractionManager)
+ * - router.dismiss() + setTimeout(500ms) + router.replace() → black screen
+ *   because replace() remounts the (tabs) navigator that was already underneath
+ * - router.dismissTo(target) → target not in stack, POP finds nothing,
+ *   navigation fails silently → blank screen
  */
 export function dismissAndReplace(href: Href) {
-  const target = withUniqueParam(href);
-  (router as any).dismissTo(target);
+  const hrefStr = typeof href === "string" ? href : (href as any).pathname;
+
+  if (hrefStr === "/(tabs)") {
+    // Login success: tabs is already the root screen underneath the modal.
+    // Just dismiss — no extra navigation needed.
+    router.dismiss();
+    return;
+  }
+
+  // For all other screens: push on top of the open modal.
+  // No dismiss call = no animation timing race condition.
+  router.push(withUniqueParam(href));
+}
+
+/**
+ * Pop all screens back to the root (tabs) screen.
+ * Use this from verify-email / partner-pending when the flow is complete,
+ * so the auth modal left underneath is also removed from the stack.
+ *
+ * Stack before: [(tabs) → auth (modal) → verify-email (card)]
+ * Stack after:  [(tabs)]
+ */
+export function dismissAllAndGoHome() {
+  (router as any).dismissAll?.();
 }
 
 /**

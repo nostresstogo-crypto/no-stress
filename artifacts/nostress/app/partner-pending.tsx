@@ -3,6 +3,7 @@ import { Animated, View, Text, TouchableOpacity, StyleSheet, ScrollView } from "
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { dismissAllAndGoHome } from "@/lib/navigation";
 
 import { useApp, useColors } from "@/context/AppContext";
 
@@ -79,7 +80,7 @@ export default function PartnerPendingScreen() {
 
       <TouchableOpacity
         style={styles.primaryBtn}
-        onPress={() => router.replace("/(tabs)")}
+        onPress={() => dismissAllAndGoHome()}
         activeOpacity={0.85}
         accessibilityLabel={fr ? "Accéder au tableau de bord" : "Go to dashboard"}
         accessibilityRole="button"

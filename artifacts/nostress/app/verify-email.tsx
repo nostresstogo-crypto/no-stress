@@ -15,7 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
-import { safeReplace } from "@/lib/navigation";
+import { dismissAllAndGoHome } from "@/lib/navigation";
 
 import { useApp, useColors } from "@/context/AppContext";
 import { API_BASE } from "@/lib/apiBase";
@@ -218,12 +218,12 @@ export default function VerifyEmailScreen() {
           bodyFr: "Votre compte partenaire est actif. Votre lieu est en cours de validation.",
         });
         triggerSuccess("success-partner");
-        setTimeout(() => safeReplace("/(tabs)"), 2000);
+        setTimeout(() => dismissAllAndGoHome(), 2000);
       } else {
         if (data.user)  await setUser(data.user);
         if (data.token) await setSession(data.token, data.refreshToken || null);
         triggerSuccess("success-user");
-        setTimeout(() => safeReplace("/(tabs)"), 2000);
+        setTimeout(() => dismissAllAndGoHome(), 2000);
       }
     } catch {
       setErrorKind("network");
