@@ -49,10 +49,10 @@ export function dismissAndReplace(href: Href) {
   const hrefStr = typeof href === "string" ? href : (href as any).pathname;
 
   if (hrefStr === "/(tabs)") {
-    // Login success: pop everything back to the root (tabs) screen.
-    // dismissAll() is more reliable than dismiss() on Android new arch when
-    // the AppContext auth state update fires concurrently with the navigation.
-    (router as any).dismissAll?.();
+    // Login success is now handled by a useEffect in auth.tsx that watches
+    // the user state and dismisses only after React has committed the update.
+    // This call is kept as a fallback for any other caller.
+    router.dismiss();
     return;
   }
 

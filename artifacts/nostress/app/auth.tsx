@@ -399,7 +399,7 @@ const LocationSearch = React.memo(function LocationSearch({
 // ─── Composant principal ──────────────────────────────────────────
 export default function AuthScreen() {
   const t   = useT();
-  const { setUser, setSession, lang, addNotification, configCities, configCountries } = useApp();
+  const { user, setUser, setSession, lang, addNotification, configCities, configCountries } = useApp();
   const insets = useSafeAreaInsets();
   const C      = useColors();
   const S      = useMemo(() => makeStyles(C), [C]);
@@ -507,6 +507,17 @@ export default function AuthScreen() {
   const [globalError,    setGlobalError]    = useState("");
   const [fieldErrors,    setFieldErrors]    = useState<Record<string, string>>({});
   const [emailExistsHint, setEmailExistsHint] = useState(false);
+
+  // ── Auto-dismiss quand la connexion réussit ───────────────────
+  // On surveille `user` depuis le contexte. Quand il passe de null à non-null
+  // PENDANT cette session (pas au montage initial), React a déjà committé
+  // l'update — (tabs) a le bon état auth — on peut dismiss proprement.
+  const userOnMount = useRef(user);
+  useEffect(() => {
+    if (user && !userOnMount.current) {
+      router.dismiss();
+    }
+  }, [user]);
 
   // Refs
   const scrollRef       = useRef<ScrollView>(null);
@@ -672,7 +683,8 @@ export default function AuthScreen() {
     }
     setLoading(false);
     Keyboard.dismiss();
-    dismissAndReplace("/(tabs)");
+    // Navigation handled by the useEffect watching `user` above —
+    // it fires after React commits the setUser() state update.
   }
 
   async function handleUserRegister() {
